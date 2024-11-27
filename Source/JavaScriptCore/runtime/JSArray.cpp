@@ -481,6 +481,74 @@ bool JSArray::setLengthWithArrayStorage(JSGlobalObject* globalObject, unsigned n
     return true;
 }
 
+bool JSArray::fastFill(VM& vm, unsigned startIndex, unsigned endIndex, JSValue value)
+{
+    if (isCopyOnWrite(indexingMode()))
+        convertFromCopyOnWrite(vm);
+
+    IndexingType type = indexingType();
+    IndexingType nextType = [type, value]() {
+        if (!(type & IsArray))
+            return NonArray;
+        if (hasAnyArrayStorage(type))
+            return NonArray;
+        switch (type) {
+        case ArrayWithInt32:
+        case ArrayWithUndecided:
+            if (value.isInt32())
+                return ArrayWithInt32;
+            if (value.isNumber())
+                return ArrayWithDouble;
+            return ArrayWithContiguous;
+        case ArrayWithDouble:
+            if (value.isNumber())
+                return type;
+            return ArrayWithContiguous;
+        case ArrayWithContiguous:
+            return type;
+        default:
+            return NonArray;
+        }
+    }();
+    if (type == ArrayWithUndecided) {
+        if (nextType == ArrayWithInt32)
+            convertUndecidedToInt32(vm);
+        else if (nextType == ArrayWithDouble)
+            convertUndecidedToDouble(vm);
+        else if (nextType == ArrayWithContiguous)
+            convertUndecidedToContiguous(vm);
+        else {
+            ASSERT_NOT_REACHED();
+            return false;
+        }
+    } else if (type != nextType)
+        return false;
+
+    ASSERT(nextType == indexingType());
+
+    if (nextType == ArrayWithDouble) {
+        auto* data = butterfly()->contiguousDouble().data();
+#if OS(DARWIN)
+        double pattern = value.asNumber();
+        memset_pattern8(data + startIndex, &pattern, sizeof(double) * (endIndex - startIndex));
+#else
+        std::fill(data + startIndex, data + endIndex, value.asNumber());
+#endif
+    } else {
+#if OS(DARWIN)
+        auto* data = butterfly()->contiguous().data();
+        auto pattern = std::bit_cast<const WriteBarrier<Unknown>>(JSValue::encode(value));
+        memset_pattern8(data + startIndex, &pattern, sizeof(JSValue) * (endIndex - startIndex));
+#else
+        for (unsigned i = startIndex; i < endIndex; ++i)
+            butterfly()->contiguous().at(this, i) = std::bit_cast<const WriteBarrier<Unknown>>(JSValue::encode(value));
+#endif
+        vm.writeBarrier(this);
+    }
+
+    return true;
+}
+
 bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, IndexingType otherType, std::span<const EncodedJSValue> values)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
