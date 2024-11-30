@@ -1375,6 +1375,20 @@ public:
         m_pattern.m_disjunctions.append(WTFMove(parenthesesDisjunction));
     }
 
+    void atomParenthesesModifiedBegin(OptionSet<Flags> addedFlags, OptionSet<Flags> removedFlags)
+    {
+        // TODO: Implement RegExp Modifiers semantics
+        UNUSED_PARAM(addedFlags);
+        UNUSED_PARAM(removedFlags);
+        ASSERT(!addedFlags.isEmpty() || !removedFlags.isEmpty());
+
+        auto parenthesesDisjunction = makeUnique<PatternDisjunction>(m_alternative);
+        m_alternative->m_terms.append(PatternTerm(PatternTerm::Type::ParenthesesSubpattern, m_pattern.m_numSubpatterns + 1, parenthesesDisjunction.get(), true, false, parenthesisMatchDirection()));
+        m_alternative = parenthesesDisjunction->addNewAlternative(m_pattern.m_numSubpatterns, parenthesisMatchDirection());
+        pushParenthesisContext();
+        m_pattern.m_disjunctions.append(WTFMove(parenthesesDisjunction));
+    }
+
     void atomParenthesesEnd()
     {
         ASSERT(m_alternative->m_parent);

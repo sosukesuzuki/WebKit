@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "Options.h"
 #include "Yarr.h"
 #include "YarrPattern.h"
 #include "YarrUnicodeProperties.h"
@@ -1462,64 +1463,133 @@ private:
 
         auto type = ParenthesesType::Subpattern;
 
+        bool parsingModifiers = false;
+        bool modifiersPolarity = true;
+        OptionSet<Flags> addedFlags;
+        OptionSet<Flags> removedFlags;
+
         if (tryConsume('?')) {
             if (atEndOfPattern()) {
                 m_errorCode = ErrorCode::ParenthesesTypeInvalid;
                 return;
             }
 
-            switch (consume()) {
-            case ':':
-                m_delegate.atomParenthesesSubpatternBegin(false);
-                break;
-            
-            case '=':
-                m_delegate.atomParentheticalAssertionBegin(false, Forward);
-                type = ParenthesesType::Assertion;
-                break;
-
-            case '!':
-                m_delegate.atomParentheticalAssertionBegin(true, Forward);
-                type = ParenthesesType::Assertion;
-                break;
-
-            case '<': {
-                auto groupName = tryConsumeGroupName();
-                if (hasError(m_errorCode))
+            do {
+                auto current = consume();
+                switch (current) {
+                case '-':
+                    if (!Options::useRegExpModifiers()) {
+                        m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                        break;
+                    }
+                    parsingModifiers = true;
+                    if (!modifiersPolarity) {
+                        m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                        break;
+                    }
+                    modifiersPolarity = false;
                     break;
 
-                if (groupName) {
-                    if (m_kIdentityEscapeSeen) {
-                        m_errorCode = ErrorCode::InvalidNamedBackReference;
+                case 'i':
+                case 'm':
+                case 's': {
+                    if (!Options::useRegExpModifiers()) {
+                        m_errorCode = ErrorCode::ParenthesesTypeInvalid;
                         break;
+                    }
+                    parsingModifiers = true;
+
+                    auto handleFlag = [&](auto flag) {
+                        if (addedFlags.contains(flag) || removedFlags.contains(flag)) {
+                            m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                            return false;
+                        }
+                        if (modifiersPolarity)
+                            addedFlags.add(flag);
+                        else
+                            removedFlags.add(flag);
+                        return true;
+                    };
+
+                    if (current == 'i') {
+                        if (!handleFlag(Flags::IgnoreCase))
+                            break;
+                    } else if (current == 'm') {
+                        if (!handleFlag(Flags::Multiline))
+                            break;
+                    } else if (current == 's') {
+                        if (!handleFlag(Flags::DotAll))
+                            break;
                     }
 
-                    auto setAddResult = m_namedCaptureGroups.add(groupName.value());
-                    if (setAddResult.isNewEntry)
-                        m_delegate.atomParenthesesSubpatternBegin(true, groupName);
-                    else
-                        m_errorCode = ErrorCode::DuplicateGroupName;
-                } else {
-                    if (tryConsume('=')) {
-                        m_delegate.atomParentheticalAssertionBegin(false, Backward);
-                        type = ParenthesesType::LookbehindAssertion;
-                        break;
-                    }
-
-                    if (tryConsume('!')) {
-                        m_delegate.atomParentheticalAssertionBegin(true, Backward);
-                        type = ParenthesesType::LookbehindAssertion;
-                        break;
-                    }
-                    m_errorCode = ErrorCode::InvalidGroupName;
+                    break;
                 }
 
-                break;
-            }
+                case ':':
+                    if (!parsingModifiers)
+                        m_delegate.atomParenthesesSubpatternBegin(false);
+                    else {
+                        parsingModifiers = false;
+                        if (addedFlags.isEmpty() && removedFlags.isEmpty())
+                            m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                    }
+                    break;
 
-            default:
-                m_errorCode = ErrorCode::ParenthesesTypeInvalid;
-            }
+                case '=':
+                    parsingModifiers = false;
+                    m_delegate.atomParentheticalAssertionBegin(false, Forward);
+                    type = ParenthesesType::Assertion;
+                    break;
+
+                case '!':
+                    parsingModifiers = false;
+                    m_delegate.atomParentheticalAssertionBegin(true, Forward);
+                    type = ParenthesesType::Assertion;
+                    break;
+
+                case '<': {
+                    parsingModifiers = false;
+                    auto groupName = tryConsumeGroupName();
+                    if (hasError(m_errorCode))
+                        break;
+
+                    if (groupName) {
+                        if (m_kIdentityEscapeSeen) {
+                            m_errorCode = ErrorCode::InvalidNamedBackReference;
+                            break;
+                        }
+
+                        auto setAddResult = m_namedCaptureGroups.add(groupName.value());
+                        if (setAddResult.isNewEntry)
+                            m_delegate.atomParenthesesSubpatternBegin(true, groupName);
+                        else
+                            m_errorCode = ErrorCode::DuplicateGroupName;
+                    } else {
+                        if (tryConsume('=')) {
+                            m_delegate.atomParentheticalAssertionBegin(false, Backward);
+                            type = ParenthesesType::LookbehindAssertion;
+                            break;
+                        }
+
+                        if (tryConsume('!')) {
+                            m_delegate.atomParentheticalAssertionBegin(true, Backward);
+                            type = ParenthesesType::LookbehindAssertion;
+                            break;
+                        }
+                        m_errorCode = ErrorCode::InvalidGroupName;
+                    }
+
+                    break;
+                }
+
+                default:
+                    parsingModifiers = false;
+                    m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                }
+            } while (parsingModifiers);
+
+            if (!addedFlags.isEmpty() || !removedFlags.isEmpty())
+                m_delegate.atomParenthesesModifiedBegin(addedFlags, removedFlags);
         } else
             m_delegate.atomParenthesesSubpatternBegin();
 
@@ -2133,6 +2203,7 @@ private:
  *    void atomCharacterClassEnd()
  *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
  *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
+ *    void atomParenthesesModifiedBegin(OptionSet<Flags> addedFlags, OptionSet<Flags> removedFlags);
  *    void atomParenthesesEnd();
  *    void atomBackReference(unsigned subpatternId);
  *    void atomNamedBackReference(const String& subpatternName);
