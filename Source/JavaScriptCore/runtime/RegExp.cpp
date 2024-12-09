@@ -259,6 +259,7 @@ void RegExp::compile(VM* vm, Yarr::CharSize charSize, std::optional<StringView> 
         && !pattern.m_containsBackreferences
 #endif
         && !pattern.m_containsLookbehinds
+        && !pattern.m_containsModifiers
         ) {
         auto& jitCode = ensureRegExpJITCode();
         Yarr::jitCompile(pattern, m_patternString, charSize, sampleString, vm, jitCode, Yarr::JITCompileMode::IncludeSubpatterns);

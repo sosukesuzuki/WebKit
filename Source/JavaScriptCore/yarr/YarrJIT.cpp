@@ -4885,6 +4885,11 @@ public:
             return;
         }
 
+        if (m_pattern.m_containsModifiers) {
+            codeBlock.setFallBackWithFailureReason(JITFailureReason::Modifiers);
+            return;
+        }
+
 #if ENABLE(YARR_JIT_UNICODE_EXPRESSIONS) && ENABLE(YARR_JIT_UNICODE_CAN_INCREMENT_INDEX_FOR_NON_BMP)
         if (m_decodeSurrogatePairs && m_compileMode != JITCompileMode::InlineTest && !m_pattern.multiline() && !m_pattern.m_containsBOL && !m_pattern.m_containsLookbehinds) {
             ASSERT(m_regs.firstCharacterAdditionalReadSize != InvalidGPRReg);
@@ -5560,6 +5565,9 @@ static void dumpCompileFailure(JITFailureReason failure)
         break;
     case JITFailureReason::OffsetTooLarge:
         dataLog("Can't JIT because pattern exceeds string length limits\n");
+        break;
+    case JITFailureReason::Modifiers:
+        dataLog("Can't JIT a pattern containing modifiers\n");
         break;
     }
 }

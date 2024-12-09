@@ -537,6 +537,7 @@ struct YarrPattern {
         m_hasCopiedParenSubexpressions = false;
         m_hasNamedCaptureGroups = false;
         m_saveInitialStartValue = false;
+        m_containsModifiers = false;
 
         anycharCached = nullptr;
         newlineCached = nullptr;
@@ -708,6 +709,7 @@ struct YarrPattern {
     bool m_hasCopiedParenSubexpressions : 1;
     bool m_hasNamedCaptureGroups : 1;
     bool m_saveInitialStartValue : 1;
+    bool m_containsModifiers : 1;
     OptionSet<Flags> m_flags;
     unsigned m_numSubpatterns { 0 };
     unsigned m_initialStartValueFrameLocation { 0 };
