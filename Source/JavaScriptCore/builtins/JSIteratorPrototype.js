@@ -32,10 +32,13 @@ function map(mapper)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.map requires that |this| be an Object.");
 
-    if (!@isCallable(mapper))
-        @throwTypeError("Iterator.prototype.map callback must be a function.");
-
     var iterated = this;
+
+    if (!@isCallable(mapper)) {
+        @iteratorGenericClose(iterated);
+        @throwTypeError("Iterator.prototype.map callback must be a function.");
+    }
+
     var iteratedNextMethod = iterated.next;
 
     var generator = (function*() {
@@ -63,10 +66,13 @@ function filter(predicate)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.filter requires that |this| be an Object.");
 
-    if (!@isCallable(predicate))
-        @throwTypeError("Iterator.prototype.filter callback must be a function.");
-
     var iterated = this;
+
+    if (!@isCallable(predicate)) {
+        @iteratorGenericClose(iterated);
+        @throwTypeError("Iterator.prototype.filter callback must be a function.");
+    }
+
     var iteratedNextMethod = iterated.next;
 
     var generator = (function*() {
@@ -94,15 +100,21 @@ function take(limit)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.take requires that |this| be an Object.");
 
-    var numLimit = @toNumber(limit);
-    if (numLimit !== numLimit)
+    var iterated = this;
+
+    var numLimit;
+    @ifAbruptCloseIterator(iterated, numLimit = @toNumber(limit));
+    if (numLimit !== numLimit) {
+        @iteratorGenericClose(iterated);
         @throwRangeError("Iterator.prototype.take argument must not be NaN.");
+    }
 
     var intLimit = @toIntegerOrInfinity(numLimit);
-    if (intLimit < 0)
+    if (intLimit < 0) {
+        @iteratorGenericClose(iterated);
         @throwRangeError("Iterator.prototype.take argument must be non-negative.");
+    }
 
-    var iterated = this;
     var iteratedNextMethod = iterated.next;
 
     var generator = (function*() {
@@ -138,15 +150,21 @@ function drop(limit)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.drop requires that |this| be an Object.");
 
-    var numLimit = @toNumber(limit);
-    if (numLimit !== numLimit)
+    var iterated = this;
+
+    var numLimit;
+    @ifAbruptCloseIterator(iterated, (numLimit = @toNumber(limit)));
+    if (numLimit !== numLimit) {
+        @iteratorGenericClose(iterated);
         @throwRangeError("Iterator.prototype.drop argument must not be NaN.");
+    }
 
     var intLimit = @toIntegerOrInfinity(numLimit);
-    if (intLimit < 0)
+    if (intLimit < 0) {
+        @iteratorGenericClose(iterated);
         @throwRangeError("Iterator.prototype.drop argument must be non-negative.");
+    }
 
-    var iterated = this;
     var iteratedNextMethod = iterated.next;
 
     var generator = (function*() {
@@ -179,10 +197,13 @@ function flatMap(mapper)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.flatMap requires that |this| be an Object.");
 
-    if (!@isCallable(mapper))
-        @throwTypeError("Iterator.prototype.flatMap callback must be a function.");
-
     var iterated = this;
+
+    if (!@isCallable(mapper)) {
+        @iteratorGenericClose(iterated);
+        @throwTypeError("Iterator.prototype.flatMap callback must be a function.");
+    }
+
     var iteratedNextMethod = iterated.next;
     var iteratedWrapper = {
         @@iterator: function() { return this; },
@@ -212,12 +233,14 @@ function some(predicate)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.some requires that |this| be an Object.");
 
-    if (!@isCallable(predicate))
+    var iterated = this;
+    if (!@isCallable(predicate)) {
+        @iteratorGenericClose(iterated);
         @throwTypeError("Iterator.prototype.some callback must be a function.");
+    }
 
     var count = 0;
-    var iterator = this;
-    var wrapper = { @@iterator: function () { return iterator; }};
+    var wrapper = { @@iterator: function () { return iterated; }};
     for (var item of wrapper) {
         if (predicate(item, count++))
             return true;
@@ -234,12 +257,15 @@ function every(predicate)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.every requires that |this| be an Object.");
 
-    if (!@isCallable(predicate))
+    var iterated = this;
+
+    if (!@isCallable(predicate)) {
+        @iteratorGenericClose(iterated);
         @throwTypeError("Iterator.prototype.every callback must be a function.");
+    }
 
     var count = 0;
-    var iterator = this;
-    var wrapper = { @@iterator: function () { return iterator; }};
+    var wrapper = { @@iterator: function () { return iterated; }};
     for (var item of wrapper) {
         if (!predicate(item, count++))
             return false;
@@ -256,12 +282,15 @@ function find(predicate)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.find requires that |this| be an Object.");
 
-    if (!@isCallable(predicate))
+    var iterated = this;
+
+    if (!@isCallable(predicate)) {
+        @iteratorGenericClose(iterated);
         @throwTypeError("Iterator.prototype.find callback must be a function.");
+    }
 
     var count = 0;
-    var iterator = this;
-    var wrapper = { @@iterator: function () { return iterator; }};
+    var wrapper = { @@iterator: function () { return iterated; }};
     for (var item of wrapper) {
         if (predicate(item, count++))
             return item;
@@ -278,12 +307,15 @@ function reduce(reducer /*, initialValue */)
     if (!@isObject(this))
         @throwTypeError("Iterator.prototype.reduce requires that |this| be an Object.");
 
-    if (!@isCallable(reducer))
+    var iterated = this;
+
+    if (!@isCallable(reducer)) {
+        @iteratorGenericClose(iterated);
         @throwTypeError("Iterator.prototype.reduce reducer argument must be a function.");
+    }
 
     var initialValue = @argument(1);
 
-    var iterated = this;
     var iteratedNextMethod = this.next;
 
     var accumulator;
