@@ -51,6 +51,10 @@ skip:
     - test/staging/JSON
     - test/staging/Temporal
   files:
+    # Temporaly failing due to https://github.com/tc39/ecma262/pull/3467
+    # context: https://github.com/tc39/test262/pull/4350#pullrequestreview-2504333076
+    - test/built-ins/Iterator/prototype/reduce/non-callable-reducer.js
+
     # https://github.com/claudepache/es-legacy-function-reflection
     - test/built-ins/ThrowTypeError/unique-per-realm-function-proto.js
     - test/built-ins/Function/prototype/restricted-property-arguments.js
