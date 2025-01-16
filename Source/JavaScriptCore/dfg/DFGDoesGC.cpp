@@ -562,6 +562,9 @@ bool doesGC(Graph& graph, Node* node)
             return true;
         return false;
 
+    case ArrayAt:
+        return false;
+
     case ResolveRope:
         return true;
 

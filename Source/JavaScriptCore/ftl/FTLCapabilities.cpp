@@ -417,6 +417,7 @@ inline CapabilityLevel canCompile(Node* node)
     case CheckNotJSCast:
     case CallDOM:
     case CallDOMGetter:
+    case ArrayAt:
     case ArraySlice:
     case ArraySplice:
     case ArrayIndexOf:
