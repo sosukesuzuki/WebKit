@@ -657,6 +657,14 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     return JSValue::encode(result);
 }
 
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncLastIndexIsWritable, (JSGlobalObject*, CallFrame* callFrame))
+{
+    JSValue thisValue = callFrame->thisValue();
+    RegExpObject* regexp = jsCast<RegExpObject*>(thisValue);
+
+    return JSValue::encode(jsBoolean(regexp->lastIndexIsWritable()));
+}
+
 } // namespace JSC
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

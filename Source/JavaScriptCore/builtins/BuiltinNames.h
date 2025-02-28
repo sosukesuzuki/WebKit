@@ -177,6 +177,7 @@ namespace JSC {
     macro(regExpSearchFast) \
     macro(regExpSplitFast) \
     macro(regExpTestFast) \
+    macro(regExpLastIndexIsWritable) \
     macro(stringIncludesInternal) \
     macro(stringIndexOfInternal) \
     macro(stringSplitFast) \

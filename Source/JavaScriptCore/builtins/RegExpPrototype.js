@@ -404,7 +404,8 @@ function search(strArg)
     // Check for observable side effects and call the fast path if there aren't any.
     if (@isRegExpObject(regexp)
         && @tryGetById(regexp, "exec") === @regExpBuiltinExec
-        && typeof regexp.lastIndex === "number")
+        && (typeof regexp.lastIndex === "number")
+        && @regExpLastIndexIsWritable.@call(regexp))
         return @regExpSearchFast.@call(regexp, strArg);
 
     // 1. Let rx be the this value.

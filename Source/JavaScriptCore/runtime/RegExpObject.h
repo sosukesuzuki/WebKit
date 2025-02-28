@@ -131,6 +131,11 @@ public:
 
     bool areLegacyFeaturesEnabled() const { return !(m_regExpAndFlags & legacyFeaturesDisabledFlag); }
 
+    bool lastIndexIsWritable() const
+    {
+        return !(m_regExpAndFlags & lastIndexIsNotWritableFlag);
+    }
+
 private:
     JS_EXPORT_PRIVATE RegExpObject(VM&, Structure*, RegExp*, bool areLegacyFeaturesEnabled);
 #if ASSERT_ENABLED
@@ -138,11 +143,6 @@ private:
 #endif
 
     DECLARE_VISIT_CHILDREN;
-
-    bool lastIndexIsWritable() const
-    {
-        return !(m_regExpAndFlags & lastIndexIsNotWritableFlag);
-    }
 
     void setLastIndexIsNotWritable()
     {
