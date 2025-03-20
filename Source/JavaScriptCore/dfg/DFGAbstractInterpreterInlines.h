@@ -67,7 +67,11 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace DFG {
 
-inline TriState foldComparisonWithRange(NodeType op, int64_t min, int64_t max, int64_t right)
+template <typename T>
+concept Int64OrDouble = std::is_same_v<T, int64_t> || std::is_same_v<T, double>;
+
+template <Int64OrDouble T>
+inline TriState foldComparisonWithRange(NodeType op, T min, T max, T right)
 {
     switch (op) {
     case CompareLess: {
@@ -2218,15 +2222,15 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             }
         }
 
-        if (rightConst && rightConst.isAnyInt()) {
-            int64_t rightValue = rightConst.asAnyInt();
-            if (node->child1()->op() == GetByVal) {
-                ArrayMode arrayMode = node->child1()->arrayMode();
-                bool didFold = false;
-                if (!arrayMode.isOutOfBounds()) {
+        if (rightConst && node->child1()->op() == GetByVal) {
+            ArrayMode arrayMode = node->child1()->arrayMode();
+            bool didFold = false;
+            if (!arrayMode.isOutOfBounds()) {
+                if (rightConst.isAnyInt()) {
+                    int64_t rightValue = rightConst.asAnyInt();
                     switch (arrayMode.type()) {
                     case Array::Int8Array:
-                        if (auto result = foldComparisonWithRange(node->op(), INT8_MIN, INT8_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), INT8_MIN, INT8_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
@@ -2234,35 +2238,65 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                         break;
                     case Array::Uint8Array:
                     case Array::Uint8ClampedArray:
-                        if (auto result = foldComparisonWithRange(node->op(), 0, UINT8_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), 0, UINT8_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Int16Array:
-                        if (auto result = foldComparisonWithRange(node->op(), INT16_MIN, INT16_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), INT16_MIN, INT16_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Uint16Array:
-                        if (auto result = foldComparisonWithRange(node->op(), 0, UINT16_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), 0, UINT16_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Int32Array:
-                        if (auto result = foldComparisonWithRange(node->op(), INT32_MIN, INT32_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), INT32_MIN, INT32_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Uint32Array:
-                        if (auto result = foldComparisonWithRange(node->op(), 0, UINT32_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), 0, UINT32_MAX, rightValue); result != TriState::Indeterminate) {
+                            setConstant(node, jsBoolean(result == TriState::True));
+                            didFold = true;
+                            break;
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+                    if (didFold)
+                        break;
+                }
+                if (rightConst.isNumber()) {
+                    double rightValue = rightConst.asNumber();
+                    switch (arrayMode.type()) {
+                    case Array::Float16Array:
+                        if (auto result = foldComparisonWithRange<double>(node->op(), Float16::min(), Float16::max(), rightValue); result != TriState::Indeterminate) {
+                            setConstant(node, jsBoolean(result == TriState::True));
+                            didFold = true;
+                            break;
+                        }
+                        break;
+                    case Array::Float32Array:
+                        if (auto result = foldComparisonWithRange<double>(node->op(), std::numeric_limits<float>::min(), std::numeric_limits<float>::max(), rightValue); result != TriState::Indeterminate) {
+                            setConstant(node, jsBoolean(result == TriState::True));
+                            didFold = true;
+                            break;
+                        }
+                        break;
+                    case Array::Float64Array:
+                        if (auto result = foldComparisonWithRange<double>(node->op(), std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
@@ -2383,15 +2417,15 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             }
         }
 
-        if (right && right.isAnyInt()) {
-            int64_t rightValue = right.asAnyInt();
-            if (node->child1()->op() == GetByVal) {
-                ArrayMode arrayMode = node->child1()->arrayMode();
-                bool didFold = false;
-                if (!arrayMode.isOutOfBounds()) {
+        if (right && node->child1()->op() == GetByVal) {
+            ArrayMode arrayMode = node->child1()->arrayMode();
+            bool didFold = false;
+            if (!arrayMode.isOutOfBounds()) {
+                if (right.isAnyInt()) {
+                    int64_t rightValue = right.asAnyInt();
                     switch (arrayMode.type()) {
                     case Array::Int8Array:
-                        if (auto result = foldComparisonWithRange(node->op(), INT8_MIN, INT8_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), INT8_MIN, INT8_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
@@ -2399,35 +2433,65 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                         break;
                     case Array::Uint8Array:
                     case Array::Uint8ClampedArray:
-                        if (auto result = foldComparisonWithRange(node->op(), 0, UINT8_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), 0, UINT8_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Int16Array:
-                        if (auto result = foldComparisonWithRange(node->op(), INT16_MIN, INT16_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), INT16_MIN, INT16_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Uint16Array:
-                        if (auto result = foldComparisonWithRange(node->op(), 0, UINT16_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), 0, UINT16_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Int32Array:
-                        if (auto result = foldComparisonWithRange(node->op(), INT32_MIN, INT32_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), INT32_MIN, INT32_MAX, rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
                         }
                         break;
                     case Array::Uint32Array:
-                        if (auto result = foldComparisonWithRange(node->op(), 0, UINT32_MAX, rightValue); result != TriState::Indeterminate) {
+                        if (auto result = foldComparisonWithRange<int64_t>(node->op(), 0, UINT32_MAX, rightValue); result != TriState::Indeterminate) {
+                            setConstant(node, jsBoolean(result == TriState::True));
+                            didFold = true;
+                            break;
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+                    if (didFold)
+                        break;
+                }
+                if (right.isNumber()) {
+                    double rightValue = right.asNumber();
+                    switch (arrayMode.type()) {
+                    case Array::Float16Array:
+                        if (auto result = foldComparisonWithRange<double>(node->op(), Float16::min(), Float16::max(), rightValue); result != TriState::Indeterminate) {
+                            setConstant(node, jsBoolean(result == TriState::True));
+                            didFold = true;
+                            break;
+                        }
+                        break;
+                    case Array::Float32Array:
+                        if (auto result = foldComparisonWithRange<double>(node->op(), std::numeric_limits<float>::min(), std::numeric_limits<float>::max(), rightValue); result != TriState::Indeterminate) {
+                            setConstant(node, jsBoolean(result == TriState::True));
+                            didFold = true;
+                            break;
+                        }
+                        break;
+                    case Array::Float64Array:
+                        if (auto result = foldComparisonWithRange<double>(node->op(), std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), rightValue); result != TriState::Indeterminate) {
                             setConstant(node, jsBoolean(result == TriState::True));
                             didFold = true;
                             break;
