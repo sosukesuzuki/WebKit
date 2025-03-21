@@ -4151,6 +4151,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case RegExpSearch: {
+        compileRegExpSearch(node);
+        break;
+    }
+
     case StringReplace:
     case StringReplaceAll:
     case StringReplaceRegExp: {

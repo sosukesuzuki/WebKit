@@ -1341,8 +1341,6 @@ test/staging/sm/Iterator/prototype/some/check-fn-after-getting-iterator.js:
   default: 'Test262Error: Actual [get: some, get: return] and expected [get: some] should have the same contents. '
 test/staging/sm/Proxy/revoked-get-function-realm-typeerror.js:
   default: 'Error: Assertion failed: expected exception TypeError, no exception thrown'
-test/staging/sm/RegExp/lastIndex-search.js:
-  default: 'Error: Assertion failed: expected exception TypeError, no exception thrown'
 test/staging/sm/RegExp/match-local-tolength-recompilation.js:
   default: 'Test262Error: Expected SameValue(«false», «true») to be true'
 test/staging/sm/RegExp/replace-local-tolength-recompilation.js:
