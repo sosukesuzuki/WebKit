@@ -3942,6 +3942,45 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIncludesValueInt32OrContiguous, UCPUStric
     OPERATION_RETURN(scope, toUCPUStrictInt32(0));
 }
 
+JSC_DEFINE_JIT_OPERATION(operationArrayIncludesValueInt32, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+
+    if (index >= length)
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+
+    JSValue searchElement = JSValue::decode(encodedValue);
+
+    if (searchElement.isUndefined() && containsHole(data, length))
+        OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+
+    if (!searchElement.isInt32AsAnyInt())
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+
+    if (LIKELY(searchElement.isInt32())) {
+        auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedValue, length - index));
+        if (result)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+    }
+
+    int32_t searchInt32 = searchElement.asInt32AsAnyInt();
+    for (; index < length; ++index) {
+        JSValue value = data[index].get();
+        if (!value)
+            continue;
+        if (searchInt32 == value.asInt32())
+            OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+    }
+    OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+}
+
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIncludesValueDouble, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
 {
     // We do not cause any exceptions, thus we do not need FrameTracers.
@@ -4091,6 +4130,42 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrict
         bool isEqual = JSValue::strictEqual(globalObject, searchElement, value);
         OPERATION_RETURN_IF_EXCEPTION(scope, 0);
         if (isEqual)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(index));
+    }
+    OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+
+    if (index >= length)
+        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+
+    JSValue searchElement = JSValue::decode(encodedValue);
+
+    if (!searchElement.isInt32AsAnyInt())
+        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+
+    if (LIKELY(searchElement.isInt32())) {
+        auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedValue, length - index));
+        if (result)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(result - data));
+        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+    }
+
+    int32_t searchInt32 = searchElement.asInt32AsAnyInt();
+    for (; index < length; ++index) {
+        JSValue value = data[index].get();
+        if (!value)
+            continue;
+        if (searchInt32 == value.asInt32())
             OPERATION_RETURN(scope, toUCPUStrictInt32(index));
     }
     OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
