@@ -536,9 +536,9 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
 
     auto type = indexingType();
     switch (type) {
-    case ArrayWithInt32:
-    case ArrayWithContiguous:
-    case ArrayWithDouble: {
+    case ALL_INT32_INDEXING_TYPES:
+    case ALL_CONTIGUOUS_INDEXING_TYPES:
+    case ALL_DOUBLE_INDEXING_TYPES: {
         if (length > this->butterfly()->vectorLength())
             return nullptr;
         Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(type);
@@ -618,9 +618,9 @@ JSArray* JSArray::fastWith(JSGlobalObject* globalObject, uint32_t index, JSValue
 
     auto type = indexingType();
     switch (type) {
-    case ArrayWithInt32:
-    case ArrayWithContiguous:
-    case ArrayWithDouble: {
+    case ALL_INT32_INDEXING_TYPES:
+    case ALL_CONTIGUOUS_INDEXING_TYPES:
+    case ALL_DOUBLE_INDEXING_TYPES: {
         if (length > this->butterfly()->vectorLength())
             return nullptr;
 
@@ -715,7 +715,7 @@ std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue 
     uint32_t index = static_cast<uint32_t>(index64);
 
     switch (this->indexingType()) {
-    case ArrayWithInt32: {
+    case ALL_INT32_INDEXING_TYPES: {
         auto& butterfly = *this->butterfly();
         auto data = butterfly.contiguous().data();
 
@@ -731,7 +731,7 @@ std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue 
         auto* result = WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedSearchElement, length - index);
         return static_cast<bool>(result);
     }
-    case ArrayWithContiguous: {
+    case ALL_CONTIGUOUS_INDEXING_TYPES: {
         auto& butterfly = *this->butterfly();
         auto data = butterfly.contiguous().data();
 
