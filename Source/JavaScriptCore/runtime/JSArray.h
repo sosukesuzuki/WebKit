@@ -348,9 +348,12 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
         if constexpr (fillMode == ArrayFillMode::Empty) {
             for (unsigned i = 0; i < sourceSize; ++i)
                 clearElement<T>(buffer[i + offset]);
-        } else {
+        } else if constexpr (!std::is_same_v<T, double>) {
             for (unsigned i = 0; i < sourceSize; ++i)
                 buffer[i + offset].setWithoutWriteBarrier(jsUndefined());
+        } else {
+            static_assert(fillMode == ArrayFillMode::Undefined && std::is_same_v<T, double>);
+            static_assert(false, "copyArrayElements does not support copying from undecided to double with FillMode::Undefined");
         }
         return;
     }
@@ -364,13 +367,16 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
             else
                 gcSafeMemcpy(buffer + offset, source + sourceOffset, sizeof(JSValue) * sourceSize);
             return;
-        } else {
+        } else if constexpr (!std::is_same_v<T, double>) {
             for (unsigned i = 0; i < sourceSize; ++i) {
                 JSValue value = source[i + sourceOffset].get();
                 if (!value)
                     value = jsUndefined();
                 buffer[i + offset].setWithoutWriteBarrier(value);
             }
+        } else {
+            static_assert(fillMode == ArrayFillMode::Undefined && std::is_same_v<T, double>);
+            static_assert(false, "copyArrayElements does not support copying from double to double with FillMode::Undefined");
         }
     } else if constexpr (std::is_same_v<T, double>) {
         ASSERT(sourceType == ArrayWithInt32);
