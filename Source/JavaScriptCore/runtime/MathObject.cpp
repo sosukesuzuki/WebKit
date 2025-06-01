@@ -68,6 +68,7 @@ static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTrunc);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncIMul);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncF16Round);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncSumPrecise);
+static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncClamp);
 
 const ClassInfo MathObject::s_info = { "Math"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(MathObject) };
 
@@ -130,6 +131,9 @@ void MathObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
     if (Options::useMathSumPreciseMethod())
         putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "sumPrecise"_s), 1, mathProtoFuncSumPrecise, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+
+    if (Options::useMathClamp())
+        putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "clamp"_s), 1, mathProtoFuncClamp, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // ------------------------------ Functions --------------------------------
@@ -464,6 +468,47 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncSumPrecise, (JSGlobalObject* globalObject,
     });
 
     return JSValue::encode(jsNumber(sum.compute()));
+}
+
+// https://tc39.es/proposal-math-clamp/#sec-math.clamp
+JSC_DEFINE_HOST_FUNCTION(mathProtoFuncClamp, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue value = callFrame->argument(0);
+    if (!value.isNumber()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Math.clamp requires value argument be a Number"_s);
+    JSValue min = callFrame->argument(1);
+    if (!min.isNumber()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Math.clamp requires min argument be a Number"_s);
+    JSValue max = callFrame->argument(2);
+    if (!max.isNumber()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Math.clamp requires max argument be a Number"_s);
+
+    double valueNum = value.asNumber();
+    double minNum = min.asNumber();
+    double maxNum = max.asNumber();
+
+    if (std::isnan(minNum)) [[unlikely]]
+        return JSValue::encode(jsNaN());
+    if (std::isnan(maxNum)) [[unlikely]]
+        return JSValue::encode(jsNaN());
+    if (std::isnan(valueNum)) [[unlikely]]
+        return JSValue::encode(jsNaN());
+
+    if (minNum == maxNum)
+        return JSValue::encode(min);
+    if (valueNum == 0.0 && minNum == 0.0) [[unlikely]]
+        return JSValue::encode(jsNumber(0));
+    if (valueNum < minNum)
+        return JSValue::encode(min);
+    if (valueNum == 0.0 && maxNum == 0.0) [[unlikely]]
+        return JSValue::encode(jsNumber(-0.0));
+    if (valueNum > maxNum)
+        return JSValue::encode(max);
+
+    return JSValue::encode(value);
 }
 
 } // namespace JSC
