@@ -6866,6 +6866,9 @@ class WebKitStyleTest(CppStyleTestBase):
                                             '{\n'
                                             '}\n', 'test.cpp', parameter_error_rules))
 
+        # Control structure keywords should not be treated as function declarations.
+        self.assertEqual('', self.perform_lint('else if (!condition || value != 0.0)\n    return;', 'test.cpp', parameter_error_rules))
+
     def test_split_identifier_into_words(self):
         self.assertEqual([], _split_identifier_into_words(''))
         self.assertEqual(['a'], _split_identifier_into_words('a'))

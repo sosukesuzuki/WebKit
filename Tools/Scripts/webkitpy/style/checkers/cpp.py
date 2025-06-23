@@ -1745,6 +1745,10 @@ def detect_functions(clean_lines, line_number, function_state, error):
     if function_name != 'TEST' and function_name != 'TEST_F' and match(r'[A-Z_]+$', function_name):
         return
 
+    # Skip control structure keywords that are not function declarations
+    if search(r'\b(if|for|while|switch|else)\b', line):
+        return
+
     joined_line = ''
     for start_line_number in range(line_number, clean_lines.num_lines()):
         start_line = clean_lines.elided[start_line_number]
