@@ -29,6 +29,7 @@
 #include "CodeBlock.h"
 #include "DebuggerPrimitives.h"
 #include "JSCellInlines.h"
+#include "UnlinkedFunctionExecutable.h"
 #include <wtf/text/MakeString.h>
 
 namespace JSC {
@@ -41,6 +42,14 @@ StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee)
 StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
     : m_callee(vm, owner, callee)
     , m_codeBlock(vm, owner, codeBlock)
+    , m_bytecodeIndex(bytecodeIndex)
+{
+}
+
+StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex, JSValue thisValue)
+    : m_callee(vm, owner, callee)
+    , m_codeBlock(vm, owner, codeBlock)
+    , m_constructorName(getConstructorName(vm, thisValue))
     , m_bytecodeIndex(bytecodeIndex)
 {
 }
@@ -107,6 +116,44 @@ String StackFrame::sourceURLStripped(VM& vm) const
     return processSourceURL(vm, *this, m_codeBlock->ownerExecutable()->sourceURLStripped());
 }
 
+String StackFrame::getConstructorName(VM& vm, JSValue thisValue)
+{
+    AssertNoGC assertNoGC;
+
+    if (!thisValue || !thisValue.isObject()) [[unlikely]]
+        return String();
+
+    JSObject* object = asObject(thisValue);
+    Structure* structure = object->structure();
+
+    // obj.__proto__.constructor
+    if (!structure->typeInfo().overridesGetPrototype()) {
+        JSValue protoValue = object->getPrototypeDirect();
+        if (protoValue.isObject()) {
+            JSObject* protoObject = asObject(protoValue);
+            Structure* protoStructure = protoObject->structure();
+            unsigned attributes;
+            PropertyOffset protoConstructorOffset = protoStructure->getConcurrently(vm.propertyNames->constructor.impl(), attributes);
+            if (protoConstructorOffset != invalidOffset && !(attributes & (PropertyAttribute::Accessor | PropertyAttribute::CustomAccessorOrValue))) {
+                JSValue protoConstructor = protoObject->getDirect(protoConstructorOffset);
+                if (protoConstructor.isObject()) {
+                    JSObject* protoConstructorObject = asObject(protoConstructor);
+                    if (auto* jsFunction = jsDynamicCast<JSFunction*>(protoConstructorObject)) {
+                        // FIXME: Support ES5 function style constructor
+                        if (jsFunction->isClassConstructorFunction()) {
+                            String constructorName = getCalculatedDisplayName(vm, protoConstructorObject);
+                            if (!constructorName.isEmpty())
+                                return constructorName;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return emptyString();
+}
+
 String StackFrame::functionName(VM& vm) const
 {
     if (m_isWasmFrame) {
@@ -136,16 +183,24 @@ String StackFrame::functionName(VM& vm) const
     if (m_callee) {
         if (m_callee->isObject())
             name = getCalculatedDisplayName(vm, jsCast<JSObject*>(m_callee.get())).impl();
-
-        return name.isNull() ? emptyString() : name;
-    }
-
-    if (m_codeBlock) {
+    } else if (m_codeBlock) {
         if (auto* executable = jsDynamicCast<FunctionExecutable*>(m_codeBlock->ownerExecutable()))
             name = executable->ecmaName().impl();
     }
 
-    return name.isNull() ? emptyString() : name;
+    if (name.isNull())
+        name = emptyString();
+
+    if (!m_constructorName.isEmpty() && !name.isEmpty() && m_codeBlock) {
+        if (auto* executable = jsDynamicCast<FunctionExecutable*>(m_codeBlock->ownerExecutable())) {
+            auto* unlinkedExecutable = executable->unlinkedExecutable();
+            ConstructorKind constructorKind = unlinkedExecutable->constructorKind();
+            if (constructorKind == ConstructorKind::None)
+                return makeString(m_constructorName, '.', name);
+        }
+    }
+
+    return name;
 }
 
 LineColumn StackFrame::computeLineAndColumn() const

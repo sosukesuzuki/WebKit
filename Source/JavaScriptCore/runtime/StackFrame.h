@@ -43,6 +43,7 @@ class StackFrame {
 public:
     StackFrame(VM&, JSCell* owner, JSCell* callee);
     StackFrame(VM&, JSCell* owner, JSCell* callee, CodeBlock*, BytecodeIndex);
+    StackFrame(VM&, JSCell* owner, JSCell* callee, CodeBlock*, BytecodeIndex, JSValue thisValue);
     StackFrame(VM&, JSCell* owner, CodeBlock*, BytecodeIndex);
     StackFrame(Wasm::IndexOrName);
     StackFrame(Wasm::IndexOrName, size_t functionIndex);
@@ -77,8 +78,11 @@ public:
     bool isMarked(VM& vm) const { return (!m_callee || vm.heap.isMarked(m_callee.get())) && (!m_codeBlock || vm.heap.isMarked(m_codeBlock.get())); }
 
 private:
+    static String getConstructorName(VM&, JSValue);
+
     WriteBarrier<JSCell> m_callee { };
     WriteBarrier<CodeBlock> m_codeBlock { };
+    String m_constructorName { };
     Wasm::IndexOrName m_wasmFunctionIndexOrName;
     size_t m_wasmFunctionIndex { 0 };
     BytecodeIndex m_bytecodeIndex;
