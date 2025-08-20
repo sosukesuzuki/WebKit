@@ -1909,16 +1909,32 @@ ALWAYS_INLINE void Lexer<T>::parseCommentDirective()
     }
 }
 
-ALWAYS_INLINE const LChar* parseCommentDirectiveValueSIMD(const LChar* start, const LChar* end)
+
+IGNORE_WARNINGS_BEGIN("unused-but-set-variable")
+template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::parseCommentDirectiveValue()
 {
-    constexpr auto controlMinChar = SIMD::splat<LChar>(0x09); // '\t'
-    constexpr auto controlMaxChar = SIMD::splat<LChar>(0x0D); // '\r'
-    constexpr auto spaceChar = SIMD::splat<LChar>(0x20); // ' '
-    constexpr auto quoteChar = SIMD::splat<LChar>(0x22); // '"'
-    constexpr auto squoteChar = SIMD::splat<LChar>(0x27); // '\''
-    constexpr auto nbspChar = SIMD::splat<LChar>(0xA0); // non-breaking space
+    skipWhitespace();
+    auto stringStart = currentSourcePtr();
+
+    using UnsignedType = std::make_unsigned_t<CharacterType>;
+
+    constexpr auto controlMinChar = SIMD::splat<UnsignedType>(0x09);
+    constexpr auto controlMaxChar = SIMD::splat<UnsignedType>(0x0D);
+    constexpr auto spaceChar = SIMD::splat<UnsignedType>(0x20);
+    constexpr auto quoteChar = SIMD::splat<UnsignedType>(0x22);
+    constexpr auto squoteChar = SIMD::splat<UnsignedType>(0x27);
+    constexpr auto nbspChar = SIMD::splat<UnsignedType>(0xA0);
+
+    bool isAllLatin1 = true;
 
     auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+        if constexpr (std::is_same_v<CharacterType, char16_t>) {
+            constexpr auto latin1Max = SIMD::splat<UnsignedType>(0xFF);
+            auto nonLatin1Mask = SIMD::greaterThan(input, latin1Max);
+            if (SIMD::isNonZero(nonLatin1Mask))
+                isAllLatin1 = false;
+        }
+
         auto controls = SIMD::bitAnd(
             SIMD::greaterThanOrEqual(input, controlMinChar),
             SIMD::lessThanOrEqual(input, controlMaxChar)
@@ -1928,39 +1944,44 @@ ALWAYS_INLINE const LChar* parseCommentDirectiveValueSIMD(const LChar* start, co
         auto squotes = SIMD::equal(input, squoteChar);
         auto nbsps = SIMD::equal(input, nbspChar);
 
-        auto mask = SIMD::bitOr(controls, spaces, quotes, squotes, nbsps);
-        return SIMD::findFirstNonZeroIndex(mask);
+        if constexpr (std::is_same_v<CharacterType, char16_t>) {
+            constexpr auto lineSeparator = SIMD::splat<UnsignedType>(0x2028);
+            constexpr auto paragraphSeparator = SIMD::splat<UnsignedType>(0x2029);
+            constexpr auto byteOrderMarkChar = SIMD::splat<UnsignedType>(0xFEFF);
+
+            auto lineSeps = SIMD::equal(input, lineSeparator);
+            auto paraSeps = SIMD::equal(input, paragraphSeparator);
+            auto boms = SIMD::equal(input, byteOrderMarkChar);
+
+            auto mask = SIMD::bitOr(
+                controls, spaces, quotes, squotes, nbsps,
+                lineSeps, paraSeps, boms
+            );
+            return SIMD::findFirstNonZeroIndex(mask);
+        } else {
+            auto mask = SIMD::bitOr(controls, spaces, quotes, squotes, nbsps);
+            return SIMD::findFirstNonZeroIndex(mask);
+        }
     };
 
-    auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
-        return Lexer<LChar>::isWhiteSpace(character)
-            || Lexer<LChar>::isLineTerminator(character)
+    auto scalarMatch = [&](CharacterType character) ALWAYS_INLINE_LAMBDA {
+        if constexpr (std::is_same_v<CharacterType, char16_t>) {
+            if (character > 0xFF)
+                isAllLatin1 = false;
+        }
+        return Lexer<CharacterType>::isWhiteSpace(character)
+            || Lexer<CharacterType>::isLineTerminator(character)
             || character == '"'
             || character == '\'';
     };
 
-    return SIMD::find(std::span { start, end }, vectorMatch, scalarMatch);
-}
+    m_code = SIMD::find(std::span { stringStart, m_codeEnd }, vectorMatch, scalarMatch);
 
-IGNORE_WARNINGS_BEGIN("unused-but-set-variable")
-template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::parseCommentDirectiveValue()
-{
-    skipWhitespace();
-    char16_t mergedCharacterBits = 0;
-    auto stringStart = currentSourcePtr();
-    if constexpr (std::is_same_v<CharacterType, LChar>) {
-        m_code = parseCommentDirectiveValueSIMD(stringStart, m_codeEnd);
-        if (m_code < m_codeEnd)
-            m_current = *m_code;
-        else
-            m_current = 0;
-    } else {
-        while (!isWhiteSpace(m_current) && !isLineTerminator(m_current) && m_current != '"' && m_current != '\'' && !atEnd()) {
-            if constexpr (std::is_same_v<CharacterType, char16_t>)
-                mergedCharacterBits |= m_current;
-            shift();
-        }
-    }
+    if (m_code < m_codeEnd)
+        m_current = *m_code;
+    else
+        m_current = 0;
+
     std::span commentDirective { stringStart, currentSourcePtr() };
 
     skipWhitespace();
@@ -1968,7 +1989,7 @@ template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::pars
         return String();
 
     if constexpr (std::is_same_v<CharacterType, char16_t>) {
-        if (isLatin1(mergedCharacterBits))
+        if (isAllLatin1)
             return String::make8Bit(commentDirective);
     }
     return commentDirective;
