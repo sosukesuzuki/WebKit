@@ -6,7 +6,6 @@ FAIL :setViewport,exceeds_attachment_size: assert_unreached:
   - INFO: subcase: attachmentWidth=1024;attachmentHeight=1024
     OK
   - EXCEPTION: Error: Unexpected validation error occurred: GPUCommandEncoder.finish: encoder state is 'Locked', expected 'Open'
-    TestFailedButDeviceReusable@
     attemptEndTestScope@http://127.0.0.1:8000/webgpu/webgpu/util/device_pool.js:442:44
  Reached unreachable code
 FAIL :setViewport,xy_rect_contained_in_bounds: assert_unreached:
@@ -63,7 +62,6 @@ FAIL :setViewport,xy_rect_contained_in_bounds: assert_unreached:
   - INFO: subcase: dimension=1;om=0;od=0;sd="positive"
     OK
   - EXCEPTION: Error: Unexpected validation error occurred: GPUCommandEncoder.finish: encoder state is 'Locked', expected 'Open'
-    TestFailedButDeviceReusable@
     attemptEndTestScope@http://127.0.0.1:8000/webgpu/webgpu/util/device_pool.js:442:44
  Reached unreachable code
 PASS :setViewport,depth_rangeAndOrder:
