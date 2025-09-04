@@ -527,9 +527,12 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
                 break;
             }
             }
-        } else if (!!visitor->codeBlock() && !visitor->codeBlock()->unlinkedCodeBlock()->isBuiltinFunction())
-            results.append(StackFrame(vm, owner, visitor->callee().asCell(), visitor->codeBlock(), visitor->bytecodeIndex()));
-        else
+        } else if (!!visitor->codeBlock() && !visitor->codeBlock()->unlinkedCodeBlock()->isBuiltinFunction()) {
+            // We should skip async function wrapper frame, only append body frame for async function
+            auto parseMode = visitor->codeBlock()->unlinkedCodeBlock()->parseMode();
+            if (parseMode != SourceParseMode::AsyncFunctionMode && parseMode != SourceParseMode::AsyncMethodMode && parseMode != SourceParseMode::AsyncArrowFunctionMode)
+                results.append(StackFrame(vm, owner, visitor->callee().asCell(), visitor->codeBlock(), visitor->bytecodeIndex()));
+        } else
             results.append(StackFrame(vm, owner, visitor->callee().asCell()));
         return IterationStatus::Continue;
     });
