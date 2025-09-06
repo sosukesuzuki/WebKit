@@ -291,4 +291,9 @@ IterationMode getIterationMode(VM&, JSGlobalObject* globalObject, JSValue iterab
     return IterationMode::FastArray;
 }
 
+bool isNonObservableMap(JSMap* map)
+{
+    return map->isIteratorProtocolFastAndNonObservable();
+}
+
 } // namespace JSC
