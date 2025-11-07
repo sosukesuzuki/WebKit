@@ -285,6 +285,29 @@ void JSPromise::performPromiseThen(VM& vm, JSGlobalObject* globalObject, JSValue
     markAsHandled();
 }
 
+void JSPromise::performPromiseThenWithoutHandler(VM& vm, JSGlobalObject* globalObject, JSValue promise, bool isFirstResolveOnly)
+{
+    JSValue reactionsOrResult = this->reactionsOrResult();
+    switch (status()) {
+    case JSPromise::Status::Pending: {
+        auto* reaction = JSPromiseReaction::create(vm, promise, jsUndefined(), jsUndefined(), jsBoolean(isFirstResolveOnly), jsDynamicCast<JSPromiseReaction*>(reactionsOrResult));
+        setReactionsOrResult(vm, reaction);
+        break;
+    }
+    case JSPromise::Status::Rejected: {
+        if (!isHandled())
+            globalObject->globalObjectMethodTable()->promiseRejectionTracker(globalObject, this, JSPromiseRejectionOperation::Handle);
+        globalObject->queueMicrotask(isFirstResolveOnly ? InternalMicrotask::PromiseFirstResolveWithoutHandlerJob : InternalMicrotask::PromiseResolveWithoutHandlerJob, promise, reactionsOrResult, jsNumber(static_cast<int32_t>(Status::Rejected)), jsUndefined());
+        break;
+    }
+    case JSPromise::Status::Fulfilled: {
+        globalObject->queueMicrotask(isFirstResolveOnly ? InternalMicrotask::PromiseFirstResolveWithoutHandlerJob : InternalMicrotask::PromiseResolveWithoutHandlerJob, promise, reactionsOrResult, jsNumber(static_cast<int32_t>(Status::Fulfilled)), jsUndefined());
+        break;
+    }
+    }
+    markAsHandled();
+}
+
 void JSPromise::rejectPromise(VM& vm, JSGlobalObject* globalObject, JSValue argument)
 {
     ASSERT(status() == Status::Pending);
@@ -538,7 +561,8 @@ void JSPromise::triggerPromiseReactions(VM& vm, JSGlobalObject* globalObject, St
         current = current->next();
 
         if (handler.isUndefinedOrNull()) {
-            globalObject->queueMicrotask(InternalMicrotask::PromiseResolveWithoutHandlerJob, promise, argument, jsNumber(static_cast<int32_t>(status)), jsUndefined());
+            bool isFirstResolveOnly = context.isBoolean() && context.asBoolean();
+            globalObject->queueMicrotask(isFirstResolveOnly ? InternalMicrotask::PromiseFirstResolveWithoutHandlerJob : InternalMicrotask::PromiseResolveWithoutHandlerJob, promise, argument, jsNumber(static_cast<int32_t>(status)), jsUndefined());
             continue;
         }
 
