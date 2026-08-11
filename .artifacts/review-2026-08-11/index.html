@@ -72,10 +72,10 @@
   <div class="sub">
     <span>chicoxyzzy</span>
     <span><span class="add">+607</span> / <span class="del">−156</span></span>
-    <span class="verdict comment">💬 Comment</span>
-    <span>指摘 4 件（medium 1 / low 2 / nit 1）</span>
+    <span class="verdict reject">✗ Request Changes</span>
+    <span>指摘 5 件（<strong>high 1</strong> / medium 2 / low 1 / nit 1）</span>
   </div>
-  <div class="desc">到達不能コード内でも type-only スタックを追跡し、Wasm 仕様の polymorphic-stack 型検証を実装。<code>unreached-invalid.wast</code> 等で 42 個の FAIL → PASS。</div>
+  <div class="desc">到達不能コード内でも type-only スタックを追跡し、Wasm 仕様の polymorphic-stack 型検証を実装。<code>unreached-invalid.wast</code> 等で 42 個の FAIL → PASS。<strong>ただし depth-1 でのネスト制御構造で有効モジュールを reject する regression と、到達不能 br_table の crash-on-OOM allocation を確認</strong>（いずれも小修正で解消可能）。</div>
 </a>
 
 <h2>本日スキップ（既処理・draft・非 JSC 領域）</h2>

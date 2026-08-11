@@ -157,7 +157,9 @@ if (type == ExceptionType::Termination) {
   </dl>
 </div>
 
-<!-- REVIEW_FINDINGS_70964_EXTRA -->
+<p style="font-size:13px; color:var(--fg-muted);">
+  <strong>敵対的レビュー結果</strong>: 2 名の独立レビュアーが上記 1 番目（DeferTermination edge case）と同一の指摘を報告。反証エージェントが全 <code>DeferTraps</code>/<code>DeferTermination</code> 使用箇所（<code>RepatchInlines.h</code>・<code>Interpreter.cpp</code>・<code>LLIntSlowPaths.cpp</code>・<code>JITOperations.cpp</code>・<code>DFGOperations.cpp</code>・<code>BytecodeGenerator</code>・<code>LazyProperty</code> 他）を監査した結果、いずれも <code>prepareForExecution</code>/linking/初期化のみを囲み、ユーザー JS/Wasm 実行前にスコープが終了することを確認。<strong>現行コードで到達可能なパスは存在しない</strong>（PLAUSIBLE / defense-in-depth のみ）。
+</p>
 
 <h2 id="recommendation">レビュー推奨事項</h2>
 <p><span class="verdict comment">💬 Comment</span></p>

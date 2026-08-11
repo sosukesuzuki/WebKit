@@ -8,7 +8,7 @@
     <span>著者: chicoxyzzy</span>
     <span>差分: <span class="diffstat"><span class="add">+607</span> / <span class="del">−156</span></span> · 4 files</span>
     <span><a href="https://bugs.webkit.org/show_bug.cgi?id=220278">bug 220278</a></span>
-    <span class="verdict comment">💬 Comment 推奨</span>
+    <span class="verdict reject">✗ Request Changes 推奨</span>
   </div>
 </div></header>
 
@@ -93,7 +93,7 @@ Vector&lt;Type, 16&gt; m_unreachableTypeStack;       // polymorphic 突入後に
 <h2 id="review">コードレビュー結果</h2>
 
 <div class="callout warn">
-  <strong>総評</strong>: 大きな一歩前進で、多くの WPT が新たに PASS します。設計の方針（type-only stack + polymorphic フラグ、未対応 opcode は保守的に truncate）は健全です。ただし <code>br_table</code> の部分スタック検証と、いくつかのエッジケースについてコメントに値する点があります。
+  <strong>総評</strong>: 大きな一歩前進で、多くの WPT が新たに PASS します。設計の方針（type-only stack + polymorphic フラグ、未対応 opcode は保守的に truncate）は健全です。<strong>ただし、depth-1 の到達不能フレームからネストしたブロックに入るときに type stack が処理されず、有効なモジュールを reject する regression が見つかりました。</strong>また、到達不能 <code>br_table</code> に攻撃者制御サイズの crash-on-OOM allocation が入っています。修正が必要です。
 </div>
 
 <h3>敵対的レビューで検証した項目</h3>
@@ -107,6 +107,59 @@ Vector&lt;Type, 16&gt; m_unreachableTypeStack;       // polymorphic 突入後に
 </ul>
 
 <h3 id="review-findings">指摘事項</h3>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip high">HIGH</span>
+    <span class="chip confirmed">CONFIRMED · REGRESSION</span>
+    <span class="loc">WasmFunctionParser.h:4170-4197, 4160-4166 — Block/Loop/If/Try/TryTable + End</span>
+  </div>
+  <div class="claim"><code>m_unreachableBlocks == 1</code> でネストした制御構造（<code>block</code>/<code>loop</code>/<code>if</code>/<code>try</code>/<code>try_table</code>）に入るとき、ブロック引数（および <code>if</code> の I32 条件）を <code>m_unreachableTypeStack</code> から pop せず、<code>end</code> で 2→1 に戻るときも結果型を push もリセットもしないため、スタックに残った古い具体型が後続命令で型不一致を起こし、<strong>仕様上有効なモジュールが reject されます（regression）</strong>。</div>
+  <dl>
+    <dt>シナリオ 1 — <code>if</code> の条件が pop されない</dt>
+    <dd>
+<pre>(module (func
+  unreachable
+  i32.const 0    ;; type stack = [I32]
+  if end         ;; ← I32 条件を pop せず m_unreachableBlocks++。end で 2→1、リセットなし
+  i64.eqz        ;; ← popUnreachableOperand(I64) が [I32] から I32 を取り出す
+  drop))         ;;    → isSubtype(I32, I64) = false → 検証エラー！</pre>
+    仕様アルゴリズム（Appendix §A.3）: <code>if</code> は I32 条件を pop して新フレームを開き、<code>end</code> で外側 polymorphic フレームに具体値なしで戻る → <code>i64.eqz</code> は <code>⊥</code> を pop → <strong>有効</strong>。この PR 以前は到達不能コードで型検証しなかったので受理されていた。<strong>regression です。</strong></dd>
+    <dt>シナリオ 2 — ブロック結果型が push されない</dt>
+    <dd>
+<pre>(module (func
+  unreachable
+  i32.const 0                       ;; stack = [I32]
+  (block (result f32) f32.const 0)  ;; level 2 では f32.const は追跡されず、end 2→1 で f32 を push しない
+  f32.neg                           ;; ← [I32] から I32 を pop、f32 と不一致 → エラー
+  drop drop))</pre>
+    仕様: block 終了で外側スタックは <code>[I32, F32]</code> → <code>f32.neg</code> は F32 を pop → 有効。</dd>
+    <dt>シナリオ 3 — ブロック引数が pop されない</dt>
+    <dd><code>unreachable; i64.const 0; (block (param i64) drop); i32.eqz; drop</code> — <code>block</code> 突入時に I64 引数が pop されず、end 後も <code>[I64]</code> のまま → <code>i32.eqz</code> が I64 で失敗。</dd>
+    <dt>コード上の原因</dt>
+    <dd><code>parseUnreachableExpression()</code> の <code>Block</code>/<code>Loop</code>/<code>If</code>/<code>Try</code>（4170〜4197 行）と <code>TryTable</code>（4231 行）は <code>m_unreachableBlocks++</code> するのみで、<code>m_unreachableTypeStack</code> を触りません。<code>End</code>（4160〜4166 行）の <code>m_unreachableBlocks--</code> パスは <code>== 0</code> になったときのみリセットし、2→1 遷移では何もしません。</dd>
+    <dt>敵対的検証（2 独立レビュアー + 反証エージェント）</dt>
+    <dd>2 名の独立レビュアーが同一の不具合を報告し、反証エージェントもコードパスをトレースして CONFIRMED。<code>main</code> ブランチには <code>m_unreachableTypeStack</code>/<code>popUnreachableOperand</code> が存在しないことを grep で確認済み → 本 PR で導入された regression。</dd>
+    <dt>推奨対応（最小・安全）</dt>
+    <dd><code>m_unreachableBlocks == 1</code> で <code>Block</code>/<code>Loop</code>/<code>If</code>/<code>Try</code>/<code>TryTable</code> に入る<strong>前</strong>に <code>truncateUnreachableStack()</code> を呼ぶ（他の未対応 opcode と同じ escape hatch）。これにより false accept にはなりますが false reject（regression）は解消し、この PR の他の部分と一貫します。<br>
+    より正確な対応: ブロック引数（と If の I32 条件）を <code>popUnreachableOperand()</code> で pop・検証し、<code>End</code> の 2→1 遷移で結果型を push する — ただし内側フレーム（level ≥ 2）は追跡していないので、正確に実装するなら level 2 以降も追跡する必要があり、大きな変更になります。</dd>
+  </dl>
+</div>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip medium">MEDIUM</span>
+    <span class="chip confirmed">CONFIRMED · REGRESSION</span>
+    <span class="loc">WasmFunctionParser.h:4204-4205 — parseUnreachableExpression() BrTable</span>
+  </div>
+  <div class="claim">到達不能 <code>br_table</code> で <code>targetIndices.reserveInitialCapacity(numberOfTargets)</code> は <code>FailureAction::Crash</code> です。攻撃者制御の <code>numberOfTargets</code>（最大 <code>0xFFFFFFFE</code>）でプロセスがクラッシュします（DoS regression）。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd><code>(func unreachable br_table)</code> でターゲット数 LEB を <code>FE FF FF FF 0F</code>（= 0xFFFFFFFE）にエンコード。<code>UINT32_MAX</code> のみ拒否する 4202 行のガードを通過し、<code>reserveInitialCapacity(4294967294)</code> が <code>WTF/wtf/Vector.h:227</code> の <code>CRASH()</code> に到達（<code>isValidCapacityForVector&lt;uint32_t&gt;(cap)</code> = <code>cap ≤ 536870911</code> を満たさない）。この PR 以前は allocation なしのループで、end-of-input で正常にパースエラーになっていました。到達可能パス（3874 行）は同じ理由で <code>tryReserveCapacity</code> + <code>WASM_ALLOCATOR_FAIL_IF</code> を使っています。</dd>
+    <dt>推奨対応</dt>
+    <dd><code>WASM_ALLOCATOR_FAIL_IF(!targetIndices.tryReserveInitialCapacity(numberOfTargets), "can't allocate memory for "_s, numberOfTargets, " br_table targets"_s);</code></dd>
+  </dl>
+</div>
 
 <div class="finding">
   <div class="head">
@@ -131,21 +184,6 @@ br_table $A $B</pre>
     <dd>これは <strong>regression ではありません</strong>（この PR 以前は到達不能コードで一切型検証していなかったので、同じモジュールは以前も受理されていた）。false accept のみで false reject はなく、実行時の危険もありません。ただし WPT に該当ケースが今後追加される可能性があります。</dd>
     <dt>推奨対応</dt>
     <dd><code>sliceSize &lt; arity</code> の early-return 前に、<code>m_unreachableTypeStack</code> の具体値を <code>target.branchTargetType(arity - sliceSize + i)</code> と照合するループを追加。</dd>
-  </dl>
-</div>
-
-<div class="finding">
-  <div class="head">
-    <span class="chip low">LOW</span>
-    <span class="chip confirmed">CONFIRMED</span>
-    <span class="loc">WasmFunctionParser.h — parseUnreachableExpression() BrTable</span>
-  </div>
-  <div class="claim">到達不能 <code>br_table</code> で <code>targetIndices.reserveInitialCapacity(numberOfTargets)</code> は OOM 時にクラッシュします。到達可能パスは <code>tryReserveCapacity</code> + <code>WASM_ALLOCATOR_FAIL_IF</code> を使っています。</div>
-  <dl>
-    <dt>シナリオ</dt>
-    <dd><code>numberOfTargets</code> は <code>UINT32_MAX - 1</code> まで許容され、<code>Vector&lt;uint32_t&gt;::reserveInitialCapacity(0xFFFFFFFE)</code> は ~16 GB を要求します。実際には各ターゲットが最低 1 バイトの varint なので function body サイズに制約されますが、到達可能パスと同じ失敗モード（parser エラー）にすべきです。</dd>
-    <dt>推奨対応</dt>
-    <dd><code>WASM_ALLOCATOR_FAIL_IF(!targetIndices.tryReserveCapacity(numberOfTargets), ...)</code> に変更（到達可能パスの :3873 と同じパターン）。</dd>
   </dl>
 </div>
 
@@ -181,8 +219,14 @@ br_table $A $B</pre>
 <!-- REVIEW_FINDINGS_70963_EXTRA -->
 
 <h2 id="recommendation">レビュー推奨事項</h2>
-<p><span class="verdict comment">💬 Comment</span></p>
-<p>方向性は正しく、regression（既存の valid モジュールを reject）のリスクは低いです。上記指摘事項について著者に確認を求めることを推奨しますが、いずれもブロッキングではありません（<code>merging-blocked</code> ラベルが既に付いており、EWS 待ちの状態です）。</p>
+<p><span class="verdict reject">✗ Request Changes</span></p>
+<p>方向性は正しく、42 個の WPT が新規 PASS することは大きな改善です。しかし敵対的レビューで <strong>2 件の regression</strong> が確認されました:</p>
+<ol>
+  <li><strong>HIGH</strong>: depth-1 のネスト制御構造で type stack が処理されず、有効なモジュールを reject（例: <code>unreachable; i32.const 0; if end; i64.eqz</code>）。</li>
+  <li><strong>MEDIUM</strong>: 到達不能 <code>br_table</code> の <code>reserveInitialCapacity</code> で攻撃者制御サイズによる CRASH()。</li>
+</ol>
+<p>いずれも修正は小さく（1 は <code>truncateUnreachableStack()</code> の追加、2 は <code>tryReserveInitialCapacity</code> への変更）、著者に修正を依頼することを推奨します。</p>
+<p>残りの指摘（<code>checkUnreachableBranchTarget</code> の部分スタック、<code>br_on_*</code> の over-permissive）は false accept のみで regression ではないため、follow-up でも構いません。</p>
 
 <details>
 <summary>差分統計</summary>
