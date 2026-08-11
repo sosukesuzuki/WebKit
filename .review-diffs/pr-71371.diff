@@ -1,0 +1,282 @@
+diff --git a/JSTests/wasm/gc/struct-new-does-not-clobber-loads.js b/JSTests/wasm/gc/struct-new-does-not-clobber-loads.js
+new file mode 100644
+index 0000000000..7393eea005
+--- /dev/null
++++ b/JSTests/wasm/gc/struct-new-does-not-clobber-loads.js
+@@ -0,0 +1,27 @@
++import { instantiate } from "./wast-wrapper.js";
++// A load of $a.f cached across an allocation must still see a store made through
++// an aliasing reference AFTER the allocation.
++const i = instantiate(`
++(module
++  (type $s (struct (field $f (mut i32))))
++  (type $t (struct (field $g (mut i32))))
++  (func (export "t") (param i32) (result i32)
++    (local $a (ref null $s))
++    (local $sum i32)
++    (local.set $a (struct.new $s (i32.const 1)))
++    (loop $l
++      ;; read, allocate (must not clobber the read), store, read again
++      (local.set $sum (i32.add (local.get $sum) (struct.get $s $f (ref.as_non_null (local.get $a)))))
++      (drop (struct.new $t (i32.const 9)))
++      (struct.set $s $f (ref.as_non_null (local.get $a)) (i32.const 2))
++      (local.set $sum (i32.add (local.get $sum) (struct.get $s $f (ref.as_non_null (local.get $a)))))
++      (struct.set $s $f (ref.as_non_null (local.get $a)) (i32.const 1))
++      (local.set 0 (i32.sub (local.get 0) (i32.const 1)))
++      (br_if $l (local.get 0)))
++    (local.get $sum)))
++`);
++// each iteration contributes 1 + 2 = 3
++for (const n of [1, 10, 1000, 200000]) {
++  const got = i.exports.t(n), want = 3 * n;
++  if (got !== want) throw new Error(`n=${n}: got ${got} want ${want}`);
++}
+diff --git a/JSTests/wasm/gc/struct-new-nested-alloc-gc.js b/JSTests/wasm/gc/struct-new-nested-alloc-gc.js
+new file mode 100644
+index 0000000000..f8e745b1db
+--- /dev/null
++++ b/JSTests/wasm/gc/struct-new-nested-alloc-gc.js
+@@ -0,0 +1,29 @@
++import { instantiate } from "./wast-wrapper.js";
++// Keep freshly allocated objects reachable through a global while allocating heavily,
++// so a GC that lands between the allocation and its field stores would be observable.
++const i = instantiate(`
++(module
++  (type $inner (struct (field $v (mut i32))))
++  (type $s (struct (field $a (mut (ref null $inner))) (field $b (mut (ref null $inner)))))
++  (global $keep (mut (ref null $s)) (ref.null $s))
++  (func (export "run") (param i32) (result i32)
++    (local $sum i32)
++    (loop $l
++      (global.set $keep
++        (struct.new $s
++          (struct.new $inner (local.get 0))
++          (struct.new $inner (i32.add (local.get 0) (i32.const 7)))))
++      (local.set $sum (i32.add (local.get $sum)
++        (i32.add
++          (struct.get $inner $v (ref.as_non_null (struct.get $s $a (ref.as_non_null (global.get $keep)))))
++          (struct.get $inner $v (ref.as_non_null (struct.get $s $b (ref.as_non_null (global.get $keep))))))))
++      (local.set 0 (i32.sub (local.get 0) (i32.const 1)))
++      (br_if $l (local.get 0)))
++    (local.get $sum)))
++`);
++// sum over k=n..1 of (k + k+7)
++function want(n){ let s=0; for(let k=n;k>=1;--k) s += k + (k+7); return s|0; }
++for (const n of [1, 100, 5000]) {
++  const got = i.exports.run(n);
++  if (got !== want(n)) throw new Error(`n=${n}: got ${got} want ${want(n)}`);
++}
+diff --git a/Source/JavaScriptCore/b3/B3LowerMacros.cpp b/Source/JavaScriptCore/b3/B3LowerMacros.cpp
+index f6a238874c..ea5143056b 100644
+--- a/Source/JavaScriptCore/b3/B3LowerMacros.cpp
++++ b/Source/JavaScriptCore/b3/B3LowerMacros.cpp
+@@ -721,28 +721,26 @@ private:
+                 uint32_t typeIndex = structNew->typeIndex();
+                 int32_t allocatorsBaseOffset = structNew->allocatorsBaseOffset();
+ 
+-                size_t allocationSize = JSWebAssemblyStruct::allocationSize(rtt->instancePayloadSize());
++                size_t sizeInBytes = JSWebAssemblyStruct::allocationSize(rtt->instancePayloadSize());
+ 
+                 static_assert(!(MarkedSpace::sizeStep & (MarkedSpace::sizeStep - 1)), "MarkedSpace::sizeStep must be a power of two.");
+-                unsigned stepShift = getLSBSet(MarkedSpace::sizeStep);
+-                size_t sizeClass = (allocationSize + MarkedSpace::sizeStep - 1) >> stepShift;
+-                bool useFastPath = (sizeClass <= (MarkedSpace::largeCutoff >> stepShift));
++                size_t sizeClassIndex = MarkedSpace::sizeClassToIndex(sizeInBytes);
+ 
+                 BasicBlock* before = m_blockInsertionSet.splitForward(m_block, m_index, &m_insertionSet);
+                 BasicBlock* slowPath = m_blockInsertionSet.insertBefore(m_block);
+ 
+                 UpsilonValue* fastUpsilon = nullptr;
+-                if (useFastPath) {
++                if (sizeInBytes <= MarkedSpace::largeCutoff) {
+                     BasicBlock* fastPathContinuation = m_blockInsertionSet.insertBefore(m_block);
+ 
+                     // Replace the Jump added by splitForward with Nop so we can add our own control flow
+                     before->replaceLastWithNew<Value>(m_proc, Nop, m_origin);
+ 
+                     // The Instance constructor initializes all the allocators on creation, thus it is never nullptr.
+-                    int32_t allocatorOffset = allocatorsBaseOffset + static_cast<int32_t>(sizeClass * sizeof(Allocator));
++                    int32_t allocatorOffset = allocatorsBaseOffset + static_cast<int32_t>(sizeClassIndex * sizeof(Allocator));
+                     Value* allocator = before->appendNew<MemoryValue>(m_proc, Load, pointerType(), m_origin, instance, allocatorOffset);
+ 
+-                    Value* cell = emitWasmGCAllocationPatchpoint(before, allocator, fastPathContinuation, slowPath);
++                    Value* cell = emitWasmGCAllocationPatchpoint(before, allocator, fastPathContinuation, slowPath, MarkedSpace::s_sizeClassForSizeStep[sizeClassIndex]);
+                     emitWasmGCCellInit(fastPathContinuation, cell, structureID, JSWebAssemblyStruct::typeInfoBlob().blob());
+ 
+                     fastUpsilon = fastPathContinuation->appendNew<UpsilonValue>(m_proc, m_origin, cell);
+@@ -1587,7 +1585,7 @@ private:
+         return result;
+     }
+ 
+-    PatchpointValue* emitWasmGCAllocationPatchpoint(BasicBlock* allocBlock, Value* allocator, BasicBlock* fastInit, BasicBlock* slowPath)
++    PatchpointValue* emitWasmGCAllocationPatchpoint(BasicBlock* allocBlock, Value* allocator, BasicBlock* fastInit, BasicBlock* slowPath, std::optional<unsigned> constantCellSize = std::nullopt)
+     {
+         PatchpointValue* patchpoint = allocBlock->appendNew<PatchpointValue>(m_proc, pointerType(), m_origin);
+         if (isARM64()) {
+@@ -1612,7 +1610,8 @@ private:
+             // AssemblyHelpers::emitAllocate(). That way, the same optimized path is shared by
+             // all of the compiler tiers.
+             jit.emitAllocateWithNonNullAllocator(
+-                params[0].gpr(), JITAllocator::variableNonNull(), allocatorGPR, params.gpScratch(0),
++                params[0].gpr(), constantCellSize ? JITAllocator::variableNonNullWithConstantCellSize(*constantCellSize) : JITAllocator::variableNonNull(),
++                allocatorGPR, params.gpScratch(0),
+                 jumpToSlowPath, CCallHelpers::SlowAllocationResult::UndefinedBehavior);
+ 
+             CCallHelpers::Jump jumpToSuccess;
+diff --git a/Source/JavaScriptCore/b3/B3Value.cpp b/Source/JavaScriptCore/b3/B3Value.cpp
+index c297364d8a..5cdca69bc2 100644
+--- a/Source/JavaScriptCore/b3/B3Value.cpp
++++ b/Source/JavaScriptCore/b3/B3Value.cpp
+@@ -711,13 +711,11 @@ constexpr Effects constantEffectsForOpcode(Opcode opcode)
+         result = Effects::forCheck();
+         break;
+     case WasmStructNew:
+-        result.reads = HeapRange::top();
+-        result.writes = HeapRange::top();
+-        result.exitsSideways = true;
+-        break;
+     case WasmArrayNew:
++        // Allocation can trap and can trigger GC, so it reads everything and exits sideways.
++        // It only stores into the object it just produced, though, which nothing loaded earlier
++        // can alias, so it does not need to clobber previously cached field loads.
+         result.reads = HeapRange::top();
+-        result.writes = HeapRange::top();
+         result.exitsSideways = true;
+         break;
+     case WasmRefCast:
+diff --git a/Source/JavaScriptCore/jit/AssemblyHelpers.cpp b/Source/JavaScriptCore/jit/AssemblyHelpers.cpp
+index 98f8571ea0..ca6ea44bb8 100644
+--- a/Source/JavaScriptCore/jit/AssemblyHelpers.cpp
++++ b/Source/JavaScriptCore/jit/AssemblyHelpers.cpp
+@@ -944,8 +944,8 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
+     loadPairPtr(allocatorGPR, TrustedImm32(LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()), resultGPR, scratchGPR);
+     popPath = branchPtr(RelationalCondition::AboveOrEqual, resultGPR, scratchGPR);
+     auto bumpLabel = label();
+-    if (allocator.isConstant())
+-        addPtr(TrustedImm32(allocator.allocator().cellSize()), resultGPR, scratchGPR);
++    if (allocator.hasConstantCellSize())
++        addPtr(TrustedImm32(allocator.constantCellSize()), resultGPR, scratchGPR);
+     else {
+         load32(Address(allocatorGPR, LocalAllocator::offsetOfCellSize()), scratchGPR);
+         addPtr(resultGPR, scratchGPR);
+@@ -970,8 +970,8 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
+     loadPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()), resultGPR);
+     popPath = branchPtr(RelationalCondition::AboveOrEqual, resultGPR, Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalEnd()));
+     auto bumpLabel = label();
+-    if (allocator.isConstant())
+-        add64(TrustedImm32(allocator.allocator().cellSize()), Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()));
++    if (allocator.hasConstantCellSize())
++        add64(TrustedImm32(allocator.constantCellSize()), Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()));
+     else {
+         load32(Address(allocatorGPR, LocalAllocator::offsetOfCellSize()), scratchGPR);
+         add64(scratchGPR, Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()));
+@@ -999,9 +999,9 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
+     loadPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalEnd()), scratchGPR);
+     popPath = branchPtr(RelationalCondition::AboveOrEqual, resultGPR, scratchGPR);
+     auto bumpLabel = label();
+-    if (allocator.isConstant()) {
++    if (allocator.hasConstantCellSize()) {
+         move(resultGPR, scratchGPR);
+-        addPtr(TrustedImm32(allocator.allocator().cellSize()), scratchGPR);
++        addPtr(TrustedImm32(allocator.constantCellSize()), scratchGPR);
+     } else {
+         load32(Address(allocatorGPR, LocalAllocator::offsetOfCellSize()), scratchGPR);
+         addPtr(resultGPR, scratchGPR);
+@@ -1048,6 +1048,7 @@ void AssemblyHelpers::emitAllocate(GPRReg resultGPR, const JITAllocator& allocat
+         slowPath.append(branchTestPtr(Zero, allocatorGPR));
+         break;
+     case JITAllocator::VariableNonNull:
++    case JITAllocator::VariableNonNullWithConstantCellSize:
+         break;
+     }
+ 
+diff --git a/Source/JavaScriptCore/jit/JITAllocator.h b/Source/JavaScriptCore/jit/JITAllocator.h
+index a8c2a9a9d7..ae6f84f2c0 100644
+--- a/Source/JavaScriptCore/jit/JITAllocator.h
++++ b/Source/JavaScriptCore/jit/JITAllocator.h
+@@ -36,38 +36,56 @@ public:
+         Constant,
+         Variable,
+         VariableNonNull,
++        VariableNonNullWithConstantCellSize,
+     };
+     using enum Kind;
+-    
++
+     JITAllocator() = default;
+-    
++
+     static JITAllocator constant(Allocator allocator)
+     {
+         JITAllocator result(Constant);
+         result.m_allocator = allocator;
+         return result;
+     }
+-    
++
+     static JITAllocator variable() { return JITAllocator(Variable); }
+     static JITAllocator variableNonNull() { return JITAllocator(VariableNonNull); }
+-    
++
++    static JITAllocator variableNonNullWithConstantCellSize(unsigned cellSize)
++    {
++        JITAllocator result(VariableNonNullWithConstantCellSize);
++        result.m_cellSize = cellSize;
++        return result;
++    }
++
+     friend bool operator==(const JITAllocator&, const JITAllocator&) = default;
+-    
++
+     explicit operator bool() const
+     {
+         return *this != JITAllocator();
+     }
+-    
++
+     Kind kind() const { return m_kind; }
+     bool isConstant() const { return m_kind == Constant; }
+     bool isVariable() const { return m_kind != Constant; }
+-    
++
++    bool hasConstantCellSize() const { return m_kind == Constant || m_kind == VariableNonNullWithConstantCellSize; }
++
++    unsigned constantCellSize() const
++    {
++        RELEASE_ASSERT(hasConstantCellSize());
++        if (m_kind == Constant)
++            return m_allocator.cellSize();
++        return m_cellSize;
++    }
++
+     Allocator allocator() const
+     {
+         RELEASE_ASSERT(isConstant());
+         return m_allocator;
+     }
+-    
++
+ private:
+     JITAllocator(Kind kind)
+         : m_kind(kind)
+@@ -75,6 +93,7 @@ private:
+ 
+     Kind m_kind { Constant };
+     Allocator m_allocator;
++    unsigned m_cellSize { 0 };
+ };
+ 
+ } // namespace JSC
+diff --git a/Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp b/Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp
+index aeacf293b8..793144a345 100644
+--- a/Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp
++++ b/Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp
+@@ -2001,7 +2001,7 @@ void BBQJIT::emitAllocateGCStructUninitialized(GPRReg resultGPR, TypeSignatureIn
+         size_t sizeClassIndex = MarkedSpace::sizeClassToIndex(sizeInBytes);
+         m_jit.loadPtr(allocatorBufferBase.withOffset(sizeClassIndex * sizeof(Allocator)), scratchGPR2);
+         JIT_COMMENT(m_jit, "Do struct allocation");
+-        m_jit.emitAllocateWithNonNullAllocator(resultGPR, JITAllocator::variableNonNull(), scratchGPR2, scratchGPR, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
++        m_jit.emitAllocateWithNonNullAllocator(resultGPR, JITAllocator::variableNonNullWithConstantCellSize(MarkedSpace::s_sizeClassForSizeStep[sizeClassIndex]), scratchGPR2, scratchGPR, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
+         m_jit.load32(structureIDAddress, scratchGPR);
+         m_jit.move(TrustedImm32(JSWebAssemblyStruct::typeInfoBlob().blob()), scratchGPR2);
+         static_assert(JSCell::structureIDOffset() + sizeof(int32_t) == JSCell::indexingTypeAndMiscOffset());

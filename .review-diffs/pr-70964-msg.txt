@@ -1,0 +1,38 @@
+[JSC] Terminate Atomics.wait / Wasm atomic.wait on worker.terminate()
+https://bugs.webkit.org/show_bug.cgi?id=289686
+
+Reviewed by NOBODY (OOPS!).
+
+After https://bugs.webkit.org/show_bug.cgi?id=305440, notifyNeedTermination()
+only fires the NeedTermination trap bit and no longer sets
+hasTerminationRequest() immediately. waitSync still only checked
+hasTerminationRequest(), so a worker blocked in Atomics.wait or Wasm
+memory.atomic.wait was woken by the stop-request condition notify but
+never returned Terminated.
+
+Teach waitSync to observe the pending NeedTermination trap, prefer
+Terminated when shutdown races with notify or timeout, and materialize the
+TerminationException via throwTerminationExceptionIfNeeded(). When Wasm
+tiers take the OutOfBounds path for wait's -1 return with termination
+already pending, throwWasmToJSException keeps the TerminationException.
+
+Tests handshake that the worker is inside the wait, then terminate and GC
+until workerThreadCount hits zero.
+
+* Source/JavaScriptCore/runtime/AtomicsObject.cpp:
+(JSC::atomicsWaitImpl):
+* Source/JavaScriptCore/runtime/VM.cpp:
+(JSC::VM::throwTerminationExceptionIfNeeded):
+* Source/JavaScriptCore/runtime/VM.h:
+* Source/JavaScriptCore/runtime/WaiterListManager.cpp:
+(JSC::WaiterListManager::waitSyncImpl):
+* Source/JavaScriptCore/wasm/WasmOperationsInlines.h:
+(JSC::Wasm::waitImpl):
+(JSC::Wasm::throwWasmToJSException):
+* LayoutTests/fast/workers/worker-terminate-atomics-wait.html: Added.
+* LayoutTests/fast/workers/worker-terminate-atomics-wait-expected.txt: Added.
+* LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait.html: Added.
+* LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait-expected.txt: Added.
+* LayoutTests/fast/workers/resources/worker-atomics-wait-forever.js: Added.
+* LayoutTests/fast/workers/resources/worker-wasm-atomic-wait-forever.js: Added.
+

@@ -1,0 +1,1272 @@
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/wasm/core/call_ref.wast.js-expected.txt b/LayoutTests/imported/w3c/web-platform-tests/wasm/core/call_ref.wast.js-expected.txt
+index c7c429a586..c933cea813 100644
+--- a/LayoutTests/imported/w3c/web-platform-tests/wasm/core/call_ref.wast.js-expected.txt
++++ b/LayoutTests/imported/w3c/web-platform-tests/wasm/core/call_ref.wast.js-expected.txt
+@@ -4,7 +4,7 @@ PASS #2 Test that WebAssembly compilation succeeds (call_ref.wast:1)
+ PASS #3 Test that WebAssembly compilation succeeds (call_ref.wast:129)
+ PASS #4 Test that WebAssembly compilation succeeds (call_ref.wast:138)
+ PASS #5 Test that WebAssembly compilation succeeds (call_ref.wast:151)
+-FAIL #6 Test that WebAssembly compilation fails (call_ref.wast:167) assert_equals: expected true but got false
++PASS #6 Test that WebAssembly compilation fails (call_ref.wast:167)
+ FAIL #7 Test that WebAssembly compilation fails (call_ref.wast:183) assert_equals: expected true but got false
+ PASS #8 Test that WebAssembly compilation fails (call_ref.wast:200)
+ PASS #9 Test that WebAssembly compilation fails (call_ref.wast:210)
+@@ -44,10 +44,7 @@ PASS #42 Test that a WebAssembly code traps (call_ref.wast:149)
+ PASS #43 Test that WebAssembly compilation succeeds (call_ref.wast:151)
+ PASS #44 Test that WebAssembly instantiation succeeds (call_ref.wast:151)
+ PASS #45 Test that a WebAssembly code traps (call_ref.wast:165)
+-FAIL #46 Test that WebAssembly compilation fails (call_ref.wast:167) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-call_ref_wast_js@call_ref.wast.js:109:15
+-global code@call_ref.wast.js:120:3 expected true got false
++PASS #46 Test that WebAssembly compilation fails (call_ref.wast:167)
+ FAIL #47 Test that WebAssembly compilation fails (call_ref.wast:183) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ call_ref_wast_js@call_ref.wast.js:112:15
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/wasm/core/return_call_ref.wast.js-expected.txt b/LayoutTests/imported/w3c/web-platform-tests/wasm/core/return_call_ref.wast.js-expected.txt
+index beda2116c2..181c61c2fe 100644
+--- a/LayoutTests/imported/w3c/web-platform-tests/wasm/core/return_call_ref.wast.js-expected.txt
++++ b/LayoutTests/imported/w3c/web-platform-tests/wasm/core/return_call_ref.wast.js-expected.txt
+@@ -17,7 +17,7 @@ PASS #15 Test that WebAssembly compilation fails (return_call_ref.wast:286)
+ PASS #16 Test that WebAssembly compilation succeeds (return_call_ref.wast:299)
+ PASS #17 Test that WebAssembly compilation succeeds (return_call_ref.wast:308)
+ PASS #18 Test that WebAssembly compilation succeeds (return_call_ref.wast:321)
+-FAIL #19 Test that WebAssembly compilation fails (return_call_ref.wast:336) assert_equals: expected true but got false
++PASS #19 Test that WebAssembly compilation fails (return_call_ref.wast:336)
+ FAIL #20 Test that WebAssembly compilation fails (return_call_ref.wast:352) assert_equals: expected true but got false
+ PASS #21 Test that WebAssembly compilation fails (return_call_ref.wast:368)
+ PASS #22 Test that WebAssembly compilation fails (return_call_ref.wast:378)
+@@ -86,10 +86,7 @@ PASS #84 Test that a WebAssembly code traps (return_call_ref.wast:319)
+ PASS #85 Test that WebAssembly compilation succeeds (return_call_ref.wast:321)
+ PASS #86 Test that WebAssembly instantiation succeeds (return_call_ref.wast:321)
+ PASS #87 Test that a WebAssembly code traps (return_call_ref.wast:334)
+-FAIL #88 Test that WebAssembly compilation fails (return_call_ref.wast:336) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-return_call_ref_wast_js@return_call_ref.wast.js:157:15
+-global code@return_call_ref.wast.js:171:3 expected true got false
++PASS #88 Test that WebAssembly compilation fails (return_call_ref.wast:336)
+ FAIL #89 Test that WebAssembly compilation fails (return_call_ref.wast:352) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ return_call_ref_wast_js@return_call_ref.wast.js:160:15
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/wasm/core/unreached-invalid.wast.js-expected.txt b/LayoutTests/imported/w3c/web-platform-tests/wasm/core/unreached-invalid.wast.js-expected.txt
+index 3f609dc137..ca934b68bd 100644
+--- a/LayoutTests/imported/w3c/web-platform-tests/wasm/core/unreached-invalid.wast.js-expected.txt
++++ b/LayoutTests/imported/w3c/web-platform-tests/wasm/core/unreached-invalid.wast.js-expected.txt
+@@ -4,9 +4,9 @@ PASS #2 Test that WebAssembly compilation fails (unreached-invalid.wast:3)
+ PASS #3 Test that WebAssembly compilation fails (unreached-invalid.wast:7)
+ PASS #4 Test that WebAssembly compilation fails (unreached-invalid.wast:11)
+ PASS #5 Test that WebAssembly compilation fails (unreached-invalid.wast:15)
+-FAIL #6 Test that WebAssembly compilation fails (unreached-invalid.wast:20) assert_equals: expected true but got false
++PASS #6 Test that WebAssembly compilation fails (unreached-invalid.wast:20)
+ FAIL #7 Test that WebAssembly compilation fails (unreached-invalid.wast:26) assert_equals: expected true but got false
+-FAIL #8 Test that WebAssembly compilation fails (unreached-invalid.wast:32) assert_equals: expected true but got false
++PASS #8 Test that WebAssembly compilation fails (unreached-invalid.wast:32)
+ FAIL #9 Test that WebAssembly compilation fails (unreached-invalid.wast:41) assert_equals: expected true but got false
+ FAIL #10 Test that WebAssembly compilation fails (unreached-invalid.wast:45) assert_equals: expected true but got false
+ FAIL #11 Test that WebAssembly compilation fails (unreached-invalid.wast:49) assert_equals: expected true but got false
+@@ -14,9 +14,9 @@ FAIL #12 Test that WebAssembly compilation fails (unreached-invalid.wast:55) ass
+ FAIL #13 Test that WebAssembly compilation fails (unreached-invalid.wast:59) assert_equals: expected true but got false
+ FAIL #14 Test that WebAssembly compilation fails (unreached-invalid.wast:63) assert_equals: expected true but got false
+ FAIL #15 Test that WebAssembly compilation fails (unreached-invalid.wast:70) assert_equals: expected true but got false
+-FAIL #16 Test that WebAssembly compilation fails (unreached-invalid.wast:76) assert_equals: expected true but got false
++PASS #16 Test that WebAssembly compilation fails (unreached-invalid.wast:76)
+ FAIL #17 Test that WebAssembly compilation fails (unreached-invalid.wast:82) assert_equals: expected true but got false
+-FAIL #18 Test that WebAssembly compilation fails (unreached-invalid.wast:88) assert_equals: expected true but got false
++PASS #18 Test that WebAssembly compilation fails (unreached-invalid.wast:88)
+ FAIL #19 Test that WebAssembly compilation fails (unreached-invalid.wast:94) assert_equals: expected true but got false
+ FAIL #20 Test that WebAssembly compilation fails (unreached-invalid.wast:100) assert_equals: expected true but got false
+ FAIL #21 Test that WebAssembly compilation fails (unreached-invalid.wast:106) assert_equals: expected true but got false
+@@ -24,9 +24,9 @@ FAIL #22 Test that WebAssembly compilation fails (unreached-invalid.wast:112) as
+ FAIL #23 Test that WebAssembly compilation fails (unreached-invalid.wast:118) assert_equals: expected true but got false
+ FAIL #24 Test that WebAssembly compilation fails (unreached-invalid.wast:124) assert_equals: expected true but got false
+ FAIL #25 Test that WebAssembly compilation fails (unreached-invalid.wast:131) assert_equals: expected true but got false
+-FAIL #26 Test that WebAssembly compilation fails (unreached-invalid.wast:137) assert_equals: expected true but got false
++PASS #26 Test that WebAssembly compilation fails (unreached-invalid.wast:137)
+ FAIL #27 Test that WebAssembly compilation fails (unreached-invalid.wast:143) assert_equals: expected true but got false
+-FAIL #28 Test that WebAssembly compilation fails (unreached-invalid.wast:149) assert_equals: expected true but got false
++PASS #28 Test that WebAssembly compilation fails (unreached-invalid.wast:149)
+ FAIL #29 Test that WebAssembly compilation fails (unreached-invalid.wast:155) assert_equals: expected true but got false
+ FAIL #30 Test that WebAssembly compilation fails (unreached-invalid.wast:161) assert_equals: expected true but got false
+ FAIL #31 Test that WebAssembly compilation fails (unreached-invalid.wast:167) assert_equals: expected true but got false
+@@ -36,9 +36,9 @@ FAIL #34 Test that WebAssembly compilation fails (unreached-invalid.wast:185) as
+ FAIL #35 Test that WebAssembly compilation fails (unreached-invalid.wast:192) assert_equals: expected true but got false
+ FAIL #36 Test that WebAssembly compilation fails (unreached-invalid.wast:198) assert_equals: expected true but got false
+ FAIL #37 Test that WebAssembly compilation fails (unreached-invalid.wast:204) assert_equals: expected true but got false
+-FAIL #38 Test that WebAssembly compilation fails (unreached-invalid.wast:210) assert_equals: expected true but got false
++PASS #38 Test that WebAssembly compilation fails (unreached-invalid.wast:210)
+ FAIL #39 Test that WebAssembly compilation fails (unreached-invalid.wast:216) assert_equals: expected true but got false
+-FAIL #40 Test that WebAssembly compilation fails (unreached-invalid.wast:222) assert_equals: expected true but got false
++PASS #40 Test that WebAssembly compilation fails (unreached-invalid.wast:222)
+ FAIL #41 Test that WebAssembly compilation fails (unreached-invalid.wast:228) assert_equals: expected true but got false
+ FAIL #42 Test that WebAssembly compilation fails (unreached-invalid.wast:234) assert_equals: expected true but got false
+ FAIL #43 Test that WebAssembly compilation fails (unreached-invalid.wast:240) assert_equals: expected true but got false
+@@ -78,15 +78,15 @@ PASS #76 Test that WebAssembly compilation fails (unreached-invalid.wast:444)
+ PASS #77 Test that WebAssembly compilation fails (unreached-invalid.wast:450)
+ PASS #78 Test that WebAssembly compilation fails (unreached-invalid.wast:456)
+ PASS #79 Test that WebAssembly compilation fails (unreached-invalid.wast:462)
+-FAIL #80 Test that WebAssembly compilation fails (unreached-invalid.wast:469) assert_equals: expected true but got false
+-FAIL #81 Test that WebAssembly compilation fails (unreached-invalid.wast:476) assert_equals: expected true but got false
+-FAIL #82 Test that WebAssembly compilation fails (unreached-invalid.wast:483) assert_equals: expected true but got false
++PASS #80 Test that WebAssembly compilation fails (unreached-invalid.wast:469)
++PASS #81 Test that WebAssembly compilation fails (unreached-invalid.wast:476)
++PASS #82 Test that WebAssembly compilation fails (unreached-invalid.wast:483)
+ PASS #83 Test that WebAssembly compilation fails (unreached-invalid.wast:489)
+ FAIL #84 Test that WebAssembly compilation fails (unreached-invalid.wast:497) assert_equals: expected true but got false
+ FAIL #85 Test that WebAssembly compilation fails (unreached-invalid.wast:506) assert_equals: expected true but got false
+-FAIL #86 Test that WebAssembly compilation fails (unreached-invalid.wast:514) assert_equals: expected true but got false
+-FAIL #87 Test that WebAssembly compilation fails (unreached-invalid.wast:520) assert_equals: expected true but got false
+-FAIL #88 Test that WebAssembly compilation fails (unreached-invalid.wast:526) assert_equals: expected true but got false
++PASS #86 Test that WebAssembly compilation fails (unreached-invalid.wast:514)
++PASS #87 Test that WebAssembly compilation fails (unreached-invalid.wast:520)
++PASS #88 Test that WebAssembly compilation fails (unreached-invalid.wast:526)
+ PASS #89 Test that WebAssembly compilation fails (unreached-invalid.wast:539)
+ PASS #90 Test that WebAssembly compilation fails (unreached-invalid.wast:545)
+ PASS #91 Test that WebAssembly compilation fails (unreached-invalid.wast:551)
+@@ -109,13 +109,13 @@ PASS #107 Test that WebAssembly compilation fails (unreached-invalid.wast:655)
+ PASS #108 Test that WebAssembly compilation fails (unreached-invalid.wast:661)
+ FAIL #109 Test that WebAssembly compilation fails (unreached-invalid.wast:668) assert_equals: expected true but got false
+ FAIL #110 Test that WebAssembly compilation fails (unreached-invalid.wast:675) assert_equals: expected true but got false
+-FAIL #111 Test that WebAssembly compilation fails (unreached-invalid.wast:686) assert_equals: expected true but got false
++PASS #111 Test that WebAssembly compilation fails (unreached-invalid.wast:686)
+ FAIL #112 Test that WebAssembly compilation fails (unreached-invalid.wast:697) assert_equals: expected true but got false
+-FAIL #113 Test that WebAssembly compilation fails (unreached-invalid.wast:709) assert_equals: expected true but got false
+-FAIL #114 Test that WebAssembly compilation fails (unreached-invalid.wast:714) assert_equals: expected true but got false
+-FAIL #115 Test that WebAssembly compilation fails (unreached-invalid.wast:720) assert_equals: expected true but got false
+-FAIL #116 Test that WebAssembly compilation fails (unreached-invalid.wast:725) assert_equals: expected true but got false
+-FAIL #117 Test that WebAssembly compilation fails (unreached-invalid.wast:730) assert_equals: expected true but got false
++PASS #113 Test that WebAssembly compilation fails (unreached-invalid.wast:709)
++PASS #114 Test that WebAssembly compilation fails (unreached-invalid.wast:714)
++PASS #115 Test that WebAssembly compilation fails (unreached-invalid.wast:720)
++PASS #116 Test that WebAssembly compilation fails (unreached-invalid.wast:725)
++PASS #117 Test that WebAssembly compilation fails (unreached-invalid.wast:730)
+ FAIL #118 Test that WebAssembly compilation fails (unreached-invalid.wast:736) assert_equals: expected true but got false
+ FAIL #119 Test that WebAssembly compilation fails (unreached-invalid.wast:743) assert_equals: expected true but got false
+ PASS #120 Test that WebAssembly compilation fails (unreached-invalid.wast:748)
+@@ -126,18 +126,12 @@ PASS #124 Test that WebAssembly compilation fails (unreached-invalid.wast:3)
+ PASS #125 Test that WebAssembly compilation fails (unreached-invalid.wast:7)
+ PASS #126 Test that WebAssembly compilation fails (unreached-invalid.wast:11)
+ PASS #127 Test that WebAssembly compilation fails (unreached-invalid.wast:15)
+-FAIL #128 Test that WebAssembly compilation fails (unreached-invalid.wast:20) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:16:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #128 Test that WebAssembly compilation fails (unreached-invalid.wast:20)
+ FAIL #129 Test that WebAssembly compilation fails (unreached-invalid.wast:26) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:19:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #130 Test that WebAssembly compilation fails (unreached-invalid.wast:32) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:22:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #130 Test that WebAssembly compilation fails (unreached-invalid.wast:32)
+ FAIL #131 Test that WebAssembly compilation fails (unreached-invalid.wast:41) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:25:15
+@@ -166,18 +160,12 @@ FAIL #137 Test that WebAssembly compilation fails (unreached-invalid.wast:70) as
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:43:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #138 Test that WebAssembly compilation fails (unreached-invalid.wast:76) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:46:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #138 Test that WebAssembly compilation fails (unreached-invalid.wast:76)
+ FAIL #139 Test that WebAssembly compilation fails (unreached-invalid.wast:82) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:49:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #140 Test that WebAssembly compilation fails (unreached-invalid.wast:88) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:52:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #140 Test that WebAssembly compilation fails (unreached-invalid.wast:88)
+ FAIL #141 Test that WebAssembly compilation fails (unreached-invalid.wast:94) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:55:15
+@@ -206,18 +194,12 @@ FAIL #147 Test that WebAssembly compilation fails (unreached-invalid.wast:131) a
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:73:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #148 Test that WebAssembly compilation fails (unreached-invalid.wast:137) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:76:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #148 Test that WebAssembly compilation fails (unreached-invalid.wast:137)
+ FAIL #149 Test that WebAssembly compilation fails (unreached-invalid.wast:143) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:79:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #150 Test that WebAssembly compilation fails (unreached-invalid.wast:149) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:82:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #150 Test that WebAssembly compilation fails (unreached-invalid.wast:149)
+ FAIL #151 Test that WebAssembly compilation fails (unreached-invalid.wast:155) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:85:15
+@@ -254,18 +236,12 @@ FAIL #159 Test that WebAssembly compilation fails (unreached-invalid.wast:204) a
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:109:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #160 Test that WebAssembly compilation fails (unreached-invalid.wast:210) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:112:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #160 Test that WebAssembly compilation fails (unreached-invalid.wast:210)
+ FAIL #161 Test that WebAssembly compilation fails (unreached-invalid.wast:216) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:115:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #162 Test that WebAssembly compilation fails (unreached-invalid.wast:222) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:118:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #162 Test that WebAssembly compilation fails (unreached-invalid.wast:222)
+ FAIL #163 Test that WebAssembly compilation fails (unreached-invalid.wast:228) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:121:15
+@@ -329,18 +305,9 @@ PASS #198 Test that WebAssembly compilation fails (unreached-invalid.wast:444)
+ PASS #199 Test that WebAssembly compilation fails (unreached-invalid.wast:450)
+ PASS #200 Test that WebAssembly compilation fails (unreached-invalid.wast:456)
+ PASS #201 Test that WebAssembly compilation fails (unreached-invalid.wast:462)
+-FAIL #202 Test that WebAssembly compilation fails (unreached-invalid.wast:469) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:238:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #203 Test that WebAssembly compilation fails (unreached-invalid.wast:476) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:241:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #204 Test that WebAssembly compilation fails (unreached-invalid.wast:483) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:244:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #202 Test that WebAssembly compilation fails (unreached-invalid.wast:469)
++PASS #203 Test that WebAssembly compilation fails (unreached-invalid.wast:476)
++PASS #204 Test that WebAssembly compilation fails (unreached-invalid.wast:483)
+ PASS #205 Test that WebAssembly compilation fails (unreached-invalid.wast:489)
+ FAIL #206 Test that WebAssembly compilation fails (unreached-invalid.wast:497) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+@@ -350,18 +317,9 @@ FAIL #207 Test that WebAssembly compilation fails (unreached-invalid.wast:506) a
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:253:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #208 Test that WebAssembly compilation fails (unreached-invalid.wast:514) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:256:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #209 Test that WebAssembly compilation fails (unreached-invalid.wast:520) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:259:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #210 Test that WebAssembly compilation fails (unreached-invalid.wast:526) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:262:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #208 Test that WebAssembly compilation fails (unreached-invalid.wast:514)
++PASS #209 Test that WebAssembly compilation fails (unreached-invalid.wast:520)
++PASS #210 Test that WebAssembly compilation fails (unreached-invalid.wast:526)
+ PASS #211 Test that WebAssembly compilation fails (unreached-invalid.wast:539)
+ PASS #212 Test that WebAssembly compilation fails (unreached-invalid.wast:545)
+ PASS #213 Test that WebAssembly compilation fails (unreached-invalid.wast:551)
+@@ -390,34 +348,16 @@ FAIL #232 Test that WebAssembly compilation fails (unreached-invalid.wast:675) a
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:328:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #233 Test that WebAssembly compilation fails (unreached-invalid.wast:686) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:331:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #233 Test that WebAssembly compilation fails (unreached-invalid.wast:686)
+ FAIL #234 Test that WebAssembly compilation fails (unreached-invalid.wast:697) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:334:15
+ global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #235 Test that WebAssembly compilation fails (unreached-invalid.wast:709) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:337:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #236 Test that WebAssembly compilation fails (unreached-invalid.wast:714) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:340:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #237 Test that WebAssembly compilation fails (unreached-invalid.wast:720) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:343:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #238 Test that WebAssembly compilation fails (unreached-invalid.wast:725) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:346:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
+-FAIL #239 Test that WebAssembly compilation fails (unreached-invalid.wast:730) assert_true: module@async_index.js:175:29
+-assert_invalid@async_index.js:204:9
+-unreached_invalid_wast_js@unreached-invalid.wast.js:349:15
+-global code@unreached-invalid.wast.js:366:3 expected true got false
++PASS #235 Test that WebAssembly compilation fails (unreached-invalid.wast:709)
++PASS #236 Test that WebAssembly compilation fails (unreached-invalid.wast:714)
++PASS #237 Test that WebAssembly compilation fails (unreached-invalid.wast:720)
++PASS #238 Test that WebAssembly compilation fails (unreached-invalid.wast:725)
++PASS #239 Test that WebAssembly compilation fails (unreached-invalid.wast:730)
+ FAIL #240 Test that WebAssembly compilation fails (unreached-invalid.wast:736) assert_true: module@async_index.js:175:29
+ assert_invalid@async_index.js:204:9
+ unreached_invalid_wast_js@unreached-invalid.wast.js:352:15
+diff --git a/Source/JavaScriptCore/wasm/WasmFunctionParser.h b/Source/JavaScriptCore/wasm/WasmFunctionParser.h
+index c0dd6457a5..5fba33b74a 100644
+--- a/Source/JavaScriptCore/wasm/WasmFunctionParser.h
++++ b/Source/JavaScriptCore/wasm/WasmFunctionParser.h
+@@ -439,8 +439,86 @@ private:
+     size_t m_currentOpcodeStartingOffset { 0 };
+ 
+     unsigned m_unreachableBlocks { 0 };
++    bool m_unreachablePolymorphic { false };
++    Vector<Type, 16> m_unreachableTypeStack;
+     unsigned m_loopIndex { 0 };
+     unsigned m_callProfileIndex { 0 };
++
++    void markUnreachableAndClearStack()
++    {
++        ASSERT(!m_unreachableBlocks);
++        m_unreachableTypeStack.shrink(0);
++        m_unreachablePolymorphic = true;
++        m_unreachableBlocks = 1;
++    }
++
++    void truncateUnreachableStack()
++    {
++        ASSERT(m_unreachableBlocks == 1);
++        m_unreachableTypeStack.shrink(0);
++        m_unreachablePolymorphic = true;
++    }
++
++    void pushUnreachableOperand(Type type)
++    {
++        if (type.isV128())
++            m_context.notifyFunctionUsesSIMD();
++        m_unreachableTypeStack.append(type);
++    }
++
++    [[nodiscard]] PartialResult popUnreachableOperand()
++    {
++        if (!m_unreachableTypeStack.isEmpty()) {
++            m_unreachableTypeStack.removeLast();
++            return { };
++        }
++        WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "can't pop empty stack in unreachable context"_s);
++        return { };
++    }
++
++    [[nodiscard]] PartialResult popUnreachableOperand(Type expected, Type& actual)
++    {
++        if (!m_unreachableTypeStack.isEmpty()) {
++            actual = m_unreachableTypeStack.takeLast();
++            if (actual != Types::Void)
++                WASM_VALIDATOR_FAIL_IF(!isSubtype(actual, expected), "type mismatch in unreachable context. "_s, actual, " is not a "_s, expected);
++            else
++                actual = expected;
++            return { };
++        }
++        WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "can't pop empty stack in unreachable context"_s);
++        actual = expected;
++        return { };
++    }
++
++    [[nodiscard]] PartialResult popUnreachableBranchArgs(const ControlType& target)
++    {
++        const auto arity = target.branchTargetArity();
++        for (unsigned i = 0; i < arity; ++i) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(target.branchTargetType(arity - 1 - i), actual));
++        }
++        return { };
++    }
++
++    [[nodiscard]] PartialResult checkUnreachableBranchTarget(const ControlType& target)
++    {
++        const auto arity = target.branchTargetArity();
++        if (!arity)
++            return { };
++        const uint32_t sliceSize = m_unreachableTypeStack.size();
++        if (sliceSize < arity) {
++            WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "branch to block on expression stack of size "_s, sliceSize, ", but block expects "_s, arity, " values"_s);
++            return { };
++        }
++        const unsigned offset = m_unreachableTypeStack.size() - arity;
++        for (unsigned i = 0; i < arity; ++i) {
++            Type actual = m_unreachableTypeStack[offset + i];
++            if (actual != Types::Void)
++                WASM_VALIDATOR_FAIL_IF(!isSubtype(actual, target.branchTargetType(i)), "branch's stack type is not a subtype of block's type branch target type. Stack value has type "_s, actual, " but branch target expects a value of "_s, target.branchTargetType(i), " at index "_s, i);
++        }
++        return { };
++    }
+ };
+ 
+ WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename Context>, FunctionParser<Context>);
+@@ -3299,7 +3377,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+ 
+             WASM_TRY_ADD_TO_CONTEXT(addCall(m_callProfileIndex++, functionIndex, calleeSignature, args, results, CallType::TailCall));
+ 
+-            m_unreachableBlocks = 1;
++            markUnreachableAndClearStack();
+ 
+             return { };
+         }
+@@ -3365,7 +3443,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+ 
+             WASM_TRY_ADD_TO_CONTEXT(addCallIndirect(m_callProfileIndex++, tableIndex, calleeSignature, args, results, CallType::TailCall));
+ 
+-            m_unreachableBlocks = 1;
++            markUnreachableAndClearStack();
+ 
+             return { };
+         }
+@@ -3427,7 +3505,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+ 
+             WASM_TRY_ADD_TO_CONTEXT(addCallRef(m_callProfileIndex++, calleeSignature, args, results, CallType::TailCall));
+ 
+-            m_unreachableBlocks = 1;
++            markUnreachableAndClearStack();
+ 
+             return { };
+         }
+@@ -3737,7 +3815,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+         m_expressionStack.shrink(offset);
+ 
+         WASM_TRY_ADD_TO_CONTEXT(addThrow(exceptionIndex, args, expressionStack()));
+-        m_unreachableBlocks = 1;
++        markUnreachableAndClearStack();
+         return { };
+     }
+ 
+@@ -3747,7 +3825,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+         WASM_VALIDATOR_FAIL_IF(!isSubtype(exnref.type(), exnrefType()), "throw_ref expected an exception reference"_s);
+ 
+         WASM_TRY_ADD_TO_CONTEXT(addThrowRef(exnref, expressionStack()));
+-        m_unreachableBlocks = 1;
++        markUnreachableAndClearStack();
+         return { };
+     }
+ 
+@@ -3759,7 +3837,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+         WASM_VALIDATOR_FAIL_IF(!ControlType::isAnyCatch(data), "rethrow doesn't refer to a catch block");
+ 
+         WASM_TRY_ADD_TO_CONTEXT(addRethrow(target, data));
+-        m_unreachableBlocks = 1;
++        markUnreachableAndClearStack();
+         return { };
+     }
+ 
+@@ -3773,13 +3851,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+             WASM_TRY_POP_EXPRESSION_STACK_INTO(condition, "br / br_if condition"_s);
+             WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "conditional branch with non-i32 condition ", condition.type());
+         } else {
+-            m_unreachableBlocks = 1;
+             condition = TypedExpression { Types::Void, Context::emptyExpression() };
+         }
+ 
+         ControlType& data = m_controlStack[m_controlStack.size() - 1 - target].controlData;
+         WASM_FAIL_IF_HELPER_FAILS(checkBranchTarget(data, m_currentOpcode == BrIf ? Conditional : Unconditional));
+         WASM_TRY_ADD_TO_CONTEXT(addBranch(data, condition, expressionStack()));
++        if (m_currentOpcode == Br)
++            markUnreachableAndClearStack();
+         return { };
+     }
+ 
+@@ -3827,14 +3906,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+         WASM_FAIL_IF_HELPER_FAILS(checkBranchTarget(defaultTarget, Unconditional));
+         WASM_TRY_ADD_TO_CONTEXT(addSwitch(condition, targets, defaultTarget, expressionStack()));
+ 
+-        m_unreachableBlocks = 1;
++        markUnreachableAndClearStack();
+         return { };
+     }
+ 
+     case Return: {
+         WASM_FAIL_IF_HELPER_FAILS(checkBranchTarget(m_controlStack[0].controlData, Unconditional));
+         WASM_TRY_ADD_TO_CONTEXT(addReturn(m_controlStack[0].controlData, expressionStack()));
+-        m_unreachableBlocks = 1;
++        markUnreachableAndClearStack();
+         return { };
+     }
+ 
+@@ -3867,7 +3946,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
+ 
+     case Unreachable: {
+         WASM_TRY_ADD_TO_CONTEXT(addUnreachable());
+-        m_unreachableBlocks = 1;
++        markUnreachableAndClearStack();
+         return { };
+     }
+ 
+@@ -3967,6 +4046,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+ 
+         ControlEntry& data = m_controlStack.last();
+         m_unreachableBlocks = 0;
++        m_unreachablePolymorphic = false;
++        m_unreachableTypeStack.shrink(0);
+         WASM_VALIDATOR_FAIL_IF(!ControlType::isIf(data.controlData), "else block isn't associated to an if");
+         WASM_TRY_ADD_TO_CONTEXT(addElseToUnreachable(data.controlData));
+         m_expressionStack.shrink(m_currentStackBegin);
+@@ -3987,6 +4068,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         WASM_VALIDATOR_FAIL_IF(!isTryOrCatch(data.controlData), "catch block isn't associated to a try");
+ 
+         m_unreachableBlocks = 0;
++        m_unreachablePolymorphic = false;
++        m_unreachableTypeStack.shrink(0);
+         m_expressionStack.shrink(m_currentStackBegin);
+         ResultList results;
+         WASM_TRY_ADD_TO_CONTEXT(addCatchToUnreachable(exceptionIndex, exceptionSignature, data.controlData, results));
+@@ -4008,6 +4091,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+ 
+         ControlEntry& data = m_controlStack.last();
+         m_unreachableBlocks = 0;
++        m_unreachablePolymorphic = false;
++        m_unreachableTypeStack.shrink(0);
+         m_expressionStack.shrink(m_currentStackBegin);
+         WASM_VALIDATOR_FAIL_IF(!isTryOrCatch(data.controlData), "catch block isn't associated to a try");
+         WASM_TRY_ADD_TO_CONTEXT(addCatchAllToUnreachable(data.controlData));
+@@ -4057,8 +4142,6 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+                 m_expressionStack.append(data.elseBlockStack.span());
+                 WASM_FAIL_IF_HELPER_FAILS(checkExpressionStack(data.controlData));
+ 
+-                // Reachable End handling: the combined enclosedStack now lives in
+-                // m_expressionStack[parentBegin..end].
+                 auto enclosedStack = m_expressionStack.mutableSpan().subspan(parentBegin);
+                 WASM_TRY_ADD_TO_CONTEXT(endBlock(data, enclosedStack));
+             } else {
+@@ -4074,30 +4157,74 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+             if (!ControlType::isTopLevel(data.controlData))
+                 resetLocalInitStackToHeight(data.localInitStackHeight);
+         }
+-        m_unreachableBlocks--;
++        if (m_unreachableBlocks) {
++            m_unreachableBlocks--;
++            if (!m_unreachableBlocks) {
++                m_unreachablePolymorphic = false;
++                m_unreachableTypeStack.shrink(0);
++            }
++        }
+         return { };
+     }
+ 
+-    case Try:
+-    case Loop:
+-    case If:
+     case Block: {
++        BlockSignature inlineSignature;
++        WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get inline type for "_s, m_currentOpcode, " in unreachable context"_s);
++        m_unreachableBlocks++;
++        return { };
++    }
++
++    case Loop: {
++        BlockSignature inlineSignature;
++        WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get inline type for "_s, m_currentOpcode, " in unreachable context"_s);
++        m_unreachableBlocks++;
++        return { };
++    }
++
++    case If: {
++        BlockSignature inlineSignature;
++        WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get inline type for "_s, m_currentOpcode, " in unreachable context"_s);
++        m_unreachableBlocks++;
++        return { };
++    }
++
++    case Try: {
++        m_info.m_usesLegacyExceptions.storeRelaxed(true);
++        BlockSignature inlineSignature;
++        WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get inline type for "_s, m_currentOpcode, " in unreachable context"_s);
+         m_unreachableBlocks++;
+-        BlockSignature unused;
+-        WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(unused), "can't get inline type for "_s, m_currentOpcode, " in unreachable context"_s);
+         return { };
+     }
+ 
+     case BrTable: {
+         uint32_t numberOfTargets;
+-        uint32_t unused;
+         WASM_PARSER_FAIL_IF(!parseVarUInt32(numberOfTargets), "can't get the number of targets for br_table in unreachable context"_s);
+         WASM_PARSER_FAIL_IF(numberOfTargets == std::numeric_limits<uint32_t>::max(), "br_table's number of targets is too big "_s, numberOfTargets);
+ 
+-        for (uint32_t i = 0; i < numberOfTargets; ++i)
+-            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get "_s, i, "th target for br_table in unreachable context"_s);
++        Vector<uint32_t, 16> targetIndices;
++        targetIndices.reserveInitialCapacity(numberOfTargets);
++        for (uint32_t i = 0; i < numberOfTargets; ++i) {
++            uint32_t target;
++            WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(target, m_unreachableBlocks));
++            targetIndices.append(target);
++        }
++
++        uint32_t defaultTargetIndex;
++        WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(defaultTargetIndex, m_unreachableBlocks));
+ 
+-        WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get default target for br_table in unreachable context"_s);
++        if (m_unreachableBlocks == 1) {
++            ControlType& defaultTarget = m_controlStack[m_controlStack.size() - 1 - defaultTargetIndex].controlData;
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++            for (uint32_t i = 0; i < numberOfTargets; ++i) {
++                ControlType& target = m_controlStack[m_controlStack.size() - 1 - targetIndices[i]].controlData;
++                WASM_VALIDATOR_FAIL_IF(defaultTarget.branchTargetArity() != target.branchTargetArity(), "br_table target type size mismatch. Default has size: "_s, defaultTarget.branchTargetArity(), "but target: "_s, i, " has size: "_s, target.branchTargetArity());
++                WASM_FAIL_IF_HELPER_FAILS(checkUnreachableBranchTarget(target));
++            }
++            WASM_FAIL_IF_HELPER_FAILS(checkUnreachableBranchTarget(defaultTarget));
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableBranchArgs(defaultTarget));
++            truncateUnreachableStack();
++        }
+         return { };
+     }
+ 
+@@ -4134,6 +4261,24 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get call_indirect's table index in unreachable context"_s);
+         WASM_PARSER_FAIL_IF(tableIndex >= m_info.tableCount(), "call_indirect's table index "_s, tableIndex, " invalid, limit is "_s, m_info.tableCount());
+         WASM_PARSER_FAIL_IF(m_info.typeCount() <= signatureIndex, "call_indirect's signature index "_s, signatureIndex, " exceeds known signatures "_s, m_info.typeCount());
++        if (m_unreachableBlocks == 1) {
++            WASM_PARSER_FAIL_IF(m_info.tables[tableIndex].type() != TableElementType::Funcref, "call_indirect is only valid when a table has type funcref"_s);
++            auto index = TypeSignatureIndex(signatureIndex);
++            const auto& calleeSignature = m_info.rtt(index);
++            WASM_VALIDATOR_FAIL_IF(calleeSignature.kind() != RTTKind::Function, "invalid type index (not a function signature) for call_indirect, got ", signatureIndex);
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(m_info.table(tableIndex).addressType().asWasmType(), actual));
++            for (unsigned i = 0; i < calleeSignature.argumentCount(); ++i) {
++                Type argActual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(calleeSignature.argumentType(calleeSignature.argumentCount() - 1 - i), argActual));
++            }
++            if (m_currentOpcode == TailCallIndirect)
++                truncateUnreachableStack();
++            else {
++                for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
++                    pushUnreachableOperand(calleeSignature.returnType(i));
++            }
++        }
+         return { };
+     }
+ 
+@@ -4141,20 +4286,43 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
+         [[fallthrough]];
+     case CallRef: {
+-        uint32_t unused;
+-        WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't call_ref's signature index in unreachable context"_s);
++        uint32_t rawTypeIndex;
++        WASM_PARSER_FAIL_IF(!parseVarUInt32(rawTypeIndex), "can't call_ref's signature index in unreachable context"_s);
++        if (m_unreachableBlocks == 1) {
++            WASM_VALIDATOR_FAIL_IF(rawTypeIndex >= m_info.typeCount(), "call_ref index ", rawTypeIndex, " is out of bounds");
++            TypeSignatureIndex typeIndex(rawTypeIndex);
++            const auto& calleeSignature = m_info.rtt(typeIndex);
++            WASM_VALIDATOR_FAIL_IF(calleeSignature.kind() != RTTKind::Function, "invalid type index (not a function signature) for call_ref, got ", rawTypeIndex);
++            Type calleeType = Type { TypeKind::RefNull, calleeSignature.asTypeIndex() };
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(calleeType, actual));
++            for (unsigned i = 0; i < calleeSignature.argumentCount(); ++i) {
++                Type argActual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(calleeSignature.argumentType(calleeSignature.argumentCount() - 1 - i), argActual));
++            }
++            if (m_currentOpcode == TailCallRef)
++                truncateUnreachableStack();
++            else {
++                for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
++                    pushUnreachableOperand(calleeSignature.returnType(i));
++            }
++        }
+         return { };
+     }
+ 
+     case F32Const: {
+         uint32_t unused;
+         WASM_PARSER_FAIL_IF(!parseUInt32(unused), "can't parse 32-bit floating-point constant"_s);
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(Types::F32);
+         return { };
+     }
+ 
+     case F64Const: {
+         uint64_t constant;
+         WASM_PARSER_FAIL_IF(!parseUInt64(constant), "can't parse 64-bit floating-point constant"_s);
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(Types::F64);
+         return { };
+     }
+ 
+@@ -4169,6 +4337,29 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         WASM_PARSER_FAIL_IF(alignment > memoryLog2Alignment(m_currentOpcode), "byte alignment "_s, 1ull << alignment, " exceeds "_s, m_currentOpcode, "'s natural alignment "_s, 1ull << memoryLog2Alignment(m_currentOpcode));
+         uint64_t unusedOffset;
+         WASM_FAIL_IF_HELPER_FAILS(parseMemoryOffset(memoryIndex, unusedOffset));
++        if (m_unreachableBlocks == 1) {
++            Type addressType = m_info.memory(memoryIndex).addressType().asWasmType();
++            Type valueType = Types::I32;
++            bool isStore = false;
++            switch (m_currentOpcode) {
++#define CREATE_LOAD_TYPE(name, id, b3op, inc, memoryType) case OpType::name: valueType = Types::memoryType; break;
++                FOR_EACH_WASM_MEMORY_LOAD_OP(CREATE_LOAD_TYPE)
++#undef CREATE_LOAD_TYPE
++#define CREATE_STORE_TYPE(name, id, b3op, inc, memoryType) case OpType::name: valueType = Types::memoryType; isStore = true; break;
++                FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_STORE_TYPE)
++#undef CREATE_STORE_TYPE
++            default:
++                break;
++            }
++            Type actual;
++            if (isStore) {
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(valueType, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++            } else {
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++                pushUnreachableOperand(valueType);
++            }
++        }
+         return { };
+     }
+ 
+@@ -4176,6 +4367,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         uint32_t index;
+         WASM_FAIL_IF_HELPER_FAILS(parseIndexForLocal(index));
+         WASM_FAIL_IF_HELPER_FAILS(checkLocalInitialized(index));
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(typeOfLocal(index));
+         return { };
+     }
+ 
+@@ -4184,13 +4377,30 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         uint32_t index;
+         WASM_FAIL_IF_HELPER_FAILS(parseIndexForLocal(index));
+         pushLocalInitialized(index);
++        if (m_unreachableBlocks == 1) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(typeOfLocal(index), actual));
++            if (m_currentOpcode == TeeLocal)
++                pushUnreachableOperand(typeOfLocal(index));
++        }
++        return { };
++    }
++
++    case GetGlobal: {
++        uint32_t index;
++        WASM_FAIL_IF_HELPER_FAILS(parseIndexForGlobal(index));
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(m_info.globals[index].type);
+         return { };
+     }
+ 
+-    case GetGlobal:
+     case SetGlobal: {
+         uint32_t index;
+         WASM_FAIL_IF_HELPER_FAILS(parseIndexForGlobal(index));
++        if (m_unreachableBlocks == 1) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(m_info.globals[index].type, actual));
++        }
+         return { };
+     }
+ 
+@@ -4200,6 +4410,19 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+     case Call: {
+         FunctionSpaceIndex functionIndex;
+         WASM_FAIL_IF_HELPER_FAILS(parseFunctionIndex(functionIndex));
++        if (m_unreachableBlocks == 1) {
++            const auto& calleeSignature = m_info.rtt(m_info.typeSignatureIndexFromFunctionIndexSpace(functionIndex));
++            for (unsigned i = 0; i < calleeSignature.argumentCount(); ++i) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(calleeSignature.argumentType(calleeSignature.argumentCount() - 1 - i), actual));
++            }
++            if (m_currentOpcode == TailCall)
++                truncateUnreachableStack();
++            else {
++                for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
++                    pushUnreachableOperand(calleeSignature.returnType(i));
++            }
++        }
+         return { };
+     }
+ 
+@@ -4209,6 +4432,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+ 
+         ControlType& data = m_controlStack[m_controlStack.size() - 1 - target].controlData;
+         WASM_VALIDATOR_FAIL_IF(!ControlType::isAnyCatch(data), "rethrow doesn't refer to a catch block"_s);
++        if (m_unreachableBlocks == 1)
++            truncateUnreachableStack();
+         return { };
+     }
+ 
+@@ -4216,29 +4441,58 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+     case BrIf: {
+         uint32_t target;
+         WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(target, m_unreachableBlocks));
++        if (m_unreachableBlocks == 1) {
++            ControlType& data = m_controlStack[m_controlStack.size() - 1 - target].controlData;
++            if (m_currentOpcode == BrIf) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableBranchArgs(data));
++                for (unsigned i = 0; i < data.branchTargetArity(); ++i)
++                    pushUnreachableOperand(data.branchTargetType(i));
++            } else {
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableBranchArgs(data));
++                truncateUnreachableStack();
++            }
++        }
+         return { };
+     }
+ 
+     case Throw: {
+         uint32_t exceptionIndex;
+         WASM_FAIL_IF_HELPER_FAILS(parseExceptionIndex(exceptionIndex));
+-
++        if (m_unreachableBlocks == 1) {
++            const auto& exceptionSignature = m_info.rtt(m_info.typeSignatureIndexFromExceptionIndexSpace(exceptionIndex));
++            for (unsigned i = 0; i < exceptionSignature.argumentCount(); ++i) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(exceptionSignature.argumentType(exceptionSignature.argumentCount() - 1 - i), actual));
++            }
++            truncateUnreachableStack();
++        }
+         return { };
+     }
+ 
+     case ThrowRef: {
++        if (m_unreachableBlocks == 1) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(exnrefType(), actual));
++            truncateUnreachableStack();
++        }
+         return { };
+     }
+ 
+     case I32Const: {
+         int32_t unused;
+         WASM_PARSER_FAIL_IF(!parseVarInt32(unused), "can't get immediate for "_s, m_currentOpcode, " in unreachable context"_s);
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(Types::I32);
+         return { };
+     }
+ 
+     case I64Const: {
+         int64_t unused;
+         WASM_PARSER_FAIL_IF(!parseVarInt64(unused), "can't get immediate for "_s, m_currentOpcode, " in unreachable context"_s);
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(Types::I64);
+         return { };
+     }
+ 
+@@ -4250,6 +4504,12 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         case Ext1OpType::TableInit: {
+             TableInitImmediates immediates;
+             WASM_FAIL_IF_HELPER_FAILS(parseTableInitImmediates(immediates));
++            if (m_unreachableBlocks == 1) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(m_info.tables[immediates.tableIndex].addressType().asWasmType(), actual));
++            }
+             return { };
+         }
+         case Ext1OpType::ElemDrop: {
+@@ -4257,31 +4517,86 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+             WASM_FAIL_IF_HELPER_FAILS(parseElementIndex(elementIndex));
+             return { };
+         }
+-        case Ext1OpType::TableSize:
+-        case Ext1OpType::TableGrow:
++        case Ext1OpType::TableSize: {
++            unsigned tableIndex;
++            WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
++            if (m_unreachableBlocks == 1)
++                pushUnreachableOperand(m_info.table(tableIndex).addressType().asWasmType());
++            return { };
++        }
++        case Ext1OpType::TableGrow: {
++            unsigned tableIndex;
++            WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
++            if (m_unreachableBlocks == 1) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(m_info.table(tableIndex).addressType().asWasmType(), actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(m_info.tables[tableIndex].wasmType(), actual));
++                pushUnreachableOperand(m_info.table(tableIndex).addressType().asWasmType());
++            }
++            return { };
++        }
+         case Ext1OpType::TableFill: {
+             unsigned tableIndex;
+             WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
++            if (m_unreachableBlocks == 1) {
++                Type addressType = m_info.table(tableIndex).addressType().asWasmType();
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(m_info.tables[tableIndex].wasmType(), actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++            }
+             return { };
+         }
+         case Ext1OpType::TableCopy: {
+             TableCopyImmediates immediates;
+             WASM_FAIL_IF_HELPER_FAILS(parseTableCopyImmediates(immediates));
++            if (m_unreachableBlocks == 1) {
++                auto dstAddress = m_info.tables[immediates.dstTableIndex].addressType();
++                auto srcAddress = m_info.tables[immediates.srcTableIndex].addressType();
++                Type lengthType = (dstAddress.is64Bit() && srcAddress.is64Bit()) ? Types::I64 : Types::I32;
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(lengthType, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(srcAddress.asWasmType(), actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(dstAddress.asWasmType(), actual));
++            }
+             return { };
+         }
+         case Ext1OpType::MemoryFill: {
+             uint8_t memoryIndex;
+             WASM_FAIL_IF_HELPER_FAILS(parseMemoryFillImmediate(memoryIndex));
++            if (m_unreachableBlocks == 1) {
++                Type addressType = m_info.memory(memoryIndex).addressType().asWasmType();
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++            }
+             return { };
+         }
+         case Ext1OpType::MemoryCopy: {
+             uint8_t dstMemoryIndex, srcMemoryIndex;
+             WASM_FAIL_IF_HELPER_FAILS(parseMemoryCopyImmediates(dstMemoryIndex, srcMemoryIndex));
++            if (m_unreachableBlocks == 1) {
++                bool dst64 = m_info.memory(dstMemoryIndex).isMemory64();
++                bool src64 = m_info.memory(srcMemoryIndex).isMemory64();
++                Type lengthType = (dst64 && src64) ? Types::I64 : Types::I32;
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(lengthType, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(src64 ? Types::I64 : Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(dst64 ? Types::I64 : Types::I32, actual));
++            }
+             return { };
+         }
+         case Ext1OpType::MemoryInit: {
+             MemoryInitImmediates immediates;
+             WASM_FAIL_IF_HELPER_FAILS(parseMemoryInitImmediates(immediates));
++            if (m_unreachableBlocks == 1) {
++                Type dstType = m_info.memory(immediates.memoryIndex).isMemory64() ? Types::I64 : Types::I32;
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(dstType, actual));
++            }
+             return { };
+         }
+         case Ext1OpType::DataDrop: {
+@@ -4289,11 +4604,43 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+             WASM_FAIL_IF_HELPER_FAILS(parseDataSegmentIndex(dataSegmentIndex));
+             return { };
+         }
+-#define CREATE_EXT1_CASE(name, ...) case Ext1OpType::name:
+-        FOR_EACH_WASM_TRUNC_SATURATED_OP(CREATE_EXT1_CASE)
+-        FOR_EACH_WASM_WIDE_ARITHMETIC_OP(CREATE_EXT1_CASE)
++#define CREATE_TRUNC_UNREACHABLE(name, id, b3op, inc, operandType, returnType) \
++        case Ext1OpType::name: { \
++            if (m_unreachableBlocks == 1) { \
++                Type actual; \
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::operandType, actual)); \
++                pushUnreachableOperand(Types::returnType); \
++            } \
++            return { }; \
++        }
++        FOR_EACH_WASM_TRUNC_SATURATED_OP(CREATE_TRUNC_UNREACHABLE)
++#undef CREATE_TRUNC_UNREACHABLE
++        case Ext1OpType::I64Add128:
++        case Ext1OpType::I64Sub128: {
++            WASM_PARSER_FAIL_IF(!Options::useWasmWideArithmetic(), "wasm wide arithmetic is not enabled"_s);
++            if (m_unreachableBlocks == 1) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I64, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I64, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I64, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I64, actual));
++                pushUnreachableOperand(Types::I64);
++                pushUnreachableOperand(Types::I64);
++            }
++            return { };
++        }
++        case Ext1OpType::I64MulWideS:
++        case Ext1OpType::I64MulWideU: {
++            WASM_PARSER_FAIL_IF(!Options::useWasmWideArithmetic(), "wasm wide arithmetic is not enabled"_s);
++            if (m_unreachableBlocks == 1) {
++                Type actual;
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I64, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I64, actual));
++                pushUnreachableOperand(Types::I64);
++                pushUnreachableOperand(Types::I64);
++            }
+             return { };
+-#undef CREATE_EXT1_CASE
++        }
+         default:
+             WASM_PARSER_FAIL_IF(true, "invalid extended 0xfc op "_s, m_currentExtOp);
+             break;
+@@ -4305,6 +4652,13 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+     case AnnotatedSelect: {
+         AnnotatedSelectImmediates immediates;
+         WASM_FAIL_IF_HELPER_FAILS(parseAnnotatedSelectImmediates(immediates));
++        if (m_unreachableBlocks == 1) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(immediates.targetType, actual));
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(immediates.targetType, actual));
++            pushUnreachableOperand(immediates.targetType);
++        }
+         return { };
+     }
+ 
+@@ -4312,30 +4666,84 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+     case TableSet: {
+         unsigned tableIndex;
+         WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
+-        return { };
+-    }
+-
+-    case RefIsNull: {
++        if (m_unreachableBlocks == 1) {
++            Type addressType = m_info.table(tableIndex).addressType().asWasmType();
++            Type elementType = m_info.tables[tableIndex].wasmType();
++            Type actual;
++            if (m_currentOpcode == TableSet) {
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(elementType, actual));
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++            } else {
++                WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++                pushUnreachableOperand(elementType);
++            }
++        }
+         return { };
+     }
+ 
+     case RefNull: {
+-        int32_t unused;
+-        WASM_PARSER_FAIL_IF(!parseHeapType(m_info, unused), "can't get heap type for "_s, m_currentOpcode, " in unreachable context"_s);
++        int32_t heapType;
++        WASM_PARSER_FAIL_IF(!parseHeapType(m_info, heapType), "can't get heap type for "_s, m_currentOpcode, " in unreachable context"_s);
++        if (m_unreachableBlocks == 1) {
++            Type typeOfNull;
++            if (isTypeIndexHeapType(heapType)) {
++                TypeIndex typeIndex = m_info.rtt(ModuleInformation::typeSignatureIndexFromHeapType(heapType)).asTypeIndex();
++                typeOfNull = Type { TypeKind::RefNull, typeIndex };
++            } else
++                typeOfNull = Type { TypeKind::RefNull, typeIndexFromTypeKind(static_cast<TypeKind>(heapType)) };
++            pushUnreachableOperand(typeOfNull);
++        }
+         return { };
+     }
+ 
+     case RefFunc: {
+         FunctionSpaceIndex index;
+         WASM_FAIL_IF_HELPER_FAILS(parseFunctionIndex(index));
+-        // Function references don't need to be declared in constant expression contexts.
+         if constexpr (!std::is_same<Context, ConstExprGenerator>())
+             WASM_VALIDATOR_FAIL_IF(!m_info.isDeclaredFunction(index), "ref.func index "_s, index, " isn't declared"_s);
++        if (m_unreachableBlocks == 1) {
++            TypeIndex typeIndex = m_info.rtt(index).asTypeIndex();
++            pushUnreachableOperand(Type { TypeKind::Ref, typeIndex });
++        }
++        return { };
++    }
++
++    case RefAsNonNull: {
++        if (m_unreachableBlocks == 1) {
++            Type refType = Types::Void;
++            if (!m_unreachableTypeStack.isEmpty())
++                refType = m_unreachableTypeStack.takeLast();
++            else
++                WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "can't pop empty stack in unreachable context"_s);
++            if (refType != Types::Void) {
++                WASM_VALIDATOR_FAIL_IF(!isRefType(refType), "ref.as_non_null ref to type ", refType, " expected a reference type");
++                pushUnreachableOperand(Type { TypeKind::Ref, refType.index() });
++            } else
++                pushUnreachableOperand(Types::Void);
++        }
+         return { };
+     }
+ 
+-    case RefAsNonNull:
+     case RefEq: {
++        if (m_unreachableBlocks == 1) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(eqrefType(), actual));
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(eqrefType(), actual));
++            pushUnreachableOperand(Types::I32);
++        }
++        return { };
++    }
++
++    case RefIsNull: {
++        if (m_unreachableBlocks == 1) {
++            Type refType = Types::Void;
++            if (!m_unreachableTypeStack.isEmpty())
++                refType = m_unreachableTypeStack.takeLast();
++            else
++                WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "can't pop empty stack in unreachable context"_s);
++            WASM_VALIDATOR_FAIL_IF(refType != Types::Void && !isRefType(refType), "ref.is_null to type "_s, refType, " expected a reference type"_s);
++            pushUnreachableOperand(Types::I32);
++        }
+         return { };
+     }
+ 
+@@ -4343,10 +4751,14 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+     case BrOnNonNull: {
+         uint32_t target;
+         WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(target));
++        if (m_unreachableBlocks == 1)
++            truncateUnreachableStack();
+         return { };
+     }
+ 
+     case ExtGC: {
++        if (m_unreachableBlocks == 1)
++            truncateUnreachableStack();
+         WASM_PARSER_FAIL_IF(!parseVarUInt32(m_currentExtOp), "can't parse extended GC opcode"_s);
+         m_context.willParseExtendedOpcode();
+ 
+@@ -4514,16 +4926,32 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+         return { };
+     }
+ 
+-    case GrowMemory:
++    case GrowMemory: {
++        WASM_PARSER_FAIL_IF(!m_info.memoryCount(), "grow_memory is only valid if a memory is defined or imported"_s);
++        uint8_t memoryIndex;
++        WASM_FAIL_IF_HELPER_FAILS(parseMemoryIndex(memoryIndex));
++        if (m_unreachableBlocks == 1) {
++            Type addressType = m_info.memory(memoryIndex).addressType().asWasmType();
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(addressType, actual));
++            pushUnreachableOperand(addressType);
++        }
++        return { };
++    }
++
+     case CurrentMemory: {
+-        WASM_PARSER_FAIL_IF(!m_info.memoryCount(), "grow_memory/current_memory is only valid if a memory is defined or imported"_s);
++        WASM_PARSER_FAIL_IF(!m_info.memoryCount(), "current_memory is only valid if a memory is defined or imported"_s);
+         uint8_t memoryIndex;
+         WASM_FAIL_IF_HELPER_FAILS(parseMemoryIndex(memoryIndex));
++        if (m_unreachableBlocks == 1)
++            pushUnreachableOperand(m_info.memory(memoryIndex).addressType().asWasmType());
+         return { };
+     }
+ 
+ #define CREATE_ATOMIC_CASE(name, ...) case ExtAtomicOpType::name:
+     case ExtAtomic: {
++        if (m_unreachableBlocks == 1)
++            truncateUnreachableStack();
+         WASM_PARSER_FAIL_IF(!parseVarUInt32(m_currentExtOp), "can't parse atomic extended opcode"_s);
+         m_context.willParseExtendedOpcode();
+ 
+@@ -4570,6 +4998,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+ 
+ #if ENABLE(B3_JIT)
+     case ExtSIMD: {
++        if (m_unreachableBlocks == 1)
++            truncateUnreachableStack();
+         WASM_PARSER_FAIL_IF(!Options::useWasmSIMD(), "wasm-simd is not enabled"_s);
+         m_context.notifyFunctionUsesSIMD();
+         WASM_PARSER_FAIL_IF(!parseVarUInt32(m_currentExtOp), "can't parse wasm extended opcode"_s);
+@@ -4599,12 +5029,99 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
+ 
+     // no immediate cases
+     FOR_EACH_WASM_BINARY_OP(CREATE_CASE)
+-    FOR_EACH_WASM_UNARY_OP(CREATE_CASE)
+-    case Unreachable:
++    FOR_EACH_WASM_UNARY_OP(CREATE_CASE) {
++        if (m_unreachableBlocks != 1)
++            return { };
++
++        switch (m_currentOpcode) {
++#define CREATE_BINARY_UNREACHABLE(name, id, b3op, inc, lhsType, rhsType, returnType) \
++        case OpType::name: { \
++            Type actual; \
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::rhsType, actual)); \
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::lhsType, actual)); \
++            pushUnreachableOperand(Types::returnType); \
++            return { }; \
++        }
++        FOR_EACH_WASM_BINARY_OP(CREATE_BINARY_UNREACHABLE)
++#undef CREATE_BINARY_UNREACHABLE
++#define CREATE_UNARY_UNREACHABLE(name, id, b3op, inc, operandType, returnType) \
++        case OpType::name: { \
++            Type actual; \
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::operandType, actual)); \
++            pushUnreachableOperand(Types::returnType); \
++            return { }; \
++        }
++        FOR_EACH_WASM_UNARY_OP(CREATE_UNARY_UNREACHABLE)
++#undef CREATE_UNARY_UNREACHABLE
++        default:
++            break;
++        }
++        return { };
++    }
++
++    case Unreachable: {
++        if (m_unreachableBlocks == 1)
++            truncateUnreachableStack();
++        return { };
++    }
++
+     case Nop:
+-    case Return:
+-    case Select:
++        return { };
++
++    case Return: {
++        if (m_unreachableBlocks == 1) {
++            ControlType& top = m_controlStack[0].controlData;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableBranchArgs(top));
++            truncateUnreachableStack();
++        }
++        return { };
++    }
++
++    case Select: {
++        if (m_unreachableBlocks == 1) {
++            Type actual;
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand(Types::I32, actual));
++
++            bool zeroInvented = m_unreachableTypeStack.isEmpty();
++            Type zero = Types::I32;
++            if (!zeroInvented)
++                zero = m_unreachableTypeStack.takeLast();
++            else
++                WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "can't pop empty stack in unreachable context"_s);
++
++            bool nonZeroInvented = m_unreachableTypeStack.isEmpty();
++            Type nonZero = Types::I32;
++            if (!nonZeroInvented)
++                nonZero = m_unreachableTypeStack.takeLast();
++            else
++                WASM_VALIDATOR_FAIL_IF(!m_unreachablePolymorphic, "can't pop empty stack in unreachable context"_s);
++
++            if (!zeroInvented && !nonZeroInvented) {
++                if (zero != Types::Void && nonZero != Types::Void) {
++                    WASM_PARSER_FAIL_IF(isRefType(nonZero) || isRefType(zero), "can't use ref-types with unannotated select"_s);
++                    WASM_VALIDATOR_FAIL_IF(nonZero != zero, "select result types must match, got "_s, nonZero, " and "_s, zero);
++                    pushUnreachableOperand(zero);
++                } else if (zero != Types::Void)
++                    pushUnreachableOperand(zero);
++                else if (nonZero != Types::Void)
++                    pushUnreachableOperand(nonZero);
++                else
++                    pushUnreachableOperand(Types::Void);
++            } else if (!zeroInvented) {
++                WASM_PARSER_FAIL_IF(zero != Types::Void && isRefType(zero), "can't use ref-types with unannotated select"_s);
++                pushUnreachableOperand(zero);
++            } else if (!nonZeroInvented) {
++                WASM_PARSER_FAIL_IF(nonZero != Types::Void && isRefType(nonZero), "can't use ref-types with unannotated select"_s);
++                pushUnreachableOperand(nonZero);
++            } else
++                pushUnreachableOperand(Types::Void);
++        }
++        return { };
++    }
++
+     case Drop: {
++        if (m_unreachableBlocks == 1)
++            WASM_FAIL_IF_HELPER_FAILS(popUnreachableOperand());
+         return { };
+     }
+     }

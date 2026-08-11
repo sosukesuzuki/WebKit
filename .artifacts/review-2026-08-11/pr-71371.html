@@ -1,0 +1,170 @@
+<title>PR #71371 — WasmGC アロケーション最適化</title>
+<link rel="stylesheet" href="shared.css">
+<header class="masthead"><div class="wrap">
+  <div class="kicker">WebKit/WebKit · JavaScriptCore · WebAssembly GC</div>
+  <h1>[JSC] Tighten WasmGC allocation — WasmGC struct/array 割り当ての最適化</h1>
+  <div class="meta">
+    <span>PR <a href="https://github.com/WebKit/WebKit/pull/71371">#71371</a></span>
+    <span>著者: Constellation</span>
+    <span>差分: <span class="diffstat"><span class="add">+102</span> / <span class="del">−29</span></span> · 7 files</span>
+    <span><a href="https://bugs.webkit.org/show_bug.cgi?id=321522">bug 321522</a></span>
+    <span class="verdict approve">✓ Approve 推奨</span>
+  </div>
+</div></header>
+
+<main>
+
+<div class="toc">
+  <strong>目次</strong>
+  <ul>
+    <li><a href="#summary">概要</a></li>
+    <li><a href="#background">背景 — 現状の問題点</a></li>
+    <li><a href="#change1">変更 1: <code>VariableNonNullWithConstantCellSize</code> モードの追加</a></li>
+    <li><a href="#change2">変更 2: B3 エフェクトモデルの緩和</a></li>
+    <li><a href="#review">コードレビュー結果</a></li>
+    <li><a href="#recommendation">レビュー推奨事項</a></li>
+  </ul>
+</div>
+
+<h2 id="summary">概要</h2>
+<p>WasmGC の <code>struct.new</code> / <code>array.new</code> が生成する JIT コードを 2 点で最適化します。</p>
+<ol>
+  <li><strong>定数セルサイズによるバンプアロケーション</strong> — 従来は「アロケータがレジスタに載っている（=変数）」場合はセルサイズもアロケータからロードしていましたが、WasmGC struct のセルサイズはコンパイル時に確定しているため、それを即値として埋め込めるようにします（メモリロード 1 つ削減）。</li>
+  <li><strong>B3 エフェクトモデルの緩和</strong> — <code>WasmStructNew</code> / <code>WasmArrayNew</code> は従来 <code>writes = HeapRange::top()</code> と宣言していたため、割り当てを跨いだフィールドロードの CSE が無効化されていました。DFG の <code>NewObject</code> 系と同様に「新規オブジェクト以外には書き込まない」モデルに変更し、CSE を有効化します。</li>
+</ol>
+
+<h2 id="background">背景 — 現状の問題点</h2>
+
+<h3>JIT アロケーションの高速パス</h3>
+<p>JSC のヒープは <code>LocalAllocator</code> ごとに free-list を持ち、高速パスは「free-list の <code>intervalStart</code> をロード → <code>intervalStart + cellSize</code> を書き戻し → 元の <code>intervalStart</code> を返す」バンプアロケーションです。ここで <code>cellSize</code> は通常アロケータの <code>LocalAllocator::m_cellSize</code> フィールドから <code>load32</code> で取得します。</p>
+<p>WasmGC struct の場合、struct 型ごとにレイアウトが固定なので <code>cellSize = MarkedSpace::optimalSizeFor(JSWebAssemblyStruct::allocationSize(payloadSize))</code> はコンパイル時定数です。しかしアロケータ自体は <code>JSWebAssemblyInstance</code> の allocator 配列から動的にロードするため、<code>JITAllocator</code> は <code>VariableNonNull</code> モード（=「アロケータもセルサイズも変数」）で扱われ、cellSize のロードが省けませんでした。</p>
+
+<h3>B3 のエフェクトモデル</h3>
+<p><code>B3EliminateCommonSubexpressions</code> は各命令の <code>effects().writes</code> を見て、キャッシュ中のロード（<code>WasmStructGet</code> 等）を無効化（clobber）します。<code>WasmStructNew</code> が <code>writes = top</code> だと、以下のパターンで 2 回目の <code>struct.get</code> が 1 回目と CSE できません。</p>
+<pre>local.set $sum (struct.get $s $f (local.get $a))   ;; 1回目のロード
+drop (struct.new $t ...)                            ;; ← writes=top なので $a のロードキャッシュが飛ぶ
+struct.set $s $f (local.get $a) ...
+local.set $sum (struct.get $s $f (local.get $a))   ;; 2回目 — 直前の store から forwarding したい</pre>
+<p>実際には <code>struct.new</code> は「新規に確保したセルの中身」と「アロケータの free-list 状態」しか書き換えず、既存オブジェクトのフィールドは触らないため、この保守的なモデルは過剰でした。</p>
+
+<h2 id="change1">変更 1: <code>VariableNonNullWithConstantCellSize</code> モードの追加</h2>
+
+<h3><code>JITAllocator.h</code></h3>
+<p>4 番目の <code>Kind</code> として <code>VariableNonNullWithConstantCellSize</code> を追加。「アロケータはレジスタ渡し・null チェック不要・セルサイズは即値」を表現します。</p>
+<pre>static JITAllocator variableNonNullWithConstantCellSize(unsigned cellSize) {
+    JITAllocator result(VariableNonNullWithConstantCellSize);
+    result.m_cellSize = cellSize;
+    return result;
+}
+bool hasConstantCellSize() const {
+    return m_kind == Constant || m_kind == VariableNonNullWithConstantCellSize;
+}
+unsigned constantCellSize() const {
+    if (m_kind == Constant) return m_allocator.cellSize();
+    return m_cellSize;
+}</pre>
+
+<h3><code>AssemblyHelpers.cpp</code></h3>
+<p><code>emitAllocateWithNonNullAllocator</code> の 3 か所（ARM64・x86-64・その他）で、<code>allocator.isConstant()</code> → <code>allocator.hasConstantCellSize()</code>、<code>allocator.allocator().cellSize()</code> → <code>allocator.constantCellSize()</code> に置換。<code>emitAllocate()</code> の <code>switch</code> にも新 <code>Kind</code> を追加（<code>VariableNonNull</code> と同じく null チェックを省く）。</p>
+
+<h3><code>B3LowerMacros.cpp</code> / <code>WasmBBQJIT64.cpp</code></h3>
+<p>セルサイズを <code>MarkedSpace::s_sizeClassForSizeStep[sizeClassToIndex(sizeInBytes)]</code> で取得し、<code>variableNonNullWithConstantCellSize()</code> で patchpoint に渡します。</p>
+
+<div class="callout">
+  <strong>正当性の鍵</strong>: JIT が計算する <code>constantCellSize</code> と、実行時にロードされる <code>LocalAllocator::cellSize()</code> は<strong>必ず一致する</strong>ことが不変条件です。<br><br>
+  <code>JSWebAssemblyInstance</code> の allocator 配列は <code>CompleteSubspace::allocatorsForSizeSteps()</code> のコピーで、各エントリ <code>[i]</code> は <code>allocatorForSlow(s_sizeClassForSizeStep[i])</code> で作られた <code>LocalAllocator</code>（cellSize = <code>s_sizeClassForSizeStep[i]</code>）です。JIT 側も同じ <code>i = sizeClassToIndex(bytes)</code> と <code>s_sizeClassForSizeStep[i]</code> を使うので、両者は表引きで一致します。
+</div>
+
+<h2 id="change2">変更 2: B3 エフェクトモデルの緩和</h2>
+
+<h3><code>B3Value.cpp</code></h3>
+<p><code>constantEffectsForOpcode</code> で <code>WasmStructNew</code> / <code>WasmArrayNew</code> のエフェクトから <code>result.writes = HeapRange::top()</code> を削除。<code>reads = top</code>（GC が全ヒープを走査するため）と <code>exitsSideways = true</code>（OOM でトラップ・OSR exit 可能）は維持します。</p>
+<pre>case WasmStructNew:
+case WasmArrayNew:
+    // Allocation can trap and can trigger GC, so it reads everything and exits sideways.
+    // It only stores into the object it just produced, though, which nothing loaded earlier
+    // can alias, so it does not need to clobber previously cached field loads.
+    result.reads = HeapRange::top();
+    result.exitsSideways = true;
+    break;</pre>
+
+<h3>健全性の議論</h3>
+<p>この緩和で新たに可能になる最適化は「<code>WasmStructNew</code> / <code>WasmArrayNew</code> を跨いだ <code>WasmStructGet</code>/<code>WasmArrayGet</code>/<code>MemoryValue Load</code> の CSE」です。これが安全である理由:</p>
+<ul>
+  <li>割り当てが書き込むのは (a) 新規セルの内容 (b) LocalAllocator の free-list 状態、のみ。既存オブジェクトのペイロードには一切書き込まない。</li>
+  <li>slow-path で GC が走っても JSC の MarkedSpace は non-moving なのでポインタは不変。GC はオブジェクトのペイロードを書き換えない（mark bit はヘッダ外）。</li>
+  <li>weak reference の clear は WasmGC struct フィールドには存在しない。</li>
+  <li><code>reads = top</code> は維持されるので、割り当て前の store が割り当て後に沈むこと（reordering）は起きない。<code>exitsSideways = true</code> は維持されるので、割り当て後の副作用が割り当て前に浮くこともない。</li>
+</ul>
+<p>これは DFG の <code>NewObject</code>/<code>NewArray</code> 等がずっと採用しているモデルと同じ（<code>DFGClobberize.h</code>）です。</p>
+
+<h3>追加テスト</h3>
+<ul>
+  <li><code>struct-new-does-not-clobber-loads.js</code> — 「read → alloc → store → read」のパターンで、2 回目の read が store の値（1 回目の値ではない）を見ることを 200,000 回ループで確認。CSE が誤って alloc 前の値を再利用すると失敗します。</li>
+  <li><code>struct-new-nested-alloc-gc.js</code> — 入れ子の <code>struct.new</code> で大量にアロケートし、途中で GC が走っても外側 struct から内側 struct への参照が壊れないことを確認。</li>
+</ul>
+
+<h2 id="review">コードレビュー結果</h2>
+
+<div class="callout ok">
+  <strong>総評</strong>: 2 つの最適化はいずれも健全で、正当性を裏付ける不変条件（allocator 配列の構築とサイズクラス表の一貫性、JSC GC の non-moving 性）をコード追跡で確認しました。<strong>正当性に関わる指摘事項はありません。</strong>
+</div>
+
+<h3>敵対的レビューで検証した項目</h3>
+<ul>
+  <li>✅ <code>s_sizeClassForSizeStep[sizeClassToIndex(bytes)]</code> = 実行時 <code>LocalAllocator::cellSize()</code> — <code>CompleteSubspace::prepareAllAllocators()</code> と <code>buildSizeClassTable()</code> を追跡して一致を確認</li>
+  <li>✅ <code>sizeClassIndex</code> の範囲 — <code>sizeInBytes ≤ largeCutoff</code> のときのみ高速パスを取るので <code>sizeClassIndex &lt; numSizeClasses</code> が保証される（<code>B3LowerMacros.cpp:91</code> の条件変更後も同値）</li>
+  <li>✅ 旧 <code>(allocationSize + sizeStep - 1) &gt;&gt; stepShift</code> と新 <code>sizeClassToIndex(sizeInBytes)</code> は同じ式（<code>(size + sizeStep - 1) / sizeStep</code>）</li>
+  <li>✅ <code>emitAllocate()</code> の <code>switch</code> に <code>VariableNonNullWithConstantCellSize</code> ケース追加漏れなし</li>
+  <li>✅ <code>operator==(const JITAllocator&, const JITAllocator&) = default</code> — <code>m_cellSize</code> フィールド追加後も defaulted 比較で全フィールド比較されるので問題なし</li>
+  <li>✅ B3 CSE の clobber は <code>effects.writes</code> のみを見る（<code>B3EliminateCommonSubexpressions.cpp:540</code>）— <code>exitsSideways</code> だけではキャッシュを無効化しないので、緩和の効果は意図通り</li>
+  <li>✅ WasmGC の slow-path C++ 呼び出し（<code>operationWasmStructNew</code> 等）は既存オブジェクトのペイロードに書き込まない</li>
+  <li>✅ テスト <code>struct-new-does-not-clobber-loads.js</code> は「alloc 後の store → read」で store forwarding が正しく効くことを検証しており、緩和が過剰だった場合（alloc 前の read 値が再利用される場合）に検出できる設計</li>
+</ul>
+
+<h3 id="review-findings">指摘事項</h3>
+
+<p style="color:var(--fg-muted);">2 名の独立レビュアー（correctness 観点・edge-case 観点）による敵対的レビューの結果、<strong>正当性に関わる指摘は 0 件</strong>でした。以下は改善提案（nit）です。</p>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip nit">NIT</span>
+    <span class="chip refuted">改善提案</span>
+    <span class="loc">Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp:~1466</span>
+  </div>
+  <div class="claim">定数サイズ <code>array.new</code>（<code>array.new_fixed</code> 等）でも同じ最適化が適用可能ですが、本 PR では struct のみ対応しています。</div>
+  <dl>
+    <dt>根拠</dt>
+    <dd>BBQ の <code>emitAllocateGCArray*</code> パスは依然として <code>JITAllocator::variableNonNull()</code> を使っています。要素数がコンパイル時定数の array 割り当ても同様にセルサイズが確定するため、同じ手法で最適化できます。</dd>
+    <dt>推奨対応</dt>
+    <dd>本 PR の scope 外として follow-up で対応。ブロッキングではありません。</dd>
+  </dl>
+</div>
+
+<h3>良い点</h3>
+<ul>
+  <li><code>hasConstantCellSize()</code> / <code>constantCellSize()</code> という抽象化により、既存の <code>Constant</code> パスと新パスがコード共有され、変更箇所が最小限</li>
+  <li>エフェクトモデル変更に「なぜ安全か」を説明するコメントが付いている</li>
+  <li>2 本のテストがそれぞれ「CSE 過剰緩和」「GC タイミング」という異なる regression シナリオをカバー</li>
+</ul>
+
+<h2 id="recommendation">レビュー推奨事項</h2>
+<p><span class="verdict approve">✓ Approve</span></p>
+<p>正当性の議論は明快で、既存の DFG 割り当てモデルと整合しています。テストカバレッジも適切です。そのまま Approve で問題ありません。</p>
+
+<details>
+<summary>差分統計</summary>
+<pre>JSTests/wasm/gc/struct-new-does-not-clobber-loads.js | 27 +++++++++++++
+JSTests/wasm/gc/struct-new-nested-alloc-gc.js        | 29 +++++++++++++
+Source/JavaScriptCore/b3/B3LowerMacros.cpp           | 17 ++++----
+Source/JavaScriptCore/b3/B3Value.cpp                 |  8 ++--
+Source/JavaScriptCore/jit/AssemblyHelpers.cpp        | 13 +++---
+Source/JavaScriptCore/jit/JITAllocator.h             | 35 ++++++++++++----
+Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp          |  2 +-
+7 files changed, 102 insertions(+), 29 deletions(-)</pre>
+</details>
+
+<footer>
+  生成: 2026-08-11 · JSC review routine · <a href="index.html">← 一覧へ</a>
+</footer>
+</main>

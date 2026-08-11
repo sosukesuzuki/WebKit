@@ -1,0 +1,199 @@
+<title>PR #70963 — 到達不能コードのオペランドスタック検証</title>
+<link rel="stylesheet" href="shared.css">
+<header class="masthead"><div class="wrap">
+  <div class="kicker">WebKit/WebKit · JavaScriptCore · WebAssembly Validation</div>
+  <h1>[JSC][Wasm] 到達不能になった時点でオペランドスタックを truncate する</h1>
+  <div class="meta">
+    <span>PR <a href="https://github.com/WebKit/WebKit/pull/70963">#70963</a></span>
+    <span>著者: chicoxyzzy</span>
+    <span>差分: <span class="diffstat"><span class="add">+607</span> / <span class="del">−156</span></span> · 4 files</span>
+    <span><a href="https://bugs.webkit.org/show_bug.cgi?id=220278">bug 220278</a></span>
+    <span class="verdict comment">💬 Comment 推奨</span>
+  </div>
+</div></header>
+
+<main>
+
+<div class="toc">
+  <strong>目次</strong>
+  <ul>
+    <li><a href="#summary">概要</a></li>
+    <li><a href="#background">背景 — Wasm 仕様の polymorphic stack</a></li>
+    <li><a href="#changes">変更内容の詳細</a></li>
+    <li><a href="#review">コードレビュー結果</a></li>
+    <li><a href="#recommendation">レビュー推奨事項</a></li>
+  </ul>
+</div>
+
+<h2 id="summary">概要</h2>
+<p>WebAssembly の検証（validation）において、到達不能コード内でも型スタックを追跡し、仕様が要求する型不一致を検出するようにします。これにより WPT の <code>unreached-invalid.wast</code>・<code>call_ref.wast</code>・<code>return_call_ref.wast</code> で計 <strong>42 個</strong> の FAIL → PASS が達成されます。</p>
+<p>変更は <code>WasmFunctionParser.h</code> の <code>parseUnreachableExpression()</code> のみに集中しています（+530 行程度）。実装コード生成には影響せず、検証ロジックのみの変更です。</p>
+
+<h2 id="background">背景 — Wasm 仕様の polymorphic stack</h2>
+
+<h3>仕様が要求すること</h3>
+<p>Wasm の型検証は「フレームごとに型スタックを保持し、各命令が pop/push する型が合うか」を確認します。<code>unreachable</code>・<code>br</code>・<code>return</code>・<code>throw</code> 等の制御が戻らない命令の直後は、仕様上スタックが「polymorphic（多相）」状態になります（<a href="https://webassembly.github.io/spec/core/appendix/algorithm.html">Validation Algorithm §Appendix</a>）。</p>
+<ul>
+  <li>polymorphic 状態では任意個の <code>⊥</code>（bottom 型）を pop できる</li>
+  <li><strong>ただし</strong>、<code>unreachable</code> の後に push された<strong>具体値</strong>は追跡され、後続命令が pop する期待型と<strong>一致しなければ検証エラー</strong></li>
+</ul>
+<p>つまり以下は<strong>不正</strong>なモジュールです（仕様上コンパイル失敗しなければならない）:</p>
+<pre>(func (result i32)
+  unreachable
+  i64.const 0     ;; スタック: [i64]
+  i32.eqz)        ;; i32 を pop したいが i64 → 型エラー！</pre>
+
+<h3>JSC の現状（この PR 以前）</h3>
+<p>JSC の <code>parseUnreachableExpression()</code> は immediates のパースと基本的な index 検証のみを行い、<strong>型スタックの追跡をしていません</strong>。そのため上記のような「到達不能コード内の型不一致」を検出できず、<code>unreached-invalid.wast</code> の多くの assert_invalid テストで「不正なモジュールを受理してしまう（false accept）」失敗になっていました。</p>
+<p>実行時の危険性はありません（到達不能なので実行されない）が、仕様準拠度と web-platform-tests のスコアに影響します。</p>
+
+<h2 id="changes">変更内容の詳細</h2>
+
+<h3>1. 新しいパーサー状態</h3>
+<pre>bool m_unreachablePolymorphic { false };       // 現フレームが polymorphic 状態か
+Vector&lt;Type, 16&gt; m_unreachableTypeStack;       // polymorphic 突入後に push された具体型</pre>
+<p><code>m_unreachableTypeStack</code> は<strong>型のみ</strong>を保持し、生成器（BBQ/IPInt）の <code>m_expressionStack</code> とは別に管理されます（生成器側は到達不能コード内の値を必要としないため）。</p>
+
+<h3>2. ヘルパー関数群</h3>
+<table>
+  <thead><tr><th>関数</th><th>役割</th></tr></thead>
+  <tbody>
+    <tr><td><code>markUnreachableAndClearStack()</code></td><td>到達可能 → 到達不能への遷移。type stack をクリアし polymorphic に。</td></tr>
+    <tr><td><code>truncateUnreachableStack()</code></td><td>到達不能内で再び polymorphic になる（<code>br</code>・<code>return</code>・<code>throw</code> 等）。</td></tr>
+    <tr><td><code>pushUnreachableOperand(Type)</code></td><td>型を type stack に push。</td></tr>
+    <tr><td><code>popUnreachableOperand(expected, &amp;actual)</code></td><td>type stack が空でなければ pop して <code>isSubtype(actual, expected)</code> を検証。空かつ polymorphic なら <code>⊥</code> を pop（= expected を返す）。空かつ非 polymorphic ならエラー。</td></tr>
+    <tr><td><code>popUnreachableBranchArgs(target)</code></td><td>ブランチターゲットの label 型列を（末尾から）pop して検証。</td></tr>
+    <tr><td><code>checkUnreachableBranchTarget(target)</code></td><td>消費せずに label 型列を検証（<code>br_table</code> の複数ターゲット用）。</td></tr>
+  </tbody>
+</table>
+
+<h3>3. reachable → unreachable 遷移点の統一</h3>
+<p><code>Br</code>・<code>BrTable</code>・<code>Return</code>・<code>Unreachable</code>・<code>Throw</code>・<code>ThrowRef</code>・<code>Rethrow</code>・<code>TailCall*</code> の 10 か所で <code>m_unreachableBlocks = 1</code> を <code>markUnreachableAndClearStack()</code> に置換。</p>
+
+<h3>4. <code>parseUnreachableExpression()</code> の各 opcode 対応</h3>
+<p><code>m_unreachableBlocks == 1</code>（= 最外の到達不能フレーム）のときのみ型追跡を行います。ネストした到達不能ブロック内（<code>m_unreachableBlocks &gt; 1</code>）は従来どおり immediates のパースのみです。</p>
+<p>主な追加内容:</p>
+<ul>
+  <li>数値定数（<code>I32Const</code> 等）→ 対応型を push</li>
+  <li>単項/二項演算 → <code>FOR_EACH_WASM_{UNARY,BINARY}_OP</code> マクロで operand/result 型を pop/push</li>
+  <li>load/store → address 型と value 型を pop/push</li>
+  <li>local/global get/set → index の型で pop/push</li>
+  <li>call/call_indirect/call_ref → シグネチャの引数を pop、返り値を push（tail call は truncate）</li>
+  <li>br/br_if/br_table/return → target の label 型を検証してから truncate</li>
+  <li>select → 3 つ pop、両オペランドが具体値なら型一致検証、ref 型なら reject</li>
+  <li>ref.null/ref.func/ref.is_null/ref.as_non_null/ref.eq → ref 型を push/pop</li>
+  <li>table.*・memory.*（ext1 系）→ 各命令のシグネチャ通り</li>
+  <li>wide-arithmetic（i64.add128 等）→ 4 pop / 2 push</li>
+  <li><strong>未対応の複雑な opcode</strong>（GC 系 <code>ExtGC</code>・SIMD <code>ExtSIMD</code>・atomics <code>ExtAtomic</code>・<code>BrOnNull</code>/<code>BrOnNonNull</code>）→ <code>truncateUnreachableStack()</code> で polymorphic empty にリセット（= 型追跡を諦める。false accept は残るが false reject はしない）。</li>
+</ul>
+
+<h3>5. WPT expectation 更新</h3>
+<p><code>unreached-invalid.wast.js-expected.txt</code> で 38 個、<code>call_ref</code>・<code>return_call_ref</code> で各 2 個の FAIL → PASS。</p>
+
+<h2 id="review">コードレビュー結果</h2>
+
+<div class="callout warn">
+  <strong>総評</strong>: 大きな一歩前進で、多くの WPT が新たに PASS します。設計の方針（type-only stack + polymorphic フラグ、未対応 opcode は保守的に truncate）は健全です。ただし <code>br_table</code> の部分スタック検証と、いくつかのエッジケースについてコメントに値する点があります。
+</div>
+
+<h3>敵対的レビューで検証した項目</h3>
+<ul>
+  <li>✅ <code>parseBranchTarget(target, m_unreachableBlocks)</code> で <code>m_unreachableBlocks == 1</code> のとき <code>controlStackSize += 0</code> なので <code>target &lt; m_controlStack.size()</code> が保証され、<code>m_controlStack[size - 1 - target]</code> は範囲内</li>
+  <li>✅ <code>Void</code> 型を「polymorphic からの発明値」の sentinel として使用 — Wasm 型システムに <code>Void</code> は現れないので衝突しない</li>
+  <li>✅ <code>Else</code>/<code>Catch</code>/<code>CatchAll</code>/<code>End</code> で <code>m_unreachableBlocks == 1</code> のとき type stack と polymorphic フラグを正しくリセット</li>
+  <li>✅ 未対応 opcode（GC/SIMD/atomics/BrOn*）は <code>truncateUnreachableStack()</code> で safe な over-approximation — false reject しない</li>
+  <li>✅ <code>Try</code>（legacy 例外）で <code>m_usesLegacyExceptions.storeRelaxed(true)</code> を到達不能パスでも設定するように追加（副次的な修正）</li>
+  <li>✅ 到達可能パスの <code>Br</code> で <code>markUnreachableAndClearStack()</code> の呼び出し位置を <code>addBranch()</code> の<strong>後</strong>に移動 — <code>addBranch</code> は <code>expressionStack()</code> を参照するので先にクリアしてはいけない。移動は正しい。</li>
+</ul>
+
+<h3 id="review-findings">指摘事項</h3>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip medium">MEDIUM</span>
+    <span class="chip confirmed">CONFIRMED</span>
+    <span class="loc">WasmFunctionParser.h — checkUnreachableBranchTarget()</span>
+  </div>
+  <div class="claim"><code>br_table</code> で type stack に arity 未満の具体値しかない場合、非 default ターゲットに対する具体値の型検証がスキップされます（false accept）。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd>
+<pre>(block $A (result i32 i32) ...)   ;; label 型 [i32, i32]
+(block $B (result i32 f32) ...)   ;; label 型 [i32, f32]
+unreachable
+f32.const 0      ;; type stack = [f32], polymorphic
+i32.const 0      ;; index
+br_table $A $B</pre>
+    <code>checkUnreachableBranchTarget($A)</code>: <code>sliceSize=1 &lt; arity=2</code> かつ <code>polymorphic=true</code> → <strong>早期 return（f32 vs i32 の検証を飛ばす）</strong>。<code>popUnreachableBranchArgs($B)</code>: f32 vs f32 ✓、⊥ vs i32 ✓ → 受理。しかし仕様上 $A に対して <code>[⊥, f32]</code> を <code>[i32, i32]</code> として pop できないので <strong>reject すべき</strong>。</dd>
+    <dt>検証結果</dt>
+    <dd><code>checkUnreachableBranchTarget()</code> の <code>if (sliceSize &lt; arity) { ... return { }; }</code> パスでは <code>m_unreachableTypeStack</code> の中身を一切見ていません。仕様アルゴリズムは「polymorphic pop は具体値を先に消費し、足りない分だけ ⊥ を発明する」なので、具体値部分の型不一致は検出しなければなりません。</dd>
+    <dt>影響度</dt>
+    <dd>これは <strong>regression ではありません</strong>（この PR 以前は到達不能コードで一切型検証していなかったので、同じモジュールは以前も受理されていた）。false accept のみで false reject はなく、実行時の危険もありません。ただし WPT に該当ケースが今後追加される可能性があります。</dd>
+    <dt>推奨対応</dt>
+    <dd><code>sliceSize &lt; arity</code> の early-return 前に、<code>m_unreachableTypeStack</code> の具体値を <code>target.branchTargetType(arity - sliceSize + i)</code> と照合するループを追加。</dd>
+  </dl>
+</div>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip low">LOW</span>
+    <span class="chip confirmed">CONFIRMED</span>
+    <span class="loc">WasmFunctionParser.h — parseUnreachableExpression() BrTable</span>
+  </div>
+  <div class="claim">到達不能 <code>br_table</code> で <code>targetIndices.reserveInitialCapacity(numberOfTargets)</code> は OOM 時にクラッシュします。到達可能パスは <code>tryReserveCapacity</code> + <code>WASM_ALLOCATOR_FAIL_IF</code> を使っています。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd><code>numberOfTargets</code> は <code>UINT32_MAX - 1</code> まで許容され、<code>Vector&lt;uint32_t&gt;::reserveInitialCapacity(0xFFFFFFFE)</code> は ~16 GB を要求します。実際には各ターゲットが最低 1 バイトの varint なので function body サイズに制約されますが、到達可能パスと同じ失敗モード（parser エラー）にすべきです。</dd>
+    <dt>推奨対応</dt>
+    <dd><code>WASM_ALLOCATOR_FAIL_IF(!targetIndices.tryReserveCapacity(numberOfTargets), ...)</code> に変更（到達可能パスの :3873 と同じパターン）。</dd>
+  </dl>
+</div>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip low">LOW</span>
+    <span class="chip plausible">PLAUSIBLE</span>
+    <span class="loc">WasmFunctionParser.h — parseUnreachableExpression() BrOnNull/BrOnNonNull</span>
+  </div>
+  <div class="claim"><code>br_on_null</code> / <code>br_on_non_null</code> は単に <code>truncateUnreachableStack()</code> しており、ref オペランドの型検証も target 型検証も行いません。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd><code>unreachable; i32.const 0; br_on_null $L</code> — 仕様上 br_on_null は ref 型を pop するので i32 は型エラーですが、この実装では検出されません。</dd>
+    <dt>影響度</dt>
+    <dd>commit message に「Untracked unreachable ops (GC, SIMD, atomics, br_on_*) reset the type stack to polymorphic empty」とあり、<strong>意図的な段階的実装</strong>です。false accept のみ。</dd>
+    <dt>推奨対応</dt>
+    <dd>本 PR の scope 内であれば ref 型検証だけでも追加すると WPT カバレッジが上がりますが、follow-up でも可。</dd>
+  </dl>
+</div>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip nit">NIT</span>
+    <span class="loc">WasmFunctionParser.h — parseUnreachableExpression() BrTable</span>
+  </div>
+  <div class="claim"><code>m_unreachableBlocks &gt; 1</code> のときも <code>targetIndices</code> Vector に append しますが、使われません。</div>
+  <dl>
+    <dt>推奨対応</dt>
+    <dd><code>if (m_unreachableBlocks == 1) targetIndices.append(target);</code> にすれば無駄な allocation を避けられます（あるいは Vector 自体を <code>if</code> ブロック内に移動）。</dd>
+  </dl>
+</div>
+
+<!-- REVIEW_FINDINGS_70963_EXTRA -->
+
+<h2 id="recommendation">レビュー推奨事項</h2>
+<p><span class="verdict comment">💬 Comment</span></p>
+<p>方向性は正しく、regression（既存の valid モジュールを reject）のリスクは低いです。上記指摘事項について著者に確認を求めることを推奨しますが、いずれもブロッキングではありません（<code>merging-blocked</code> ラベルが既に付いており、EWS 待ちの状態です）。</p>
+
+<details>
+<summary>差分統計</summary>
+<pre>LayoutTests/.../wasm/core/call_ref.wast.js-expected.txt        |   7 +-
+LayoutTests/.../wasm/core/return_call_ref.wast.js-expected.txt |   7 +-
+LayoutTests/.../wasm/core/unreached-invalid.wast.js-expected.txt | 140 ++---
+Source/JavaScriptCore/wasm/WasmFunctionParser.h                | 609 +++++++++++++++++--
+4 files changed, 607 insertions(+), 156 deletions(-)</pre>
+</details>
+
+<footer>
+  生成: 2026-08-11 · JSC review routine · <a href="index.html">← 一覧へ</a>
+</footer>
+</main>

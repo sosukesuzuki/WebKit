@@ -1,0 +1,183 @@
+<title>PR #70964 — worker.terminate() 中の Atomics.wait 停止</title>
+<link rel="stylesheet" href="shared.css">
+<header class="masthead"><div class="wrap">
+  <div class="kicker">WebKit/WebKit · JavaScriptCore · Threading</div>
+  <h1>[JSC] worker.terminate() 中に Atomics.wait / Wasm memory.atomic.wait を停止させる</h1>
+  <div class="meta">
+    <span>PR <a href="https://github.com/WebKit/WebKit/pull/70964">#70964</a></span>
+    <span>著者: chicoxyzzy</span>
+    <span>差分: <span class="diffstat"><span class="add">+153</span> / <span class="del">−7</span></span> · 11 files</span>
+    <span><a href="https://bugs.webkit.org/show_bug.cgi?id=289686">bug 289686</a></span>
+    <span class="verdict comment">💬 Comment 推奨</span>
+  </div>
+</div></header>
+
+<main>
+
+<div class="toc">
+  <strong>目次</strong>
+  <ul>
+    <li><a href="#summary">概要</a></li>
+    <li><a href="#background">背景 — なぜハングするか</a></li>
+    <li><a href="#changes">変更内容の詳細</a></li>
+    <li><a href="#review">コードレビュー結果</a></li>
+    <li><a href="#recommendation">レビュー推奨事項</a></li>
+  </ul>
+</div>
+
+<h2 id="summary">概要</h2>
+<p>Worker が <code>Atomics.wait()</code>（または Wasm の <code>memory.atomic.wait32/64</code>）で無限にブロックしている最中に <code>worker.terminate()</code> を呼ぶと、<a href="https://bugs.webkit.org/show_bug.cgi?id=305440">bug 305440</a> の変更以降、Worker スレッドが終了しなくなっていた回帰を修正します。</p>
+<p>根本原因: <code>notifyNeedTermination()</code> は現在 <code>VMTraps::NeedTermination</code> のトラップビットを立てるだけで、<code>VM::hasTerminationRequest()</code> を即座には <code>true</code> にしなくなりました。<code>WaiterListManager::waitSyncImpl</code> は stop-request の condition notify で起床はするものの、起床後のチェックが <code>hasTerminationRequest()</code> しか見ていなかったため <code>Terminated</code> を返さず、そのままループし続けていました。</p>
+
+<h2 id="background">背景 — なぜハングするか</h2>
+
+<h3>終了通知の 2 段階化（bug 305440 の変更）</h3>
+<p>以前は <code>VM::notifyNeedTermination()</code> が即座に <code>m_hasTerminationRequest = true</code> を立てていました。bug 305440 で「まず <code>VMTraps::NeedTermination</code> ビットを立てる → mutator 側が次のトラップチェックポイントで <code>handleTraps()</code> を呼ぶ → その中で <code>setHasTerminationRequest()</code> + <code>throwTerminationException()</code>」という 2 段階に変更されました（<code>DeferTermination</code> スコープとの整合のため）。</p>
+
+<h3><code>waitSyncImpl</code> の起床パス</h3>
+<p><code>waitSyncImpl</code> は <code>condition().waitUntil()</code> でブロックし、以下 3 つのいずれかで起きます。</p>
+<ul>
+  <li><code>Atomics.notify()</code> による dequeue → <code>OK</code></li>
+  <li>timeout → <code>TimedOut</code></li>
+  <li><strong>VM stop 要求</strong> — <code>VMBlockingScope</code> が登録した stop-request 用 condition が notify される（<code>VMManager</code> が全 blocked VM を起こす仕組み）</li>
+</ul>
+<p>3 番目で起きた場合、旧コードは:</p>
+<pre>while (syncWaiter->isOnList() && time.now() < time && !vm.hasTerminationRequest())
+    syncWaiter->condition().waitUntil(...);
+// ↑ hasTerminationRequest() はまだ false（NeedTermination ビットのみ）
+// → 条件が全て true → waitUntil() へ再突入 → ハング</pre>
+
+<h2 id="changes">変更内容の詳細</h2>
+
+<h3>1. <code>WaiterListManager.cpp</code> — <code>waitSyncImpl</code></h3>
+<p>終了判定を「<code>hasTerminationRequest()</code> <strong>または</strong> <code>traps().needHandling(NeedTermination)</code>」に拡張。起床後は notify/timeout との競合よりも <code>Terminated</code> を優先し、まだリストに残っていれば自分でリストから除去します。</p>
+<pre>auto isTerminating = [&] {
+    return vm.hasTerminationRequest() || vm.traps().needHandling(VMTraps::NeedTermination);
+};
+...
+while (syncWaiter->isOnList() && time.now() < time && !isTerminating())
+    syncWaiter->condition().waitUntil(list->lock, ...);
+
+if (isTerminating()) {
+    if (syncWaiter->isOnList())
+        list->findAndRemove(listLocker, syncWaiter);
+    return WaitSyncResult::Terminated;    // notify/timeout と競合しても Terminated を優先
+}
+// 以降は既存の OK / TimedOut パス</pre>
+
+<h3>2. <code>VM.cpp</code> — 新関数 <code>throwTerminationExceptionIfNeeded()</code></h3>
+<p><code>Terminated</code> を返された呼び出し元が使うヘルパー。</p>
+<pre>void VM::throwTerminationExceptionIfNeeded() {
+    if (hasPendingTerminationException()) return;       // 既に投げ済み
+    if (traps().needHandling(VMTraps::NeedTermination))
+        traps().handleTraps(VMTraps::NeedTermination);  // トラップを処理 → 例外を投げる
+    if (hasPendingTerminationException()) return;
+    if (hasTerminationRequest() && !traps().isDeferringTermination())
+        throwTerminationException();                    // フォールバック
+}</pre>
+
+<h3>3. <code>AtomicsObject.cpp</code> / <code>WasmOperationsInlines.h</code> — 呼び出し側</h3>
+<p><code>Terminated</code> ケースで <code>throwTerminationException()</code> の直呼びを <code>throwTerminationExceptionIfNeeded()</code> に置換。Wasm 版は <code>-1</code> を返します（既存と同じ）。</p>
+
+<h3>4. <code>WasmOperationsInlines.h</code> — <code>throwWasmToJSException</code></h3>
+<p>Wasm の各 tier（BBQ/OMG/IPInt）は wait の返り値が負なら <code>ExceptionType::OutOfBoundsMemoryAccess</code> でこの関数に飛びます。<code>Terminated</code> パスでは既に <code>TerminationException</code> が投げられているので、それを上書きせず単に unwind します。</p>
+<pre>if (vm.hasPendingTerminationException())
+    break;                                  // 既存の TerminationException を保持
+if (type == ExceptionType::Termination) {
+    RELEASE_ASSERT_NOT_REACHED();           // このパスに来ることはもう無い
+    break;
+}</pre>
+
+<h3>5. LayoutTests</h3>
+<p>Worker が <code>postMessage("ready")</code> → 無限 wait に入る → 親が <code>terminate()</code> → <code>internals.workerThreadCount</code> が 0 になるまで GC + poll。JS 版と Wasm 版の 2 本。</p>
+
+<h2 id="review">コードレビュー結果</h2>
+
+<div class="callout">
+  <strong>総評</strong>: 修正の方向性は正しく、全 tier（LLInt/Baseline JS、IPInt/BBQ/OMG Wasm）で終了パスが一貫して <code>TerminationException</code> に収束することをコード追跡で確認しました。ただしいくつかコメントに値する点があります。
+</div>
+
+<h3>敵対的レビューで検証した項目</h3>
+<ul>
+  <li>✅ <code>traps().needHandling(NeedTermination)</code> は <code>list-&gt;lock</code> 保持中に呼ばれるが、これは atomic bit の read のみでロック取得しない → デッドロックなし</li>
+  <li>✅ <code>throwWasmToJSException</code> の <code>RELEASE_ASSERT_NOT_REACHED()</code> — <code>type == Termination</code> で到達するのは <code>WasmIPIntSlowPaths.cpp</code> の <code>IPINT_THROW(Termination)</code> のみで、そこは <code>hasPendingTerminationException()</code> が真の場合しか通らないため、直前の early-break で回避される。到達不能で正しい。</li>
+  <li>✅ BBQ (<code>WasmBBQJIT.cpp:1346</code>)・OMG (<code>WasmOMGIRGenerator.cpp:3230</code>)・IPInt (<code>InPlaceInterpreter64.asm:10126</code>) いずれも wait 返り値 &lt; 0 で <code>OutOfBoundsMemoryAccess</code> をスローし、新コードで <code>hasPendingTerminationException()</code> により正しく <code>TerminationException</code> が保持される</li>
+  <li>✅ <code>Terminated</code> 優先により「notify と terminate の競合」で <code>"ok"</code> が返らなくなるが、これは仕様上問題なし（terminate 後の Worker 実行結果は observable でない）</li>
+</ul>
+
+<h3 id="review-findings">指摘事項</h3>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip low">LOW</span>
+    <span class="chip plausible">PLAUSIBLE</span>
+    <span class="loc">Source/JavaScriptCore/runtime/VM.cpp — throwTerminationExceptionIfNeeded()</span>
+  </div>
+  <div class="claim"><code>DeferTermination</code> スコープ内で <code>Atomics.wait</code> がブロックしていた場合、<code>Terminated</code> は返るが例外が投げられず、Wasm 側では偽の <code>OutOfBoundsMemoryAccess</code> エラーが投げられる可能性があります。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd><code>isDeferringTermination()</code> が真のとき: <code>handleTraps(NeedTermination)</code> は <code>mask &amp;= ~NeedTermination</code> で何もせず戻り、フォールバックの <code>throwTerminationException()</code> も <code>!isDeferringTermination()</code> ガードで実行されません。すると <code>waitImpl</code> は <code>-1</code> を返しますが <code>hasPendingTerminationException()</code> は false のまま → Wasm JIT が <code>throwWasmToJSException(OutOfBoundsMemoryAccess)</code> を呼び、TerminationException ではなく通常の <code>WebAssembly.RuntimeError</code> が投げられます。</dd>
+    <dt>検証結果</dt>
+    <dd>実際には <code>DeferTermination</code> は <code>FTLOperations::materialize</code>・<code>Interpreter::unwind</code>・<code>ExceptionHelpers</code> マクロなど、VM 内部の限定的なスコープでのみ使われており、そのスコープ内から Wasm の <code>atomic.wait</code> や JS の <code>Atomics.wait</code> に到達するパスは通常存在しません。よって<strong>実運用で発火する可能性は極めて低い</strong>です。</dd>
+    <dt>推奨対応</dt>
+    <dd>念のため <code>throwTerminationExceptionIfNeeded()</code> の末尾に <code>ASSERT(hasPendingTerminationException() || traps().isDeferringTermination())</code> を追加し、想定外のパスがあれば Debug ビルドで検出できるようにすると安全です。ブロッキングではありません。</dd>
+  </dl>
+</div>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip low">LOW</span>
+    <span class="chip plausible">PLAUSIBLE</span>
+    <span class="loc">Source/JavaScriptCore/runtime/VM.cpp — throwTerminationExceptionIfNeeded()</span>
+  </div>
+  <div class="claim"><code>handleTraps(NeedTermination)</code> は codeBlockSet ロック取得 + 全 CodeBlock 走査（VMTraps breakpoint jettison）を無条件に行うため、Atomics.wait の Terminated パスで想定外のオーバーヘッドとロック取得が発生します。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd><code>VMTraps::handleTraps()</code> の冒頭は <code>vm.heap.codeBlockSet().getLock()</code> を取得して全 CodeBlock を走査します（<code>VMTraps.cpp:454-460</code>）。これは通常のトラップチェックポイント（バイトコード境界）で呼ばれる想定のコードで、<code>waitSyncImpl</code> の直後という新しい呼び出し文脈でも安全か（他のロックとの順序）は自明ではありません。</dd>
+    <dt>検証結果</dt>
+    <dd><code>waitSyncImpl</code> から戻った時点で <code>list-&gt;lock</code> と <code>VMBlockingScope</code> は既に解放済み（RAII スコープを抜けている）で、mutator スレッドは通常の実行状態にあるため、<strong>デッドロックは発生しません</strong>。オーバーヘッドは terminate パスでのみ発生し、terminate 自体が稀なので許容範囲です。</dd>
+    <dt>推奨対応</dt>
+    <dd>コメント程度。<code>handleTraps</code> を呼ぶのが最も正しい動作（<code>setHasTerminationRequest()</code> と <code>throwTerminationException()</code> を正規の順序で行う）なので、このままで問題ありません。</dd>
+  </dl>
+</div>
+
+<div class="finding">
+  <div class="head">
+    <span class="chip nit">NIT</span>
+    <span class="loc">LayoutTests/fast/workers/resources/worker-atomics-wait-forever.js</span>
+  </div>
+  <div class="claim">JS 版テストで Worker 側の SAB は Worker ローカルに作られており、親と共有されていません。</div>
+  <dl>
+    <dt>シナリオ</dt>
+    <dd>Wasm 版は <code>shared: true</code> の Memory を使いますが Worker ローカルです。JS 版も <code>new SharedArrayBuffer(4)</code> を Worker 内で作り、<code>Atomics.wait</code> でブロックします。誰も notify しないので無限 wait になり、テストの目的（terminate で起こす）は達成されます。</dd>
+    <dt>検証結果</dt>
+    <dd>テストの目的（wait 中の terminate）には十分です。ただし <code>postMessage("ready")</code> と <code>Atomics.wait()</code> の間に極小の race window があり、非常に遅い環境で <code>terminate()</code> が wait 突入前に届く可能性があります。Wasm 版は 50ms 待ってから terminate しており、JS 版も同様の delay を入れると堅牢性が上がります。</dd>
+    <dt>推奨対応</dt>
+    <dd>任意。既存の類似テスト（<code>worker-terminate-forever.html</code> 等）と同水準なのでそのままでも可。</dd>
+  </dl>
+</div>
+
+<!-- REVIEW_FINDINGS_70964_EXTRA -->
+
+<h2 id="recommendation">レビュー推奨事項</h2>
+<p><span class="verdict comment">💬 Comment</span></p>
+<p>修正は正しく機能しますが、上記指摘事項について著者に確認を求めることを推奨します。ブロッキングな問題ではありません。</p>
+
+<details>
+<summary>差分統計</summary>
+<pre>LayoutTests/.../worker-atomics-wait-forever.js       |  4 ++
+LayoutTests/.../worker-wasm-atomic-wait-forever.js   |  8 ++++
+LayoutTests/.../worker-terminate-atomics-wait.*      | 50 ++++++++++++++++++++
+LayoutTests/.../worker-terminate-wasm-atomic-wait.*  | 52 ++++++++++++++++++++
+Source/JavaScriptCore/runtime/AtomicsObject.cpp      |  2 +-
+Source/JavaScriptCore/runtime/VM.cpp                 | 15 +++++++
+Source/JavaScriptCore/runtime/VM.h                   |  1 +
+Source/JavaScriptCore/runtime/WaiterListManager.cpp  | 17 ++++++-
+Source/JavaScriptCore/wasm/WasmOperationsInlines.h   | 11 +++--
+11 files changed, 153 insertions(+), 7 deletions(-)</pre>
+</details>
+
+<footer>
+  生成: 2026-08-11 · JSC review routine · <a href="index.html">← 一覧へ</a>
+</footer>
+</main>

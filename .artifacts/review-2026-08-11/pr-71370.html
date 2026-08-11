@@ -1,0 +1,119 @@
+<title>PR #71370 — Temporal 監査テスト採用と ICU プローブ除去</title>
+<link rel="stylesheet" href="shared.css">
+<header class="masthead"><div class="wrap">
+  <div class="kicker">WebKit/WebKit · JavaScriptCore · Temporal</div>
+  <h1>[JSC][Temporal] 3 つの監査テストを採用し、未使用の ICU epoch プローブを削除</h1>
+  <div class="meta">
+    <span>PR <a href="https://github.com/WebKit/WebKit/pull/71370">#71370</a></span>
+    <span>著者: hyjorc1</span>
+    <span>差分: <span class="diffstat"><span class="add">+185</span> / <span class="del">−34</span></span> · 5 files</span>
+    <span><a href="https://bugs.webkit.org/show_bug.cgi?id=321521">bug 321521</a></span>
+    <span class="verdict approve">✓ Approve 推奨</span>
+  </div>
+</div></header>
+
+<main>
+
+<div class="toc">
+  <strong>目次</strong>
+  <ul>
+    <li><a href="#summary">概要</a></li>
+    <li><a href="#background">背景 — なぜこの変更が必要か</a></li>
+    <li><a href="#changes">変更内容の詳細</a></li>
+    <li><a href="#review">コードレビュー結果</a></li>
+    <li><a href="#recommendation">レビュー推奨事項</a></li>
+  </ul>
+</div>
+
+<h2 id="summary">概要</h2>
+<p>この PR は 2 つの独立した小変更をまとめたものです。</p>
+<ol>
+  <li><strong>デッドコード削除</strong> — <code>CalendarICUBridge.cpp</code> の <code>lunarCalendarExtendedYearFor1972()</code> 関数（32 行、+ ヘッダ宣言）を削除します。この関数は中国暦・檀紀暦の ICU バージョン差異（ISO-proleptic 年 vs epoch 起点年）を判定するプローブでしたが、<code>constrainMonthCodeInternal</code> が <code>positionCalendarToYearStart</code> の書き戻す年フィールドを直接読むようになった結果、呼び出し元がゼロになっていました。</li>
+  <li><strong>回帰テスト 3 本の追加</strong> — Temporal 実装の監査で洗い出された仕様準拠エッジケース（<code>monthCode</code> の型強制、<code>relativeTo</code> のフィールド読み取り順序、<code>PlainDate.prototype.with</code> のオプション読み取りタイミング）を <code>JSTests/stress/</code> に固定します。</li>
+</ol>
+<p>実装コードの動作変更は一切なく、テスト追加とクリーンアップのみです。</p>
+
+<h2 id="background">背景 — なぜこの変更が必要か</h2>
+
+<h3>デッドコード <code>lunarCalendarExtendedYearFor1972</code></h3>
+<p>ICU は歴史的に中国暦（<code>chinese</code>）と檀紀暦（<code>dangi</code>）の <code>UCAL_EXTENDED_YEAR</code> を「epoch 起点年」（例: ISO 1972 → 中国暦 4609 年）で返してきましたが、ICU 76 以降は「ISO-proleptic 年」（そのまま 1972）を返す挙動に切り替わりました。JSC の Temporal 実装は当初この差を吸収するために、既知の日付（ISO 1972-02-15）で ICU に問い合わせて実際の返値を観測し、その結果をプロセス寿命にわたってキャッシュするプローブ関数を持っていました。</p>
+<p>しかし後続の実装リファクタで、月コード制約ロジック（<code>constrainMonthCodeInternal</code>）が「まず <code>positionCalendarToYearStart</code> で ICU カレンダーを年頭に位置付け → その位置で ICU が書き戻した実際の <code>EXTENDED_YEAR</code> をそのまま読む」方式に変更されました。これにより ICU バージョンごとの返値差はその場で自然に吸収されるため、事前プローブは不要になりました。</p>
+<div class="callout ok">コードベース全体を <code>git grep</code> で検索した結果、削除後のブランチに <code>lunarCalendarExtendedYearFor1972</code> の参照は 0 件です（TestAPI・jsc.cpp・LayoutTests 含む）。<code>JS_EXPORT_PRIVATE</code> 付きでしたが、WebCore/WebKit 側にも呼び出し元はありません。安全に削除できます。</div>
+
+<h3>追加される 3 つのテスト</h3>
+<p>Temporal 仕様はプロパティバッグからのフィールド読み取り順序と型検証タイミングを厳密に規定しており、observable な副作用（getter 呼び出し順・例外の種類）が仕様と一致しなければなりません。今回追加されるテストは、いずれも「JSC は現状正しく動くが、リファクタで壊れやすい」観測可能な挙動を固定するものです。</p>
+
+<h2 id="changes">変更内容の詳細</h2>
+
+<h3>1. <code>temporal-monthcode-wrong-type.js</code></h3>
+<p><code>monthCode</code> フィールドは仕様上「? ToPrimitive(value, string) → 文字列でなければ TypeError → monthCode 文法検証 → RangeError」の順で処理されます（<a href="https://tc39.es/proposal-temporal/#sec-temporal-preparecalendarfields">PrepareCalendarFields</a>）。テストは以下を確認します。</p>
+<ul>
+  <li>数値・真偽値・BigInt・Symbol・null を <code>monthCode</code> に渡すと <strong>TypeError</strong>（<code>from()</code> と <code>with()</code> の両方、PlainDate/PlainDateTime/PlainYearMonth/PlainMonthDay の全型）</li>
+  <li>不正な文字列（例: <code>"bogus"</code>）は <strong>RangeError</strong></li>
+  <li>オブジェクトは ToPrimitive で文字列化 — <code>toString()</code> が正しい monthCode を返せば受理、不正なら RangeError（TypeError ではない）</li>
+  <li><code>toString()</code> は正確に 1 回だけ呼ばれる</li>
+  <li>文法検証（<code>"L99M"</code> は文法不正 → RangeError）とカレンダー適合検証（<code>"M99L"</code> は文法上有効だが ISO カレンダーに存在しない → 後続の year 検証で TypeError）の順序</li>
+</ul>
+
+<h3>2. <code>temporal-plaindate-with-option-order.js</code></h3>
+<p><code>PlainDate.prototype.with(fields, options)</code> は仕様上「フィールド読み取り → 空バッグなら TypeError → <strong>その後</strong> options.overflow 読み取り → month/monthCode 矛盾チェック」の順序です。テストは <code>overflow</code> getter に副作用を持たせて、以下を確認します。</p>
+<ul>
+  <li><code>{month: 3, monthCode: 'M04'}</code>（矛盾） → overflow は<strong>先に読まれる</strong>（RangeError の前にログに残る）</li>
+  <li>空バッグ <code>{}</code> → overflow は<strong>読まれない</strong>まま TypeError</li>
+  <li>正常系で overflow は正確に 1 回読まれる</li>
+  <li>非 ISO カレンダー（gregory）でも同じ順序</li>
+</ul>
+
+<h3>3. <code>temporal-relativeto-field-order.js</code></h3>
+<p><code>Duration.prototype.total/round</code> の <code>relativeTo</code> オプションは、プロパティバッグから calendar → day → hour → … → timeZone → year をアルファベット順に読み取り、各フィールドをその読み取り位置で型変換します。テストは以下を確認します。</p>
+<ul>
+  <li><code>timeZone</code> に数値 <code>5</code> を渡す → year を<strong>読む前に</strong> TypeError（getter ログ: <code>day,month,timeZone</code> のみ）</li>
+  <li>全 13 フィールドが未定義 → 全て読まれてから missing-field TypeError</li>
+  <li>不正な timeZone 文字列は <strong>RangeError</strong>（TypeError ではない）</li>
+  <li>正常系で <code>timeZone</code> getter は正確に 1 回</li>
+</ul>
+
+<h3>4. <code>CalendarICUBridge.{cpp,h}</code></h3>
+<p>関数本体（32 行）とヘッダ宣言（<code>JS_EXPORT_PRIVATE</code> 付き）を削除。<code>static std::atomic&lt;int32_t&gt;</code> 2 個も削除されます。</p>
+
+<h2 id="review">コードレビュー結果</h2>
+
+<div class="callout ok">
+  <strong>総評</strong>: 本 PR は実装ロジックを一切変更せず、テスト追加と確認済みデッドコード削除のみです。追加されたテストは仕様準拠かつ堅牢に書かれており、削除されるコードは呼び出し元ゼロを確認済みです。<strong>指摘事項はありません。</strong>
+</div>
+
+<h3>敵対的レビューで検証した項目</h3>
+<ul>
+  <li>✅ <code>lunarCalendarExtendedYearFor1972</code> は Source/・Tools/・LayoutTests/ 全域で参照ゼロ（<code>git grep</code> で確認）</li>
+  <li>✅ <code>JS_EXPORT_PRIVATE</code> シンボルだが WebCore/WebKit 側からの参照もなし（Temporal core は JSC 内部完結）</li>
+  <li>✅ 追加テストの assertion は <a href="https://tc39.es/proposal-temporal/">Temporal 仕様</a> 最新版と照合して正しい（PrepareCalendarFields・GetTemporalRelativeToOption・CalendarDateFromFields の各 abstract operation）</li>
+  <li>✅ テストは <code>--useTemporal=1</code> オプション付きで、Temporal 無効ビルドではスキップされる</li>
+  <li>✅ <code>Symbol()</code> を <code>monthCode</code> に渡すケース — ToPrimitive(Symbol, string) は TypeError を投げるため期待値 TypeError で正しい</li>
+  <li>✅ <code>temporal-relativeto-field-order.js</code> の第 1 ケースで <code>calendar</code>/<code>monthCode</code> 等の他フィールドが定義されていないが、これらは own property でないため getter は呼ばれず、ログに現れないのは正しい挙動（実装は <code>Get(bag, key)</code> するが、テストの bag は継承 undefined なので getter 副作用なし → ログは <code>day,month,timeZone</code> のみ）</li>
+</ul>
+
+<h3>良い点</h3>
+<ul>
+  <li>各テストの各ブロックにコメントで「何が仕様上の要求か」を明記しており、将来の regressor が意図を理解しやすい</li>
+  <li>「正確に 1 回呼ばれる」assertion が入っており、二重評価バグも検出できる</li>
+  <li>非 ISO カレンダー（hebrew, gregory）のパスも含まれている</li>
+</ul>
+
+<h2 id="recommendation">レビュー推奨事項</h2>
+<p><span class="verdict approve">✓ Approve</span></p>
+<p>実装変更なし・テスト追加のみの安全な PR です。そのまま Approve で問題ありません。</p>
+
+<details>
+<summary>差分統計</summary>
+<pre>JSTests/stress/temporal-monthcode-wrong-type.js       | 57 ++++++++++++++++++
+JSTests/stress/temporal-plaindate-with-option-order.js | 59 ++++++++++++++++++
+JSTests/stress/temporal-relativeto-field-order.js      | 69 ++++++++++++++++++++
+runtime/temporal/core/CalendarICUBridge.cpp            | 32 ----------
+runtime/temporal/core/CalendarICUBridge.h              |  2 --
+5 files changed, 185 insertions(+), 34 deletions(-)</pre>
+</details>
+
+<footer>
+  生成: 2026-08-11 · JSC review routine · <a href="index.html">← 一覧へ</a>
+</footer>
+</main>

@@ -1,0 +1,109 @@
+<title>JSC レビュー — 2026-08-11</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 20px; margin: 14px 0;
+    transition: border-color 0.12s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card .title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .card .sub {
+    display: flex; flex-wrap: wrap; gap: 6px 16px;
+    font-size: 12px; color: var(--fg-muted); font-family: var(--mono);
+    margin-bottom: 10px;
+  }
+  .card .desc { font-size: 13.5px; color: var(--fg-muted); }
+  .archive-link { font-size: 13px; color: var(--fg-muted); }
+</style>
+
+<header class="masthead"><div class="wrap">
+  <div class="kicker">JSC review routine · sosukesuzuki review-requested</div>
+  <h1>WebKit/WebKit PR レビュー — 2026-08-11</h1>
+  <div class="meta">
+    <span>新規処理: 4 件</span>
+    <span>累計処理済み: 16 件</span>
+    <span>生成: 2026-08-11 UTC</span>
+  </div>
+</div></header>
+
+<main>
+
+<p>この一覧は <code>review-requested:sosukesuzuki</code> の open PR のうち、本ルーチンで未処理だったものを対象に、敵対的コードレビュー（2 独立レビュアー + 各指摘の反証検証）と日本語解説を生成したものです。</p>
+
+<h2>本日処理分（4 件）</h2>
+
+<a class="card" href="pr-71371.html">
+  <div class="title">#71371 — [JSC] Tighten WasmGC allocation</div>
+  <div class="sub">
+    <span>Constellation</span>
+    <span><span class="add">+102</span> / <span class="del">−29</span></span>
+    <span class="verdict approve">✓ Approve</span>
+    <span>指摘 0 件</span>
+  </div>
+  <div class="desc">WasmGC struct/array のバンプアロケーションでセルサイズを即値化し、B3 エフェクトモデルから <code>writes=top</code> を除去して割り当て越しの CSE を有効化。健全性を全パスで確認、指摘なし。</div>
+</a>
+
+<a class="card" href="pr-71370.html">
+  <div class="title">#71370 — [JSC][Temporal] Adopt three audit tests and remove a dead ICU epoch probe</div>
+  <div class="sub">
+    <span>hyjorc1</span>
+    <span><span class="add">+185</span> / <span class="del">−34</span></span>
+    <span class="verdict approve">✓ Approve</span>
+    <span>指摘 0 件</span>
+  </div>
+  <div class="desc">未使用の <code>lunarCalendarExtendedYearFor1972</code> を削除し、Temporal の monthCode 型検証・relativeTo 読み取り順序・with option 順序を固定する回帰テスト 3 本を追加。実装変更なし。</div>
+</a>
+
+<a class="card" href="pr-70964.html">
+  <div class="title">#70964 — [JSC] Terminate Atomics.wait / Wasm atomic.wait on worker.terminate()</div>
+  <div class="sub">
+    <span>chicoxyzzy</span>
+    <span><span class="add">+153</span> / <span class="del">−7</span></span>
+    <span class="verdict comment">💬 Comment</span>
+    <span>指摘 3 件（low/nit）</span>
+  </div>
+  <div class="desc">bug 305440 以降 <code>waitSync</code> が <code>NeedTermination</code> トラップビットを見ておらず Worker がハングしていた回帰を修正。全 tier で終了パスの一貫性を確認。</div>
+</a>
+
+<a class="card" href="pr-70963.html">
+  <div class="title">#70963 — [JSC][Wasm] Truncate operand stack when becoming unreachable</div>
+  <div class="sub">
+    <span>chicoxyzzy</span>
+    <span><span class="add">+607</span> / <span class="del">−156</span></span>
+    <span class="verdict comment">💬 Comment</span>
+    <span>指摘 4 件（medium 1 / low 2 / nit 1）</span>
+  </div>
+  <div class="desc">到達不能コード内でも type-only スタックを追跡し、Wasm 仕様の polymorphic-stack 型検証を実装。<code>unreached-invalid.wast</code> 等で 42 個の FAIL → PASS。</div>
+</a>
+
+<h2>本日スキップ（既処理・draft・非 JSC 領域）</h2>
+<p style="font-size:13px; color:var(--fg-muted);">
+  #71267（既処理・draft 化）／ #71194 Mya（大規模ツール追加、次回以降）／ #70943 Web Inspector（非 JSC コア）／ #70886, #70863, #69622 等（build/infra 系、他 reviewer で対応中）／ #70699 以前（stale・draft）
+</p>
+
+<h2>過去処理分</h2>
+<details>
+  <summary>2026-08-10 処理済み（12 件）</summary>
+  <ul style="font-size:13px;">
+    <li><a href="https://claude.ai/code/artifact/b9aa1a61-0182-4b37-a062-7184925409c0">#71311</a> FastStringifier buffer pointer cache — approve</li>
+    <li><a href="https://claude.ai/code/artifact/08b81664-7e24-4b68-b584-7d79ef485442">#71292</a> BBQ non-nullable ref null-check elision — approve</li>
+    <li><a href="https://claude.ai/code/artifact/04f3cbf7-ac38-4d1a-b484-c02caa4525c6">#71289</a> Split type definitions out of TypeKind — approve</li>
+    <li><a href="https://claude.ai/code/artifact/c87a2b34-6a81-463b-8e04-8ab4e7b1595c">#71271</a> — comment (2 findings)</li>
+    <li><a href="https://claude.ai/code/artifact/c9bcdec0-f1eb-4715-9197-8ce6e893eace">#71270</a> — request-changes (1 confirmed bug)</li>
+    <li><a href="https://claude.ai/code/artifact/794cb0c3-76ec-451e-97a9-fac86e01a041">#71267</a> nonextensible-applies-to-private — comment (4 findings)</li>
+    <li><a href="https://claude.ai/code/artifact/f4543ae1-f85e-4587-8a52-a8f2401cd6b3">#71262</a> — approve (2 findings)</li>
+    <li><a href="https://claude.ai/code/artifact/60d37603-cf50-4878-8976-7d2133b8cf3a">#71228</a> — approve</li>
+    <li><a href="https://claude.ai/code/artifact/ed8c9754-ed76-4465-ba07-24e08e66b5bb">#71226</a> — approve</li>
+    <li><a href="https://claude.ai/code/artifact/74a31b6d-e727-439d-8248-7a5c21bb8cf0">#71223</a> — approve</li>
+    <li><a href="https://claude.ai/code/artifact/20f99a76-7c86-4f48-9c29-f65bd56f2c49">#71132</a> — approve (2 findings)</li>
+    <li><a href="https://claude.ai/code/artifact/df3e7355-3a4a-43fa-a422-bfb2a4322a23">oven-sh/WebKit#398</a> — comment (upstream 提出前レビュー)</li>
+  </ul>
+</details>
+
+<footer>
+  JSC review routine · プラグイン <code>anthropic-experimental/claude-code-plugin-sosuke-webkit</code> は cross-tier 制約により取得不可のため、
+  <code>/jsc-review-requests</code>・<code>/webkit-explain-change</code> は state file 記載の再構成手順で代替実行しています。
+</footer>
+</main>

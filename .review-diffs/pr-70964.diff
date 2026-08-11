@@ -1,0 +1,284 @@
+diff --git a/LayoutTests/fast/workers/resources/worker-atomics-wait-forever.js b/LayoutTests/fast/workers/resources/worker-atomics-wait-forever.js
+new file mode 100644
+index 0000000000..6e08d24bd9
+--- /dev/null
++++ b/LayoutTests/fast/workers/resources/worker-atomics-wait-forever.js
+@@ -0,0 +1,4 @@
++const sab = new SharedArrayBuffer(4);
++const view = new Int32Array(sab);
++self.postMessage("ready");
++Atomics.wait(view, 0, 0);
+diff --git a/LayoutTests/fast/workers/resources/worker-wasm-atomic-wait-forever.js b/LayoutTests/fast/workers/resources/worker-wasm-atomic-wait-forever.js
+new file mode 100644
+index 0000000000..7a63edcc48
+--- /dev/null
++++ b/LayoutTests/fast/workers/resources/worker-wasm-atomic-wait-forever.js
+@@ -0,0 +1,8 @@
++const wasmBytes = new Uint8Array([
++    0,97,115,109,1,0,0,0,1,4,1,96,0,0,2,16,1,3,101,110,118,6,109,101,109,111,114,121,2,3,1,1,3,2,1,0,7,7,1,3,114,117,110,0,0,10,27,1,25,0,3,64,65,0,65,0,54,2,0,65,0,65,0,66,127,254,1,2,0,26,12,0,11,11
++]);
++const memory = new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true });
++WebAssembly.instantiate(wasmBytes, { env: { memory } }).then(({ instance }) => {
++    self.postMessage("ready");
++    instance.exports.run();
++});
+diff --git a/LayoutTests/fast/workers/worker-terminate-atomics-wait-expected.txt b/LayoutTests/fast/workers/worker-terminate-atomics-wait-expected.txt
+new file mode 100644
+index 0000000000..b8574d7e6c
+--- /dev/null
++++ b/LayoutTests/fast/workers/worker-terminate-atomics-wait-expected.txt
+@@ -0,0 +1,3 @@
++CONSOLE MESSAGE: Worker was started
++CONSOLE MESSAGE: Worker was terminated
++Test worker.terminate() while blocked in Atomics.wait.
+diff --git a/LayoutTests/fast/workers/worker-terminate-atomics-wait.html b/LayoutTests/fast/workers/worker-terminate-atomics-wait.html
+new file mode 100644
+index 0000000000..a15fbda4da
+--- /dev/null
++++ b/LayoutTests/fast/workers/worker-terminate-atomics-wait.html
+@@ -0,0 +1,47 @@
++<!DOCTYPE html><!-- webkit-test-runner [ jscOptions=--useSharedArrayBuffer=true ] -->
++<body>
++<p>Test worker.terminate() while blocked in Atomics.wait.</p>
++<script>
++if (window.testRunner) {
++    testRunner.dumpAsText();
++    testRunner.waitUntilDone();
++}
++
++var worker = new Worker("resources/worker-atomics-wait-forever.js");
++var sawStart = false;
++
++worker.onmessage = function() {
++    sawStart = true;
++    console.log("Worker was started");
++    worker.terminate();
++    setTimeout(waitForWorkerToStop, 0);
++};
++
++function waitForWorkerToStop() {
++    var startTime = Date.now();
++    function checkIfWorkerStopped() {
++        if (typeof GCController !== "undefined")
++            GCController.collect();
++        if (internals.workerThreadCount == 0) {
++            console.log("Worker was terminated");
++            testRunner.notifyDone();
++        } else if (Date.now() - startTime < 5000) {
++            setTimeout(checkIfWorkerStopped, 10);
++        } else {
++            console.log("Did not see worker terminate");
++            testRunner.notifyDone();
++        }
++    }
++    setTimeout(checkIfWorkerStopped, 0);
++}
++
++setTimeout(function() {
++    if (!sawStart) {
++        console.log("Worker did not show up");
++        worker.terminate();
++        testRunner.notifyDone();
++    }
++}, 5000);
++</script>
++</body>
++</html>
+diff --git a/LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait-expected.txt b/LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait-expected.txt
+new file mode 100644
+index 0000000000..691747680b
+--- /dev/null
++++ b/LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait-expected.txt
+@@ -0,0 +1,3 @@
++CONSOLE MESSAGE: Worker was started
++CONSOLE MESSAGE: Worker was terminated
++Test worker.terminate() while blocked in Wasm memory.atomic.wait32.
+diff --git a/LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait.html b/LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait.html
+new file mode 100644
+index 0000000000..08eaefe466
+--- /dev/null
++++ b/LayoutTests/fast/workers/worker-terminate-wasm-atomic-wait.html
+@@ -0,0 +1,49 @@
++<!DOCTYPE html><!-- webkit-test-runner [ jscOptions=--useSharedArrayBuffer=true ] -->
++<body>
++<p>Test worker.terminate() while blocked in Wasm memory.atomic.wait32.</p>
++<script>
++if (window.testRunner) {
++    testRunner.dumpAsText();
++    testRunner.waitUntilDone();
++}
++
++var worker = new Worker("resources/worker-wasm-atomic-wait-forever.js");
++var sawStart = false;
++
++worker.onmessage = function() {
++    sawStart = true;
++    console.log("Worker was started");
++    setTimeout(function() {
++        worker.terminate();
++        setTimeout(waitForWorkerToStop, 0);
++    }, 50);
++};
++
++function waitForWorkerToStop() {
++    var startTime = Date.now();
++    function checkIfWorkerStopped() {
++        if (typeof GCController !== "undefined")
++            GCController.collect();
++        if (internals.workerThreadCount == 0) {
++            console.log("Worker was terminated");
++            testRunner.notifyDone();
++        } else if (Date.now() - startTime < 5000) {
++            setTimeout(checkIfWorkerStopped, 10);
++        } else {
++            console.log("Did not see worker terminate");
++            testRunner.notifyDone();
++        }
++    }
++    setTimeout(checkIfWorkerStopped, 0);
++}
++
++setTimeout(function() {
++    if (!sawStart) {
++        console.log("Worker did not show up");
++        worker.terminate();
++        testRunner.notifyDone();
++    }
++}, 5000);
++</script>
++</body>
++</html>
+diff --git a/Source/JavaScriptCore/runtime/AtomicsObject.cpp b/Source/JavaScriptCore/runtime/AtomicsObject.cpp
+index 9f8833c13f..801b1e93f3 100644
+--- a/Source/JavaScriptCore/runtime/AtomicsObject.cpp
++++ b/Source/JavaScriptCore/runtime/AtomicsObject.cpp
+@@ -470,7 +470,7 @@ JSValue atomicsWaitImpl(JSGlobalObject* globalObject, JSArrayType* typedArray, u
+     case WaiterListManager::WaitSyncResult::TimedOut:
+         return vm.smallStrings.timedOutString();
+     case WaiterListManager::WaitSyncResult::Terminated:
+-        vm.throwTerminationException();
++        vm.throwTerminationExceptionIfNeeded();
+         return { };
+     }
+     RELEASE_ASSERT_NOT_REACHED();
+diff --git a/Source/JavaScriptCore/runtime/VM.cpp b/Source/JavaScriptCore/runtime/VM.cpp
+index 09ef1b5316..36e876fdaf 100644
+--- a/Source/JavaScriptCore/runtime/VM.cpp
++++ b/Source/JavaScriptCore/runtime/VM.cpp
+@@ -1103,6 +1103,21 @@ void VM::throwTerminationException()
+         setExecutionForbidden();
+ }
+ 
++void VM::throwTerminationExceptionIfNeeded()
++{
++    if (hasPendingTerminationException())
++        return;
++
++    if (traps().needHandling(VMTraps::NeedTermination))
++        traps().handleTraps(VMTraps::NeedTermination);
++
++    if (hasPendingTerminationException())
++        return;
++
++    if (hasTerminationRequest() && !traps().isDeferringTermination())
++        throwTerminationException();
++}
++
+ Exception* VM::throwException(JSGlobalObject* globalObject, Exception* exceptionToThrow)
+ {
+     // The TerminationException should never be overridden.
+diff --git a/Source/JavaScriptCore/runtime/VM.h b/Source/JavaScriptCore/runtime/VM.h
+index bcf71c6060..179df3a316 100644
+--- a/Source/JavaScriptCore/runtime/VM.h
++++ b/Source/JavaScriptCore/runtime/VM.h
+@@ -334,6 +334,7 @@ public:
+     }
+ 
+     void throwTerminationException();
++    void throwTerminationExceptionIfNeeded();
+ 
+     enum class EntryScopeService : uint8_t {
+         // Sticky services i.e. if set, these will never be cleared.
+diff --git a/Source/JavaScriptCore/runtime/WaiterListManager.cpp b/Source/JavaScriptCore/runtime/WaiterListManager.cpp
+index 5df3695bcf..86d802793e 100644
+--- a/Source/JavaScriptCore/runtime/WaiterListManager.cpp
++++ b/Source/JavaScriptCore/runtime/WaiterListManager.cpp
+@@ -32,6 +32,7 @@
+ #include "JSObjectInlines.h"
+ #include "ObjectConstructor.h"
+ #include "VMManager.h"
++#include "VMTrapsInlines.h"
+ #include <wtf/DataLog.h>
+ #include <wtf/NeverDestroyed.h>
+ #include <wtf/RawPointer.h>
+@@ -82,6 +83,10 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueT
+     Ref<WaiterList> list = findOrCreateList(ptr);
+     MonotonicTime time = MonotonicTime::timePointFromNow(timeout);
+ 
++    auto isTerminating = [&] {
++        return vm.hasTerminationRequest() || vm.traps().needHandling(VMTraps::NeedTermination);
++    };
++
+     {
+         VMBlockingScope waitScope(vm, StopTheWorldEvent::AtomicsWaitBlocked);
+ 
+@@ -92,9 +97,17 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueT
+         list->addLast(listLocker, syncWaiter);
+         dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> added a new SyncWaiter=", syncWaiter.get(), " to a waiterList for ptr ", RawPointer(ptr));
+ 
+-        while (syncWaiter->isOnList() && time.now() < time && !vm.hasTerminationRequest())
++        while (syncWaiter->isOnList() && time.now() < time && !isTerminating())
+             syncWaiter->condition().waitUntil(list->lock, time.approximate<WallTime>());
+ 
++        if (isTerminating()) {
++            if (syncWaiter->isOnList()) {
++                bool removed = list->findAndRemove(listLocker, syncWaiter);
++                ASSERT_UNUSED(removed, removed);
++            }
++            return WaitSyncResult::Terminated;
++        }
++
+         // At this point, syncWaiter should be either notified (dequeued) or timeout (not dequeued).
+         bool didGetDequeued = !syncWaiter->isOnList();
+         if (didGetDequeued)
+@@ -102,7 +115,7 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueT
+ 
+         didGetDequeued = list->findAndRemove(listLocker, syncWaiter);
+         ASSERT(didGetDequeued);
+-        return vm.hasTerminationRequest() ? WaitSyncResult::Terminated : WaitSyncResult::TimedOut;
++        return WaitSyncResult::TimedOut;
+     }
+ }
+ 
+diff --git a/Source/JavaScriptCore/wasm/WasmOperationsInlines.h b/Source/JavaScriptCore/wasm/WasmOperationsInlines.h
+index 544bfc7505..bec198cf76 100644
+--- a/Source/JavaScriptCore/wasm/WasmOperationsInlines.h
++++ b/Source/JavaScriptCore/wasm/WasmOperationsInlines.h
+@@ -747,7 +747,7 @@ static inline int32_t waitImpl(VM& vm, ValueType* pointer, ValueType expectedVal
+     case WaiterListManager::WaitSyncResult::TimedOut:
+         return static_cast<int32_t>(result);
+     case WaiterListManager::WaitSyncResult::Terminated:
+-        vm.throwTerminationException();
++        vm.throwTerminationExceptionIfNeeded();
+         return -1;
+     }
+     RELEASE_ASSERT_NOT_REACHED();
+@@ -833,12 +833,15 @@ inline void* throwWasmToJSException(CallFrame* callFrame, Wasm::ExceptionType ty
+     do {
+         auto throwScope = DECLARE_THROW_SCOPE(vm);
+ 
+-        JSObject* error;
++        if (vm.hasPendingTerminationException())
++            break;
++
+         if (type == ExceptionType::Termination) {
+-            // Nothing to do because the exception should have already been thrown.
+-            RELEASE_ASSERT(vm.hasPendingTerminationException());
++            RELEASE_ASSERT_NOT_REACHED();
+             break;
+         }
++
++        JSObject* error;
+         if (type == ExceptionType::StackOverflow)
+             error = createStackOverflowError(globalObject);
+         else if (isTypeErrorExceptionType(type))

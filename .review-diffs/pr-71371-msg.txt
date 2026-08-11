@@ -1,0 +1,34 @@
+[JSC] Tighten WasmGC allocation
+https://bugs.webkit.org/show_bug.cgi?id=321522
+rdar://184632964
+
+Reviewed by NOBODY (OOPS!).
+
+This patch tightens WasmGC allocations.
+
+1. While allocator is not a constant in WasmGC struct allocations (it is
+   coming from JSWebAssemblyInstance field), size is constant when
+   compiling. We add VariableNonNullWithConstantCellSize mode, which
+   means that "allocator is in GPR as a variable, but cell size is constant"
+   to tighten the code generation.
+2. We revisit effect model of WasmGC allocations, now it is more aligned
+   to DFG's allocations (not saying write-top).
+
+Tests: JSTests/wasm/gc/struct-new-does-not-clobber-loads.js
+       JSTests/wasm/gc/struct-new-nested-alloc-gc.js
+
+* JSTests/wasm/gc/struct-new-does-not-clobber-loads.js: Added.
+* JSTests/wasm/gc/struct-new-nested-alloc-gc.js: Added.
+(want):
+* Source/JavaScriptCore/b3/B3LowerMacros.cpp:
+* Source/JavaScriptCore/b3/B3Value.cpp:
+* Source/JavaScriptCore/jit/AssemblyHelpers.cpp:
+(JSC::AssemblyHelpers::emitAllocateWithNonNullAllocator):
+(JSC::AssemblyHelpers::emitAllocate):
+* Source/JavaScriptCore/jit/JITAllocator.h:
+(JSC::JITAllocator::variableNonNullWithConstantCellSize):
+(JSC::JITAllocator::hasConstantCellSize const):
+(JSC::JITAllocator::constantCellSize const):
+* Source/JavaScriptCore/wasm/WasmBBQJIT64.cpp:
+(JSC::Wasm::BBQJITImpl::BBQJIT::emitAllocateGCStructUninitialized):
+
