@@ -1,0 +1,834 @@
+<title>JavaScriptCore Realm Audit</title>
+<style>
+  :root {
+    --ground: #f3f5f8;
+    --surface: #ffffff;
+    --surface-2: #e9edf2;
+    --ink: #14181e;
+    --ink-2: #454e5c;
+    --muted: #6f7a8a;
+    --rule: rgba(20, 24, 30, 0.12);
+    --rule-strong: rgba(20, 24, 30, 0.22);
+    --accent: #0a6a73;
+    --accent-soft: rgba(10, 106, 115, 0.10);
+    --code-ground: #f0f2f5;
+    --code-ink: #1d2430;
+    --sev-high: #b42318;   --sev-high-bg: rgba(180, 35, 24, 0.10);
+    --sev-med: #9a5b00;    --sev-med-bg: rgba(154, 91, 0, 0.11);
+    --sev-low: #3d6a4a;    --sev-low-bg: rgba(61, 106, 74, 0.11);
+    --sev-note: #55606f;   --sev-note-bg: rgba(85, 96, 111, 0.11);
+    --pass: #2f6f45;
+    --fail: #b42318;
+    --fig-box: #ffffff;
+    --fig-realmfree: #dfe7ef;
+    --fig-realmbound: #d5ece9;
+    --fig-hazard: #f6dfc9;
+    --font-display: "Iowan Old Style", "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  :root[data-theme="dark"] {
+    --ground: #0f1216;
+    --surface: #161b21;
+    --surface-2: #1e252d;
+    --ink: #e8ecf1;
+    --ink-2: #b4bdc9;
+    --muted: #8894a3;
+    --rule: rgba(232, 236, 241, 0.13);
+    --rule-strong: rgba(232, 236, 241, 0.26);
+    --accent: #63c3cb;
+    --accent-soft: rgba(99, 195, 203, 0.13);
+    --code-ground: #0b0e12;
+    --code-ink: #dbe2ea;
+    --sev-high: #ff8a7a;   --sev-high-bg: rgba(255, 138, 122, 0.14);
+    --sev-med: #f0b45b;    --sev-med-bg: rgba(240, 180, 91, 0.14);
+    --sev-low: #8fcca0;    --sev-low-bg: rgba(143, 204, 160, 0.14);
+    --sev-note: #a9b3c0;   --sev-note-bg: rgba(169, 179, 192, 0.14);
+    --pass: #8fcca0;
+    --fail: #ff8a7a;
+    --fig-box: #161b21;
+    --fig-realmfree: #26313d;
+    --fig-realmbound: #1f3c3a;
+    --fig-hazard: #47321f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0f1216;
+      --surface: #161b21;
+      --surface-2: #1e252d;
+      --ink: #e8ecf1;
+      --ink-2: #b4bdc9;
+      --muted: #8894a3;
+      --rule: rgba(232, 236, 241, 0.13);
+      --rule-strong: rgba(232, 236, 241, 0.26);
+      --accent: #63c3cb;
+      --accent-soft: rgba(99, 195, 203, 0.13);
+      --code-ground: #0b0e12;
+      --code-ink: #dbe2ea;
+      --sev-high: #ff8a7a;   --sev-high-bg: rgba(255, 138, 122, 0.14);
+      --sev-med: #f0b45b;    --sev-med-bg: rgba(240, 180, 91, 0.14);
+      --sev-low: #8fcca0;    --sev-low-bg: rgba(143, 204, 160, 0.14);
+      --sev-note: #a9b3c0;   --sev-note-bg: rgba(169, 179, 192, 0.14);
+      --pass: #8fcca0;
+      --fail: #ff8a7a;
+      --fig-box: #161b21;
+      --fig-realmfree: #26313d;
+      --fig-realmbound: #1f3c3a;
+      --fig-hazard: #47321f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.62; }
+  .doc { max-width: 820px; margin: 0 auto; padding: 64px 22px 120px; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  /* masthead */
+  .masthead { padding-bottom: 28px; margin-bottom: 36px; border-bottom: 1px solid var(--rule); }
+  .eyebrow { font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1.12; letter-spacing: -0.01em; margin: 0 0 14px; text-wrap: balance; }
+  .subtitle { font-size: 18px; line-height: 1.5; color: var(--ink-2); margin: 0; max-width: 62ch; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 22px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-2); }
+  .facts b { color: var(--ink); font-weight: 600; }
+
+  /* takeaways */
+  .takeaways { margin: 0 0 40px; padding: 18px 22px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+  .takeaways .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  .takeaways ul { margin: 0; padding-left: 18px; }
+  .takeaways li { margin: 6px 0; }
+  .takeaways li::marker { color: var(--accent); }
+
+  /* toc */
+  nav.toc { margin: 0 0 52px; font-size: 14px; }
+  nav.toc .toc-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  nav.toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  nav.toc li { margin: 4px 0; break-inside: avoid; }
+  nav.toc li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } h1 { font-size: 32px; } }
+
+  /* headings and prose */
+  section { margin: 0 0 56px; }
+  h2 { font-family: var(--font-display); font-weight: 700; font-size: 27px; line-height: 1.2; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font-size: 17px; font-weight: 650; margin: 30px 0 8px; line-height: 1.35; }
+  h4 { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin: 22px 0 6px; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-ground); color: var(--code-ink); padding: 1px 4px; border-radius: 3px; }
+  pre { font-family: var(--font-mono); font-size: 12.6px; line-height: 1.5; background: var(--code-ground); color: var(--code-ink); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 10px 0 16px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .cm { color: var(--muted); }
+  pre .pass { color: var(--pass); font-weight: 600; }
+  pre .fail { color: var(--fail); font-weight: 600; }
+  .path { font-family: var(--font-mono); font-size: 0.84em; color: var(--ink-2); word-break: break-all; }
+  blockquote { margin: 14px 0 16px; padding: 2px 0 2px 16px; border-left: 3px solid var(--rule-strong); color: var(--ink-2); }
+  blockquote p:last-child { margin-bottom: 0; }
+  .small { font-size: 13.5px; color: var(--ink-2); }
+  .table-wrap { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+  tr:last-child td { border-bottom: none; }
+  th { font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
+  td.num { text-align: right; white-space: nowrap; color: var(--muted); }
+  td .where { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  /* chips */
+  .chip { display: inline-block; font-size: 11px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; white-space: nowrap; vertical-align: 1px; }
+  .chip.high { color: var(--sev-high); background: var(--sev-high-bg); }
+  .chip.med { color: var(--sev-med); background: var(--sev-med-bg); }
+  .chip.low { color: var(--sev-low); background: var(--sev-low-bg); }
+  .chip.note { color: var(--sev-note); background: var(--sev-note-bg); }
+  .chip.tier { color: var(--accent); background: var(--accent-soft); }
+
+  /* finding blocks */
+  .finding { margin: 0 0 46px; padding-top: 26px; border-top: 1px solid var(--rule); }
+  .finding:first-of-type { border-top: none; padding-top: 4px; }
+  .finding h3 { margin-top: 0; font-size: 19px; }
+  .finding h3 .fid { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--muted); margin-right: 8px; letter-spacing: 0.02em; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 14px; }
+  dl.versus { display: grid; grid-template-columns: 8.5em 1fr; gap: 6px 14px; margin: 8px 0 16px; font-size: 14.5px; }
+  dl.versus dt { color: var(--muted); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 3px; }
+  dl.versus dd { margin: 0; }
+  .fix { background: var(--accent-soft); border-radius: 6px; padding: 10px 14px; font-size: 14.5px; margin: 8px 0 0; }
+  .fix b { color: var(--accent); }
+  details { margin: 8px 0 14px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+  details[open] summary { margin-bottom: 6px; }
+
+  /* figure */
+  figure { margin: 18px 0 22px; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+  .fig-frame { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; overflow-x: auto; }
+  .fig-frame svg { min-width: 640px; }
+  svg .box { fill: var(--fig-box); stroke: var(--rule-strong); }
+  svg .free { fill: var(--fig-realmfree); stroke: var(--rule-strong); }
+  svg .bound { fill: var(--fig-realmbound); stroke: var(--rule-strong); }
+  svg .haz { fill: var(--fig-hazard); stroke: var(--rule-strong); }
+  svg text { fill: var(--ink); font-family: var(--font-body); font-size: 12px; }
+  svg text.t2 { fill: var(--ink-2); font-size: 10.5px; }
+  svg text.mono { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-2); }
+  svg .arrow { stroke: var(--ink-2); stroke-width: 1.3; fill: none; marker-end: url(#ah); }
+  svg #ah path { fill: var(--ink-2); }
+  svg .pin { fill: var(--sev-high); }
+  svg .pin.m { fill: var(--sev-med); }
+  svg .pin.l { fill: var(--sev-low); }
+  svg text.pint { fill: #fff; font-size: 9.5px; font-weight: 700; font-family: var(--font-mono); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--ink-2); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--rule-strong); vertical-align: -1px; margin-right: 5px; }
+
+  .appendix { border-top: 1px solid var(--rule); padding-top: 28px; }
+  .appendix h2 { font-size: 22px; }
+
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground: #ffffff; --surface: #ffffff; --surface-2: #f1f3f6; --ink: #111; --ink-2: #444; --muted: #666;
+      --rule: rgba(0,0,0,.15); --rule-strong: rgba(0,0,0,.3); --accent: #0a6a73; --accent-soft: rgba(10,106,115,.08);
+      --code-ground: #f5f6f8; --code-ink: #111;
+    }
+    .doc { max-width: none; padding: 0; }
+    pre, table, figure, .finding h3, .fix { break-inside: avoid; }
+    h2, h3 { break-after: avoid; }
+  }
+</style>
+
+<article class="doc">
+
+<header class="masthead">
+  <p class="eyebrow">Engine audit · JavaScriptCore @ <span class="path">363100839e</span> · 13 August 2026</p>
+  <h1>JavaScriptCore Realm Audit</h1>
+  <p class="subtitle">A deep dive through the parser, bytecode, LLInt, Baseline, DFG/FTL, runtime, object model and heap looking for one class of bug — code that acts on behalf of the wrong <code>JSGlobalObject</code>. Eighteen findings, each with a runnable <code>jsc</code> reproducer: five ShadowRealm boundary escapes, four behaviours that change when a function tiers up into DFG/FTL, and nine wrong-realm results or leaks in the runtime, object model and heap. Fourteen of them also reproduce in Bun 1.3.14 through <code>node:vm</code> — where ShadowRealm is on by default.</p>
+  <ul class="facts">
+    <li><b>Checkout</b> WebKit main, <span class="path">363100839e</span></li>
+    <li><b>Binary</b> JSCOnly release build, x86_64 Linux</li>
+    <li><b>Method</b> source reading + differential tests across realms and JIT tiers</li>
+    <li><b>Also run on</b> Bun 1.3.14 (<code>node:vm</code>), Node 22 as V8 reference</li>
+  </ul>
+</header>
+
+<aside class="takeaways">
+  <p class="label">Headline results</p>
+  <ul>
+    <li><code>Function.prototype.caller</code> hands out functions from other realms and walks straight through ShadowRealm wrappers — a complete callable-boundary escape in both directions (<a href="#f1">F1</a>).</li>
+    <li><code>iframePromise.then()</code> returns a promise from a different realm once the calling function reaches DFG — the <code>PromiseThen</code> intrinsic was left out of the cross-realm guard sweep (<a href="#f2">F2</a>); five more DFG intrinsics have the same hole (<a href="#f3">F3</a>–<a href="#f5">F5</a>).</li>
+    <li>Runtime fast paths for <code>String</code>×<code>RegExp</code>, <code>Promise.prototype.then</code> and <code>ArrayBuffer.prototype.slice</code> validate the <em>receiver's</em> realm but then execute in the <em>caller's</em>, so results flip realm when an unrelated watchpoint fires (<a href="#f6">F6</a>–<a href="#f8">F8</a>).</li>
+    <li>Bun 1.3.14 inherits fourteen of the eighteen through <code>node:vm</code> contexts, and because Bun exposes <code>ShadowRealm</code> unflagged, F1/F13/F14/F15 are working sandbox escapes there today (<a href="#bun">Bun section</a>).</li>
+    <li>The front end is realm-free by construction: no realm bug is possible before <code>CodeBlock</code> linking, and none was found in LLInt/Baseline code sharing or IC stub sharing.</li>
+  </ul>
+</aside>
+
+<nav class="toc" aria-label="Contents">
+  <div class="toc-label">Contents</div>
+  <ol>
+    <li><a href="#summary">Findings at a glance</a></li>
+    <li><a href="#pipeline">Where realm identity enters JSC</a></li>
+    <li><a href="#jit">Optimizing JIT findings</a></li>
+    <li><a href="#runtime">Runtime findings</a></li>
+    <li><a href="#objmodel">Object model, legacy reflection and heap</a></li>
+    <li><a href="#bun">Bun's node:vm: which findings carry over</a></li>
+    <li><a href="#clean">Checked and found correct</a></li>
+    <li><a href="#method">Method and reproduction</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Findings at a glance</h2>
+  <p>A <em>realm</em> is a <code>JSGlobalObject</code>: one set of intrinsics (<code>Array.prototype</code>, <code>%Promise%</code>, <code>TypeError</code>…), one global scope, one bag of per-realm state (watchpoints, legacy <code>RegExp</code> statics, the <code>Math.random</code> generator, template maps). Realms that share a <code>VM</code> — same-origin iframes, <code>ShadowRealm</code>s, <code>createGlobalObject()</code> in the shell — freely exchange objects, so every engine operation has to decide <em>whose</em> intrinsics and state it uses. ECMA-262 answers with the “current realm” (the realm of the running function object) plus explicit <code>GetFunctionRealm</code>/species lookups. The bugs below are places where JSC answers differently, answers inconsistently between execution tiers, or lets an object cross a boundary it must not cross.</p>
+  <p>Severity is judged for an engine embedded in a browser: <span class="chip high">high</span> breaks an isolation guarantee, <span class="chip med">medium</span> is an observable spec deviation reachable from ordinary cross-frame code or one that changes with JIT tier, <span class="chip low">low</span> needs contrived code or only moves an error object's realm. <span class="chip tier">tier</span> marks behaviour that differs between LLInt/Baseline and DFG/FTL for the same program.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>Finding</th><th>Area</th><th>Severity</th><th>Bun 1.3.14</th></tr></thead>
+    <tbody>
+      <tr><td class="num">F1</td><td><a href="#f1"><code>Function.prototype.caller</code> returns callers from other realms and skips ShadowRealm wrapper frames</a><span class="where">runtime/FunctionPrototype.cpp:263-350</span></td><td>Legacy reflection · ShadowRealm</td><td><span class="chip high">high</span></td><td><span class="chip high">yes · default</span></td></tr>
+      <tr><td class="num">F2</td><td><a href="#f2"><code>foreignPromise.then()</code> allocates the derived promise in the caller's realm after DFG tier-up</a><span class="where">dfg/DFGByteCodeParser.cpp:5564-5591 · runtime/JSPromise.cpp:971-995</span></td><td>DFG/FTL</td><td><span class="chip med">medium</span> <span class="chip tier">tier</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F3</td><td><a href="#f3">DFG <code>String.prototype.{match,search,split}</code> / <code>RegExp.prototype[@@split]</code> intrinsics consult the caller's watchpoints and realm — foreign monkey-patches ignored</a><span class="where">dfg/DFGByteCodeParser.cpp:3399-3468, 3833-3893 · dfg/DFGFixupPhase.cpp</span></td><td>DFG/FTL</td><td><span class="chip med">medium</span> <span class="chip tier">tier</span></td><td><span class="chip low">no</span></td></tr>
+      <tr><td class="num">F4</td><td><a href="#f4">Allocation/throwing intrinsics missing the <code>calleeMayBeCrossRealm</code> guard: <code>Reflect.ownKeys</code>, <code>Object.getPrototypeOf</code>, <code>Object.assign</code>, error paths</a><span class="where">dfg/DFGByteCodeParser.cpp:3941-4034</span></td><td>DFG/FTL</td><td><span class="chip med">medium</span> <span class="chip tier">tier</span></td><td><span class="chip med">yes, wider</span></td></tr>
+      <tr><td class="num">F5</td><td><a href="#f5">DFG/FTL <code>Math.random</code> draws from the caller realm's PRNG</a><span class="where">dfg/DFGSpeculativeJIT64.cpp:7124 · jit/AssemblyHelpers.cpp:879-921</span></td><td>DFG/FTL</td><td><span class="chip low">low</span> <span class="chip tier">tier</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F6</td><td><a href="#f6"><code>String.prototype</code> × foreign <code>RegExp</code> fast paths run in the caller's realm (matches array, iterator, <code>RegExp.$1</code>…)</a><span class="where">runtime/StringPrototype.cpp:1250-1554 · runtime/RegExpObjectInlines.h:37-186</span></td><td>Runtime, all tiers</td><td><span class="chip med">medium</span></td><td><span class="chip med">partly</span></td></tr>
+      <tr><td class="num">F7</td><td><a href="#f7"><code>Promise.prototype.then/catch/finally</code> ignore <code>SpeciesConstructor</code> for foreign promises</a><span class="where">runtime/JSPromise.cpp:924-995</span></td><td>Runtime, all tiers</td><td><span class="chip med">medium</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F8</td><td><a href="#f8"><code>ArrayBuffer</code>/<code>SharedArrayBuffer.prototype.slice</code> species result lands in the caller's realm</a><span class="where">runtime/JSArrayBufferPrototype.cpp:58-238</span></td><td>Runtime</td><td><span class="chip low">low</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F9</td><td><a href="#f9"><code>WebAssembly.Memory.prototype.buffer</code>: realm of the buffer object is “first realm to look wins”</a><span class="where">wasm/js/JSWebAssemblyMemory.cpp:98, 168</span></td><td>Wasm JS API</td><td><span class="chip low">low</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F10</td><td><a href="#f10">Generator <code>{value, done}</code> objects are always created in the realm of <code>next()</code>, not the generator's</a><span class="where">builtins/GeneratorPrototype.js:49</span></td><td>Builtins</td><td><span class="chip low">low</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F11</td><td><a href="#f11">Wrong-realm <code>TypeError</code>s: <code>new</code> on host non-constructors, revoked-Proxy <code>[[Call]]</code>, <code>Array.prototype.toString</code></a><span class="where">llint/LLIntSlowPaths.cpp:2116 · runtime/ProxyObject.cpp · runtime/ArrayPrototype.cpp:280</span></td><td>LLInt/JIT call path · runtime</td><td><span class="chip low">low</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F12</td><td><a href="#f12"><code>[[IsHTMLDDA]]</code> (masquerades-as-undefined) only works inside the object's own realm</a><span class="where">runtime/Structure.h:569-572, all tiers</span></td><td>Object model · JIT</td><td><span class="chip med">medium</span></td><td><span class="chip note">n/a</span></td></tr>
+      <tr><td class="num">F13</td><td><a href="#f13">ShadowRealm: exceptions are only sanitised by the JS unwinder — wrappers invoked from C++ leak raw error objects both ways</a><span class="where">runtime/JSRemoteFunction.cpp:119-120,155-156 · interpreter/Interpreter.cpp:875-985</span></td><td>ShadowRealm</td><td><span class="chip high">high</span></td><td><span class="chip high">yes · default</span></td></tr>
+      <tr><td class="num">F14</td><td><a href="#f14">ShadowRealm: <code>remoteFunctionCallGeneric</code> wraps return values for the <em>target</em> realm</a><span class="where">runtime/JSRemoteFunction.cpp:158</span></td><td>ShadowRealm</td><td><span class="chip high">high</span></td><td><span class="chip high">yes · default</span></td></tr>
+      <tr><td class="num">F15</td><td><a href="#f15">ShadowRealm: <code>evaluate</code>/<code>importValue</code> run user code while copying an error message and leak whatever it throws</a><span class="where">runtime/Error.cpp:273-292 · builtins/ShadowRealmPrototype.js:57-63</span></td><td>ShadowRealm</td><td><span class="chip high">high</span></td><td><span class="chip high">yes · default</span></td></tr>
+      <tr><td class="num">F16</td><td><a href="#f16">ShadowRealm: <code>importValue</code> hands incubating-realm resolving functions to module code</a><span class="where">runtime/ShadowRealmPrototype.cpp:73-85 · runtime/JSMicrotask.cpp</span></td><td>ShadowRealm · Promise jobs</td><td><span class="chip high">high</span></td><td><span class="chip low">not reproduced</span></td></tr>
+      <tr><td class="num">F17</td><td><a href="#f17"><code>getFunctionRealm()</code> answers with the Structure's realm, which is not always <code>[[Realm]]</code></a><span class="where">runtime/InternalFunction.cpp:198-227</span></td><td>Object model</td><td><span class="chip low">low</span></td><td><span class="chip med">yes</span></td></tr>
+      <tr><td class="num">F18</td><td><a href="#f18">Realm-tagged Structures cached on shared cells keep dead realms alive (RegExp named-groups structure; bound-function structure)</a><span class="where">runtime/RegExp.cpp:228-255 · runtime/JSBoundFunction.cpp:141-174</span></td><td>Heap · object model</td><td><span class="chip med">medium</span></td><td><span class="chip low">no</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small">In WebKit, ShadowRealm is a “testable” feature (<code>--useShadowRealm=1</code>, off by default), which is the only reason F13–F16 are not an emergency there; F1 needs no flag between ordinary realms and becomes a sandbox escape the moment the flag is on. Bun ships <code>ShadowRealm</code> enabled, so the last column's “yes · default” entries are live. Everything else reproduces on a stock <code>jsc</code>.</p>
+</section>
+
+<section id="pipeline">
+  <h2>Where realm identity enters JSC</h2>
+  <p>The useful mental model: nothing before <code>CodeBlock</code> linking knows what a realm is, everything after it must never forget. The figure marks the stages, what each one knows, and where the findings sit.</p>
+  <figure>
+    <div class="fig-frame">
+    <svg viewBox="0 0 760 392" role="img" aria-label="JSC execution pipeline annotated with realm information and finding locations">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+      <!-- row 1: front end -->
+      <rect class="free" x="10" y="14" width="150" height="58" rx="5"/>
+      <text x="22" y="36">Lexer · Parser</text><text class="t2" x="22" y="53">parser/ — no JSGlobalObject</text><text class="t2" x="22" y="65">at all (errors excepted)</text>
+      <path class="arrow" d="M160,43 H196"/>
+      <rect class="free" x="198" y="14" width="196" height="58" rx="5"/>
+      <text x="210" y="36">BytecodeGenerator → UnlinkedCodeBlock</text><text class="t2" x="210" y="53">CodeCache keyed by SourceCodeKey;</text><text class="t2" x="210" y="65">shared by every realm in the VM</text>
+      <path class="arrow" d="M394,43 H430"/>
+      <rect class="bound" x="432" y="14" width="318" height="58" rx="5"/>
+      <text x="444" y="36">link: CodeBlock = UnlinkedCodeBlock × JSGlobalObject</text><text class="t2" x="444" y="53">link-time constants (@Array, @promiseResolve…), metadata,</text><text class="t2" x="444" y="65">profiles, DirectEvalCodeCache — all per realm</text>
+      <!-- row 2: tiers -->
+      <path class="arrow" d="M590,72 V102"/>
+      <rect class="bound" x="10" y="104" width="196" height="70" rx="5"/>
+      <text x="22" y="126">LLInt</text><text class="t2" x="22" y="143">loads globalObject from CodeBlock;</text><text class="t2" x="22" y="155">slow paths take codeBlock→globalObject()</text>
+      <rect class="bound" x="218" y="104" width="220" height="70" rx="5"/>
+      <text x="230" y="126">Baseline JIT (unlinked)</text><text class="t2" x="230" y="143">one copy per UnlinkedCodeBlock, shared across</text><text class="t2" x="230" y="155">realms; realm loaded via constant pool</text>
+      <rect class="haz" x="450" y="104" width="300" height="70" rx="5"/>
+      <text x="462" y="126">DFG · FTL (per CodeBlock)</text><text class="t2" x="462" y="143">realm pointers baked in; globalObjectFor(codeOrigin) picks</text><text class="t2" x="462" y="155">the inlinee's realm — intrinsics have no inlinee frame</text>
+      <path class="arrow" d="M206,139 H216"/><path class="arrow" d="M438,139 H448"/>
+      <!-- pins on DFG -->
+      <g><circle class="pin m" cx="706" cy="118" r="9"/><text class="pint" x="706" y="121.5" text-anchor="middle">F2</text></g>
+      <g><circle class="pin m" cx="728" cy="118" r="9"/><text class="pint" x="728" y="121.5" text-anchor="middle">F3</text></g>
+      <g><circle class="pin m" cx="706" cy="140" r="9"/><text class="pint" x="706" y="143.5" text-anchor="middle">F4</text></g>
+      <g><circle class="pin l" cx="728" cy="140" r="9"/><text class="pint" x="728" y="143.5" text-anchor="middle">F5</text></g>
+      <!-- row 3: runtime -->
+      <path class="arrow" d="M108,174 V206"/><path class="arrow" d="M328,174 V206"/><path class="arrow" d="M600,174 V206"/>
+      <rect class="haz" x="10" y="208" width="740" height="76" rx="5"/>
+      <text x="22" y="230">Runtime host functions &amp; builtins — receive callee→realm() (“current realm”)</text>
+      <text class="t2" x="22" y="248">hazard: “non-observable” fast paths that prove a property about a foreign receiver's realm, then run the shortcut in the callee's realm;</text>
+      <text class="t2" x="22" y="262">legacy reflection (caller/arguments); ShadowRealm marshalling (JSRemoteFunction, evaluate, importValue); lazily-materialised wrappers</text>
+      <g><circle class="pin" cx="520" cy="226" r="9"/><text class="pint" x="520" y="229.5" text-anchor="middle">F1</text></g>
+      <g><circle class="pin m" cx="542" cy="226" r="9"/><text class="pint" x="542" y="229.5" text-anchor="middle">F6</text></g>
+      <g><circle class="pin m" cx="564" cy="226" r="9"/><text class="pint" x="564" y="229.5" text-anchor="middle">F7</text></g>
+      <g><circle class="pin l" cx="586" cy="226" r="9"/><text class="pint" x="586" y="229.5" text-anchor="middle">F8</text></g>
+      <g><circle class="pin l" cx="608" cy="226" r="9"/><text class="pint" x="608" y="229.5" text-anchor="middle">F9</text></g>
+      <g><circle class="pin l" cx="630" cy="226" r="9"/><text class="pint" x="630" y="229.5" text-anchor="middle">F10</text></g>
+      <g><circle class="pin l" cx="652" cy="226" r="9"/><text class="pint" x="652" y="229.5" text-anchor="middle">F11</text></g>
+      <g><circle class="pin" cx="680" cy="226" r="9"/><text class="pint" x="680" y="229.5" text-anchor="middle">F13</text></g>
+      <g><circle class="pin" cx="702" cy="226" r="9"/><text class="pint" x="702" y="229.5" text-anchor="middle">F14</text></g>
+      <g><circle class="pin" cx="724" cy="226" r="9"/><text class="pint" x="724" y="229.5" text-anchor="middle">F15</text></g>
+      <g><circle class="pin" cx="724" cy="248" r="9"/><text class="pint" x="724" y="251.5" text-anchor="middle">F16</text></g>
+      <!-- row 4: object model + heap -->
+      <path class="arrow" d="M200,284 V314"/><path class="arrow" d="M580,284 V314"/>
+      <rect class="bound" x="10" y="316" width="380" height="66" rx="5"/>
+      <text x="22" y="338">Object model</text><text class="t2" x="22" y="355">Structure→realm(); JSFunction realm = scope chain; getFunctionRealm();</text><text class="t2" x="22" y="368">per-realm StructureCache, watchpoints, masquerades-as-undefined</text>
+      <g><circle class="pin m" cx="338" cy="332" r="9"/><text class="pint" x="338" y="335.5" text-anchor="middle">F12</text></g>
+      <g><circle class="pin l" cx="360" cy="332" r="9"/><text class="pint" x="360" y="335.5" text-anchor="middle">F17</text></g>
+      <rect class="bound" x="402" y="316" width="348" height="66" rx="5"/>
+      <text x="414" y="338">Heap · GC (one Heap per VM, shared by all realms)</text><g><circle class="pin m" cx="724" cy="332" r="9"/><text class="pint" x="724" y="335.5" text-anchor="middle">F18</text></g><text class="t2" x="414" y="355">per realm: microtask routing, DeferredWorkTimer tickets,</text><text class="t2" x="414" y="368">weak structure caches, haveABadTime() heap walk</text>
+    </svg>
+    </div>
+    <div class="legend"><span><i style="background:var(--fig-realmfree)"></i>realm-free by construction</span><span><i style="background:var(--fig-realmbound)"></i>realm-bound, loads the realm indirectly</span><span><i style="background:var(--fig-hazard)"></i>realm chosen by hand at each site — where the bugs live</span></div>
+    <figcaption>Realm identity is attached at link time and read back at run time. The optimizing JITs and the C++ runtime are the two places where a human picks a <code>JSGlobalObject*</code> per call site, and that is where fifteen of the eighteen findings sit.</figcaption>
+  </figure>
+
+  <h3>Lexer, parser, bytecode: nothing to get wrong</h3>
+  <p><span class="path">Source/JavaScriptCore/parser/</span> and <span class="path">bytecompiler/</span> do not reference <code>JSGlobalObject</code> except to build a <code>SyntaxError</code> for a given realm (<span class="path">parser/ParserError.h:92-115</span>) and to create module records. <code>CodeCache</code> (<span class="path">runtime/CodeCache.cpp</span>) is keyed by <code>SourceCodeKey</code> — source, strictness, script mode, derived-context and eval-context type, arrow-function context, code-generation mode flags — none of which is realm state, so an <code>UnlinkedCodeBlock</code> is legitimately shared by every realm in the VM. Realm-dependent operations are expressed indirectly: link-time constants (<code>@Array</code>, <code>@Object</code>, <code>@promiseResolve</code>…), <code>op_resolve_scope</code>/<code>op_get_from_scope</code> against the CodeBlock's global object, allocation profiles and inline-cache metadata that live in the linked <code>CodeBlock</code>. I looked specifically for per-realm inputs to code generation that bypass the cache key (per-global feature toggles read by the parser, cached template objects or RegExp objects on unlinked executables, allocation structures on <code>UnlinkedFunctionExecutable</code>) and found none; the direct-eval cache is per <code>CodeBlock</code>, and <code>eval()</code> correctly treats another realm's <code>eval</code> function as an <em>indirect</em> eval (<span class="path">interpreter/Interpreter.cpp:110</span> compares against the caller realm's <code>evalFunction()</code>).</p>
+
+  <h3>LLInt and Baseline: realm is data, not code</h3>
+  <p>The LLInt reads the global object out of the <code>CodeBlock</code> register; Baseline code has been “unlinked” since 2021 — compiled once per <code>UnlinkedCodeBlock</code> and shared across realms — so it cannot bake a realm pointer in even by accident: <code>loadGlobalObject()</code> goes through the constant pool, thunks such as the <code>Math.random</code> fast path load the realm from the callee (<span class="path">jit/AssemblyHelpers.cpp:900-905</span>), and inline-cache stubs that need a global object (custom accessors, getter/setter calls) take it from the owning <code>StructureStubInfo</code>. The one realm decision these tiers make by hand is on the call path — which realm's <code>TypeError</code> to throw when a callee is not callable/constructible — and that is where F11(a) lives.</p>
+
+  <h3>DFG and FTL: <code>globalObjectFor(codeOrigin)</code> and the intrinsic gap</h3>
+  <p>Optimized code is per <code>CodeBlock</code>, so realm pointers are constants, and inlining routinely mixes realms in one graph. The graph handles that with <code>m_graph.globalObjectFor(node-&gt;origin.semantic)</code>, which returns the realm of the <em>inlined function</em> a node came from — correct for inlined JS, including builtins written in JS. The gap is <em>intrinsic</em> inlining: when the bytecode parser replaces a call to a C++ built-in with a DFG node there is no inlinee frame, so <code>globalObjectFor()</code> yields the <em>caller's</em> realm although LLInt/Baseline would have run the built-in in its own. JSC knows this: <code>calleeMayBeCrossRealm()</code> (<span class="path">dfg/DFGByteCodeParser.cpp:2604-2610</span>) refuses to inline a foreign (or unknown) callee and guards a dozen intrinsics, and the RegExp intrinsics thread an explicit <code>GetGlobalObject(callee)</code> child. F2–F5 are the intrinsics that were missed. A useful amplifier to keep in mind: <code>NativeExecutable</code>s are VM-wide, so a call site that has seen the same built-in from two realms becomes a closure call whose <code>CallVariant</code> has no function but still reports the intrinsic — <code>calleeMayBeCrossRealm()</code> conservatively bails in that case, the unguarded intrinsics compile caller-realm behaviour for everybody.</p>
+
+  <h3>Runtime: “fast and non-observable” has a realm in it</h3>
+  <p>Host functions receive the callee's realm, which is exactly the spec's current realm, so straightforward C++ built-ins are right by construction (I spot-checked the realm of the thrown error for two dozen built-ins called cross-realm with bad arguments; all but the F11 cases were correct). The recurring bug shape is a fast path that (1) proves via watchpoints/structures that skipping an observable protocol step is safe — correctly consulting the <em>receiver's</em> realm, e.g. <code>RegExpObject::isSymbolMatchFastAndNonObservable()</code> uses <code>this-&gt;realm()</code> — and then (2) runs the shortcut with the <code>globalObject</code> in hand, i.e. the callee's realm, although the skipped step would have transferred control into the receiver's realm. Results then materialise in the wrong realm, and flip to the right one as soon as an unrelated watchpoint in the receiver's realm fires (F6–F8).</p>
+
+  <h3>Object model and heap</h3>
+  <p>Every <code>Structure</code> records its realm; <code>JSObject::realm()</code> is that, a <code>JSFunction</code>'s realm is its scope chain's global object, and <code>getFunctionRealm()</code> implements the spec operation including bound-function and proxy unwrapping (a revoked proxy correctly throws). Prototype-keyed structure caches are per realm; <code>InternalFunction::createSubclassStructure</code> re-validates cached <code>new.target</code> structures against both <code>ClassInfo</code> and realm; <code>ObjectAllocationProfile</code> falls back to <code>GetFunctionRealm(newTarget)</code>'s <code>%Object.prototype%</code> (verified with cross-realm <code>Reflect.construct</code> for plain functions, classes, <code>Array</code>, <code>Promise</code> and bound <code>new.target</code>). The heap is one per VM and realm-agnostic; the realm-relevant pieces are the routing of microtasks and deferred work to a global object (see the note under F7/F16) and the cross-realm heap walk in <code>JSGlobalObject::haveABadTime()</code>, which held up under the indexed-accessor-on-foreign-prototype tests I threw at it. The one deliberate realm-relative rule in the object model is masquerades-as-undefined (F12).</p>
+</section>
+
+<section id="jit">
+  <h2>Optimizing JIT findings</h2>
+  <p>All four reproduce with <code>jsc --useConcurrentJIT=0 file.js</code>: the reproducer runs the function once cold and then 10<sup>5</sup> times, and reports both answers. In every case LLInt and Baseline give the spec answer and DFG/FTL give a different one, so the same program changes behaviour a few milliseconds into its life. In the snippets, <code>B</code> is <code>createGlobalObject()</code> and <code>realmOf(o)</code> walks <code>o</code>'s prototype chain and reports whose <code>Object.prototype</code> it ends at.</p>
+
+  <div class="finding" id="f2">
+    <h3><span class="fid">F2</span><code>foreignPromise.then()</code> allocates the derived promise in the caller's realm after tier-up</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip tier">tier-dependent</span><span class="chip note">confirmed in jsc</span></div>
+    <p>Calling <code>.then</code> on a promise that came from another realm is the normal case whenever promises cross an iframe boundary. In LLInt/Baseline the callee is realm B's <code>Promise.prototype.then</code>, so <code>promiseProtoFuncThen</code> runs with B's global object and the derived promise is a B promise — which is also what the spec produces via <code>SpeciesConstructor</code>. Once the calling function is hot, the DFG bytecode parser turns the call into a <code>PromiseThen</code> node without asking <code>calleeMayBeCrossRealm()</code>; <code>PromiseObjectUse</code> is only a cell-type check, so the foreign promise sails through, and the backend calls <code>operationPromiseThen</code> with the node origin's (realm A's) global object, which lands in <code>JSPromise::then</code> → <code>JSPromise::create(vm, globalObject-&gt;promiseStructure())</code>.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>27.2.5.4 <code>Promise.prototype.then</code> steps 3–4: <code>C = SpeciesConstructor(promise, %Promise%)</code>; for an unmodified B promise <code>C</code> is <code>B.Promise</code>, so the result is a realm-B promise.</dd>
+      <dt>LLInt/Baseline</dt><dd>realm B (correct).</dd>
+      <dt>DFG/FTL</dt><dd>realm A. <code>bP.then() instanceof B.Promise</code> flips from <code>true</code> to <code>false</code>.</dd>
+      <dt>Where</dt><dd><span class="path">dfg/DFGByteCodeParser.cpp:5564-5591</span> (no guard; compare <code>ArraySliceIntrinsic</code> at :2845) → <span class="path">dfg/DFGOperations.cpp operationPromiseThen</span> → <span class="path">runtime/JSPromise.cpp:971-995</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 09-dfg-promise-then.js   (jsc --useConcurrentJIT=0)</span>
+const bP = B.Promise.resolve(1);
+tierCheck("realm of bPromise.then()", (p) =&gt; realmOf(p.then()), bP, "B");
+tierCheck("bPromise.then() instanceof B.Promise", (p) =&gt; p.then() instanceof B.Promise, bP, true);
+
+<span class="fail">FAIL</span> realm of bPromise.then(): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> bPromise.then() instanceof B.Promise: LLInt=true DFG/FTL=false expected=true   &lt;== changes with JIT tier</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Add the <code>calleeMayBeCrossRealm()</code> bail-out to <code>PromisePrototypeThenIntrinsic</code> (and audit <code>Catch</code>/<code>Finally</code>, which pin the receiver structure but not the callee), or give <code>PromiseThen</code> a <code>GetGlobalObject(callee)</code> child like <code>RegExpExec</code>. Independently, <code>JSPromise::then</code>'s fast path should allocate from <code>this-&gt;realm()</code> — see F7.</p>
+  </div>
+
+  <div class="finding" id="f3">
+    <h3><span class="fid">F3</span>DFG <code>String.prototype.{match, search, split}</code> and <code>RegExp.prototype[@@split]</code> intrinsics run in the caller's realm — a monkey-patch in the callee's realm is silently dropped</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip tier">tier-dependent</span><span class="chip note">confirmed in jsc</span></div>
+    <p>These recently C++-ified String methods have DFG intrinsics whose only precondition is the <em>caller's</em> <code>stringSymbol{Match,Search,Split}WatchpointSet</code> (<code>m_graph.isWatchingStringSymbolSplitWatchpoint(currentCodeOrigin())</code> etc.). When the callee is realm C's <code>String.prototype.match</code> — say a parent frame installed a child frame's String methods, or a library holds uncurried references — LLInt/Baseline execute C's built-in, which does <code>RegExpCreate</code> in C and honours C's <code>RegExp.prototype[@@match]</code>. The DFG node lowers to <code>operationStringMatch/Search/Split(lexicalGlobalObject, …)</code>, so it consults and allocates in realm A: an override of <code>RegExp.prototype[Symbol.match]</code> or <code>[Symbol.search]</code> in realm C stops being called once the caller is optimized, result arrays change realm, and the legacy <code>RegExp.lastMatch</code>/<code>$1</code> statics are written into the wrong realm. <code>RegExpSplitFast</code> has the same problem for a different reason: unlike its siblings <code>RegExpExec</code>/<code>RegExpTest</code>/<code>RegExpMatchFast</code> (which carry <code>addToGraph(GetGlobalObject, callee)</code>), it is created without a global-object child and the backend substitutes <code>LinkableConstant::globalObject(node)</code>. In Fixup, <code>StringMatch</code>/<code>StringSearch</code> with a RegExp argument are likewise converted to <code>RegExpMatchFast</code>/<code>RegExpSearch</code> with a hard-wired <code>JSConstant(globalObjectFor(origin))</code>.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>22.1.3.13 <code>String.prototype.match</code>: <code>? Invoke(rx, @@match, «S»)</code> after <code>RegExpCreate</code> — everything happens in the callee's realm C, including the <code>@@match</code> lookup.</dd>
+      <dt>LLInt/Baseline</dt><dd><code>stringProtoFuncMatch(globalObject = C)</code>: patched <code>@@match</code> runs; arrays are C arrays.</dd>
+      <dt>DFG/FTL</dt><dd>patched <code>@@match</code>/<code>@@search</code> ignored; arrays are A arrays; A's <code>RegExp.lastMatch</code> updated.</dd>
+      <dt>Where</dt><dd><span class="path">dfg/DFGByteCodeParser.cpp:3399-3468</span> (Split/Match/Search), <span class="path">:3833-3893</span> (<code>RegExpSplitFast</code> without <code>GetGlobalObject</code>), <span class="path">dfg/DFGFixupPhase.cpp ~1193-1253</span>, <span class="path">dfg/DFGOperations.cpp:4343-4486</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 10-dfg-string-regexp-intrinsics.js</span>
+const C = createGlobalObject();
+String.prototype.cmatch  = C.String.prototype.match;    <span class="cm">// borrow realm C's built-ins</span>
+String.prototype.csearch = C.String.prototype.search;
+String.prototype.csplit  = C.String.prototype.split;
+RegExp.prototype.csplit  = C.RegExp.prototype[Symbol.split];
+C.eval(`RegExp.prototype[Symbol.match]  = function () { return "patched @@match"; };
+        RegExp.prototype[Symbol.search] = function () { return 42; };`);
+tierCheck("'abc'.cmatch('b') sees C's override",  (s) =&gt; String(s.cmatch("b")), "abc", "patched @@match");
+tierCheck("'abc'.csearch('b') sees C's override", (s) =&gt; s.csearch("b"), "abc", 42);
+tierCheck("realm of 'a,b'.csplit(',')", (s) =&gt; realmOfC(s.csplit(",")), "a,b", "C");
+tierCheck("realm of /,/.csplit('a,b')",  (s) =&gt; realmOfC(/,/.csplit(s)), "a,b", "C");
+
+<span class="fail">FAIL</span> 'abc'.cmatch('b') sees C's override: LLInt=patched @@match DFG/FTL=b expected=patched @@match   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> 'abc'.csearch('b') sees C's override: LLInt=42 DFG/FTL=1 expected=42   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> realm of 'a,b'.csplit(','): LLInt=C DFG/FTL=A expected=C   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> realm of /,/.csplit('a,b'): LLInt=C DFG/FTL=A expected=C   &lt;== changes with JIT tier</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Either bail with <code>calleeMayBeCrossRealm()</code> in the four intrinsics, or thread <code>GetGlobalObject(callee)</code> into <code>StringMatch</code>/<code>StringSearch</code>/<code>StringSplit</code>/<code>RegExpSplitFast</code> and check the <em>callee</em> realm's watchpoints in the parser. The <code>String.prototype.replace</code> intrinsic (<span class="path">:4060-4085</span>) reads <code>m_inlineStackTop-&gt;m_codeBlock-&gt;globalObject()</code>'s watchpoints the same way; with a foreign callee only the legacy statics and error realm are affected there, but it deserves the same guard.</p>
+  </div>
+
+  <div class="finding" id="f4">
+    <h3><span class="fid">F4</span>Intrinsics missing from the <code>calleeMayBeCrossRealm</code> sweep: <code>Reflect.ownKeys</code>, <code>Object.getPrototypeOf</code>, <code>Object.assign</code>, and the error paths of a dozen more</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip tier">tier-dependent</span><span class="chip note">confirmed in jsc</span></div>
+    <p>The guard was applied to <code>Object.keys</code>/<code>getOwnPropertyNames</code>/<code>getOwnPropertySymbols</code> (<span class="path">:3976-4010</span>) but not to their sibling <code>ReflectOwnKeysIntrinsic</code> fifteen lines below, whose fast path allocates the key array from <code>globalObjectFor(origin)-&gt;arrayStructureForIndexingTypeDuringAllocation()</code>. <code>ObjectGetPrototypeOfIntrinsic</code>/<code>ReflectGetPrototypeOfIntrinsic</code> become <code>GetPrototypeOf</code>, which Fixup folds for primitives to the <em>lexical</em> realm's <code>Number.prototype</code>/<code>String.prototype</code>/… (spec: <code>ToObject</code> in the callee's realm). <code>ObjectAssignIntrinsic</code> emits <code>ToObject</code> for the target, materialising wrapper objects in the caller's realm. And every unguarded intrinsic that can throw from its DFG operation — <code>Object.create</code> with a bad prototype, <code>String.fromCodePoint</code>, <code>Number.prototype.toString</code> with a bad radix, <code>String.prototype.valueOf</code> on a non-string, <code>WeakMap.prototype.set</code> with a bad key, … — throws the <em>caller</em> realm's <code>TypeError</code>/<code>RangeError</code> where the interpreter throws the callee's, so <code>e instanceof TypeError</code> in a cross-frame <code>catch</code> changes with tier.</p>
+    <dl class="versus">
+      <dt>Where</dt><dd><span class="path">dfg/DFGByteCodeParser.cpp:4027-4034</span> (<code>ReflectOwnKeys</code>, unguarded) vs <span class="path">:3980</span> (<code>ObjectKeys</code>, guarded); <span class="path">:3958-3965</span>, <span class="path">:4018-4025</span> (<code>GetPrototypeOf</code>); <span class="path">:3941-3956</span> (<code>ObjectAssign</code> → <code>ToObject</code>); <span class="path">dfg/DFGFixupPhase.cpp fixupGetPrototypeOf / fixupToObject</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 11-dfg-unguarded-alloc-intrinsics.js</span>
+const ownKeys = B.Reflect.ownKeys, keys = B.Object.keys, gpo = B.Object.getPrototypeOf, assign = B.Object.assign;
+<span class="fail">FAIL</span> realm of B.Reflect.ownKeys(o): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+<span class="pass">PASS</span> realm of B.Object.keys(o)      (guarded sibling, control): LLInt=B DFG/FTL=B expected=B
+<span class="fail">FAIL</span> B.Object.getPrototypeOf(1) === B.Number.prototype: LLInt=true DFG/FTL=false expected=true   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> B.Object.getPrototypeOf('s') === B.String.prototype: LLInt=true DFG/FTL=false expected=true   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> realm of B.Object.assign(5, null) (ToObject wrapper): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> realm of TypeError from B.Object.create(42): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> realm of RangeError from B.String.fromCodePoint(-1): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Mechanical: add the guard to every intrinsic that allocates or throws, or — cheaper in coverage terms — make <code>handleIntrinsicCall</code> refuse foreign/unknown callees up front and whitelist the intrinsics that are provably realm-free (arithmetic, char access, <code>Object.is</code>, typed-array getters…).</p>
+  </div>
+
+  <div class="finding" id="f5">
+    <h3><span class="fid">F5</span>DFG/FTL <code>Math.random</code> draws from the caller realm's generator</h3>
+    <div class="meta"><span class="chip low">low</span><span class="chip tier">tier-dependent</span><span class="chip note">confirmed in jsc</span></div>
+    <p>Each realm owns a <code>WeakRandom</code> (the thing WebKit reseeds per document; <code>--forceWeakRandomSeed</code> makes it deterministic for the test). The Baseline thunk for <code>Math.random</code> loads the realm from the callee at run time (<code>AssemblyHelpers::emitRandomThunk(VM&amp;)</code>, <span class="path">jit/AssemblyHelpers.cpp:900-905</span>); <code>ArithRandom</code> in DFG/FTL uses the other overload with <code>m_graph.globalObjectFor(node-&gt;origin.semantic)</code> baked in (<span class="path">dfg/DFGSpeculativeJIT64.cpp:7124-7133</span>, <span class="path">ftl/FTLLowerDFGToB3.cpp compileArithRandom</span>), and <code>RandomIntrinsic</code> (<span class="path">DFGByteCodeParser.cpp:4162</span>) has no cross-realm guard. So <code>otherFrame.Math.random()</code> consumes and advances the calling frame's stream once hot — harmless numerically, but it is state of the wrong realm being mutated, and it defeats per-realm seeding.</p>
+<pre><code><span class="cm">// 12-dfg-math-random-realm.js   (--forceWeakRandomSeed=1 --forcedWeakRandomSeed=42: every realm starts from the same stream)</span>
+<span class="cm">// Draw N+1 numbers through () =&gt; B2.Math.random() from realm A (the tail of the loop is DFG code), then replay</span>
+<span class="cm">// N+1 draws inside a fresh realm: the last values agree iff every draw advanced B2's generator.</span>
+<span class="pass">PASS</span> control: N+1 draws of Math.random inside B match a fresh realm's stream: got true, expected true
+<span class="fail">FAIL</span> N+1 draws of B2.Math.random() from A (hot) match a fresh realm's stream: got false, expected true</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Guard <code>RandomIntrinsic</code> with <code>calleeMayBeCrossRealm()</code>, or emit <code>ArithRandom</code> against <code>variant.function()-&gt;realm()</code>.</p>
+  </div>
+</section>
+
+<section id="runtime">
+  <h2>Runtime findings</h2>
+  <p>These reproduce identically in every tier (the C++ is shared), which is why nobody's differential fuzzer has complained. Each one is a fast path whose <em>proof</em> is about the receiver's realm and whose <em>execution</em> is in the callee's.</p>
+
+  <div class="finding" id="f6">
+    <h3><span class="fid">F6</span><code>String.prototype</code> methods with a foreign <code>RegExp</code>: the fast path runs the match in the caller's realm</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip note">all tiers</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>"text".match(re)</code> where <code>re</code> came from another frame is ordinary code. <code>stringProtoFuncMatch</code> asks <code>regExpObject-&gt;isSymbolMatchFastAndNonObservable()</code> — which, correctly, inspects the RegExp's <em>own</em> realm B (its <code>regExpPrimordialPropertiesWatchpointSet</code>, its <code>RegExp.prototype</code>) — and on success calls <code>regExpMatchFast(globalObject, …)</code> with the <code>globalObject</code> of <code>String.prototype.match</code>, i.e. realm A. Everything the skipped <code>@@match</code> call would have done in realm B now happens in realm A: the matches array comes from A's <code>regExpMatchesArrayStructure</code>, <code>matchAll</code>'s species-cloned RegExp and its <code>%RegExpStringIterator%</code> are A objects, <code>split</code>'s array is an A array, and the legacy statics (<code>RegExp.lastMatch</code>, <code>RegExp.$1</code>…) are recorded on A's <code>RegExpGlobalData</code> while B's stay stale. The same shape exists in <code>search</code>, <code>replace</code>/<code>replaceAll</code> (statics only) and in the “ToString invalidated the fast path” fallbacks, which call A's <code>linkTimeConstant(regExpPrototypeSymbolMatch)</code> instead of B's method.</p>
+    <p>The behaviour is not self-consistent: fire an unrelated watchpoint in B — the reproducer deletes and re-adds the very same <code>RegExp.prototype.exec</code> — and the identical call now takes the generic path, invokes B's <code>@@match</code>, and everything lands in realm B.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>22.1.3.13: <code>matcher = GetMethod(regexp, @@match)</code>; <code>Call(matcher, regexp, «O»)</code>. B's <code>RegExp.prototype[@@match]</code> runs with current realm B; <code>RegExpBuiltinExec</code> allocates via B's <code>%Array.prototype%</code>; the legacy-statics proposal updates the statics of the realm whose <code>%RegExp%</code> built-ins ran.</dd>
+      <dt>JSC</dt><dd>realm A while B's watchpoints are intact, realm B afterwards.</dd>
+      <dt>Where</dt><dd><span class="path">runtime/StringPrototype.cpp:1256-1262</span> (split), <span class="path">:1320-1321, 1350-1361</span> (match), <span class="path">:1431-1445, 1521-1553</span> (matchAll), <span class="path">:1475-1483</span> (search), <span class="path">:614-680</span> (replace); predicates in <span class="path">runtime/RegExpObjectInlines.h:37-186</span>. DFG's <code>operationStringMatchRegExp</code>/<code>SearchRegExp</code>/<code>SplitRegExp</code> (<span class="path">dfg/DFGOperations.cpp:4366-4486</span>) copy the pattern.</dd>
+    </dl>
+<pre><code><span class="cm">// 01-string-regexp-fastpath.js</span>
+const re = new B.RegExp("a(b)?");
+<span class="fail">FAIL</span> realm of 'ab'.match(reB): got A, expected B
+<span class="fail">FAIL</span> realm of 'abab'.matchAll(/a/g from B): got A, expected B
+<span class="fail">FAIL</span> realm of 'a,b'.split(/,/ from B): got A, expected B
+<span class="fail">FAIL</span> B.RegExp.$1 after 'xaby'.replace(/a(b)/ from B): got , expected b
+<span class="fail">FAIL</span> A.RegExp.$1 is untouched: got clobbered, expected untouched
+<span class="cm">// B.eval("const e = RegExp.prototype.exec; delete RegExp.prototype.exec; RegExp.prototype.exec = e;")</span>
+<span class="pass">PASS</span> after no-op reshuffle in B: realm of 'ab'.match(reB): got B, expected B
+<span class="pass">PASS</span> after no-op reshuffle in B: realm of split result: got B, expected B</code></pre>
+    <p class="fix"><b>Fix sketch.</b> The predicates already computed <code>this-&gt;realm()</code>; pass it along. Either take the generic path when <code>regExpObject-&gt;realm() != globalObject</code>, or call <code>regExpMatchFast(regExpObject-&gt;realm(), …)</code> etc. so the shortcut executes where the skipped call would have.</p>
+  </div>
+
+  <div class="finding" id="f7">
+    <h3><span class="fid">F7</span><code>Promise.prototype.then</code>/<code>catch</code>/<code>finally</code> ignore <code>SpeciesConstructor</code> for foreign promises</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip note">all tiers</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>JSPromise::then</code> takes its fast path when <code>promiseSpeciesWatchpointIsValid(vm, this)</code> — evaluated against the promise's realm — and then allocates <code>JSPromise::create(vm, globalObject-&gt;promiseStructure())</code> in the realm of the <code>then</code> being executed. <code>promiseSpeciesConstructor()</code> encodes the same assumption: for any <code>JSPromise</code> with a valid watchpoint it returns <code>globalObject-&gt;promiseConstructor()</code> rather than <code>promise-&gt;realm()-&gt;promiseConstructor()</code>. So <code>Promise.prototype.then.call(foreignPromise, f)</code> — the defensive idiom used by promise utilities, zone/async-context shims and SES-style code precisely because it does not trust <code>foreignPromise.then</code> — yields a promise of the caller's realm; <code>catch</code> and <code>finally</code> inherit it. Twenty lines further down, <code>JSPromise::promiseResolve</code> gets the same question right (<code>constructor == promise-&gt;realm()-&gt;promiseConstructor()</code>), and <code>Promise.all/race/any/allSettled</code> wrap foreign promises correctly, so this is an oversight rather than a policy. As with F6 the answer flips to the correct realm once B's species watchpoint is invalidated. F2 is the DFG-flavoured way to reach the same line of code from an ordinary <code>bP.then()</code>.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>27.2.5.4 steps 3–4: <code>C = SpeciesConstructor(promise, %Promise%)</code> → <code>promise.constructor</code> is <code>B.Promise</code> → <code>@@species</code> → <code>B.Promise</code>; <code>NewPromiseCapability(C)</code> is a B promise.</dd>
+      <dt>Where</dt><dd><span class="path">runtime/JSPromise.cpp:978-980</span> (<code>then</code> fast path), <span class="path">:924-956</span> (<code>promiseSpeciesConstructor</code>), <span class="path">runtime/JSPromisePrototype.cpp:139-140, 285-293</span> (<code>catch</code>/<code>finally</code> fast paths).</dd>
+    </dl>
+<pre><code><span class="cm">// 02-promise-then-species.js</span>
+const bP = B.Promise.resolve(1);
+<span class="fail">FAIL</span> realm of Promise.prototype.then.call(bP): got A, expected B
+<span class="fail">FAIL</span> realm of Promise.prototype.catch.call(bP, f): got A, expected B
+<span class="fail">FAIL</span> realm of Promise.prototype.finally.call(bP, f): got A, expected B
+<span class="pass">PASS</span> Promise.resolve(bP) !== bP (correctly wraps): got true, expected true
+<span class="cm">// B.eval("const c = Promise.prototype.constructor; delete Promise.prototype.constructor; Promise.prototype.constructor = c;")</span>
+<span class="pass">PASS</span> after no-op reshuffle in B: realm of then.call(bP): got B, expected B</code></pre>
+    <p class="fix"><b>Fix sketch.</b> <code>promiseSpeciesConstructor()</code> should return <code>promise-&gt;realm()-&gt;promiseConstructor()</code>, and the <code>then</code>/<code>catch</code>/<code>finally</code> fast paths should allocate from <code>this-&gt;realm()-&gt;promiseStructure()</code> (or simply require <code>realm() == globalObject</code> for the fast path, as <code>resolvedPromise()</code> at <span class="path">JSPromise.cpp:828</span> already does).</p>
+    <blockquote><p><b>Related, code-reading only.</b> <code>HostEnqueuePromiseJob(job, realm)</code> takes <code>realm = GetFunctionRealm(handler)</code>; HTML uses it to skip jobs whose realm's document is no longer fully active and to pick entry/incumbent settings. JSC queues reactions on the <em>promise's</em> realm when a pending promise settles (<span class="path">JSPromise.cpp:495-548</span>) and on the realm of the <code>then</code> call when the promise is already settled (<span class="path">:360-378</span>) — never the handler's. In WebCore that means a handler belonging to a detached iframe, attached to a live frame's promise, still runs. Not observable in the shell (one microtask queue per VM), so it is recorded here rather than counted.</p></blockquote>
+  </div>
+
+  <div class="finding" id="f8">
+    <h3><span class="fid">F8</span><code>ArrayBuffer</code>/<code>SharedArrayBuffer.prototype.slice</code>: species result lands in the caller's realm (and same-realm <code>@@species</code> is ignored too)</h3>
+    <div class="meta"><span class="chip low">low</span><span class="chip note">all tiers</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>speciesConstructArrayBuffer</code> treats “<code>constructor</code> is <em>its own realm's</em> <code>%ArrayBuffer%</code>” as licence for the fast path (<code>constructorObject == globalObjectFromConstructor-&gt;arrayBufferConstructor(mode)</code>) and the fast path allocates with <code>globalObject-&gt;arrayBufferStructure()</code> of the calling realm. Unlike <code>ArraySpeciesCreate</code>, <code>SpeciesConstructor(O, %ArrayBuffer%)</code> has no cross-realm escape hatch, so <code>A.ArrayBuffer.prototype.slice.call(bufferFromB)</code> must construct through <code>B.ArrayBuffer</code>. JSC's own typed-array <code>speciesConstruct</code> checks <code>inSameRealm</code> and gets this right, which makes the two inconsistent with each other. While here: because that same branch returns “default” without ever reading <code>@@species</code>, a plain same-realm <code>ArrayBuffer[Symbol.species]</code> override is also ignored by <code>slice</code> (<code>new ArrayBuffer(8).slice(0, 4) instanceof MyAB</code> is <code>false</code>; Array, TypedArray, Promise and RegExp equivalents honour it).</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>25.1.6.7 steps 15–16 (and 25.2.5.6 for SAB): <code>ctor = SpeciesConstructor(O, %ArrayBuffer%)</code>; <code>new = Construct(ctor, «newLen»)</code>.</dd>
+      <dt>Where</dt><dd><span class="path">runtime/JSArrayBufferPrototype.cpp:58-90</span> (<code>arrayBufferSpeciesConstructorSlow</code>), <span class="path">:215-238</span> (fast-path allocation), <span class="path">runtime/JSArrayBufferPrototypeInlines.h:39-66</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 03-arraybuffer-slice-species.js</span>
+<span class="fail">FAIL</span> realm of ArrayBuffer.prototype.slice.call(bBuf): got A, expected B
+<span class="fail">FAIL</span> realm of slice.call(resizable bBuf): got A, expected B
+<span class="fail">FAIL</span> realm of SharedArrayBuffer.prototype.slice.call(bS): got A, expected B
+<span class="pass">PASS</span> realm of Uint8Array.prototype.slice.call(bTA) (control): got B, expected B</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Only treat the constructor as default when <code>thisObject-&gt;realm() == globalObject</code> (mirroring the typed-array helper); otherwise fall through to a real <code>Get(C, @@species)</code> + <code>Construct</code>. Reading <code>@@species</code> in the slow branch also fixes the same-realm override.</p>
+  </div>
+
+  <div class="finding" id="f9">
+    <h3><span class="fid">F9</span><code>WebAssembly.Memory.prototype.buffer</code>: the buffer object belongs to whichever realm looked first</h3>
+    <div class="meta"><span class="chip low">low</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>JSWebAssemblyMemory</code> materialises its <code>JSArrayBuffer</code> wrapper lazily in <code>buffer(globalObject)</code>/<code>associateArrayBuffer(globalObject, …)</code> using <code>globalObject-&gt;arrayBufferStructure()</code> — the realm of the <em>getter</em> that happened to run — and caches it in <code>m_bufferWrapper</code>. If a parent frame's devtools-ish helper (or <code>toResizableBuffer</code>/<code>toFixedLengthBuffer</code>) touches a child frame's memory first, the child's own <code>memory.buffer</code> is an <code>ArrayBuffer</code> from the parent's realm for the rest of the buffer's life; after a <code>grow()</code> the race starts again. Typed arrays in JSC do this right (<code>JSArrayBufferView::possiblySharedJSBuffer</code> uses the view's realm), so again the engine disagrees with itself.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>WebAssembly JS API, “initialize a memory object” / “create a fixed length memory buffer”: the buffer object is created when the <code>Memory</code> is created or grown, in that realm.</dd>
+      <dt>Where</dt><dd><span class="path">wasm/js/JSWebAssemblyMemory.cpp:98</span> (<code>associateArrayBuffer</code>), <span class="path">:168</span> (legacy path in <code>buffer()</code>).</dd>
+    </dl>
+<pre><code><span class="cm">// 04-wasm-memory-buffer.js</span>
+const getterA = Object.getOwnPropertyDescriptor(WebAssembly.Memory.prototype, "buffer").get;
+const m1 = new B.WebAssembly.Memory({ initial: 1 });
+<span class="fail">FAIL</span> A's getter first: realm of buffer: got A, expected B
+<span class="fail">FAIL</span> ...B now also sees: got A, expected B
+<span class="pass">PASS</span> B first (control): realm of buffer via A getter: got B, expected B
+<span class="fail">FAIL</span> shared memory, A first: realm: got A, expected B
+<span class="fail">FAIL</span> A toResizableBuffer.call(bMem): realm: got A, expected B</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Use <code>this-&gt;realm()-&gt;arrayBufferStructure(...)</code> in both places.</p>
+  </div>
+
+  <div class="finding" id="f10">
+    <h3><span class="fid">F10</span>Generator results are created in the realm of <code>next()</code>, never in the generator's realm</h3>
+    <div class="meta"><span class="chip low">low</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>@generatorResume</code> ends with <code>return { value, done };</code>, an object literal in the realm of the <code>%GeneratorPrototype%.next</code> that is running. The spec creates the result of a <code>yield</code> and of the final return <em>inside the generator's execution context</em> (whose realm is the generator function's), and only the “already completed” <code>{undefined, true}</code> in the caller's context. V8 allocates the <code>yield</code> result in the generator's realm (the reproducer passes that line under Node 22) but, like JSC, builds the completion result in the caller's, so engines already disagree here; JSC's own async generators use <code>generator-&gt;realm()</code> (<span class="path">runtime/JSMicrotask.cpp:532-535</span>), so within JSC sync generators are the odd one out. Only visible to code that drives a foreign generator with its own realm's <code>next</code>.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>27.5.3.7 <code>GeneratorYield(CreateIteratorResultObject(value, false))</code> evaluated in <code>genContext</code>; 27.5.3.1 <code>GeneratorStart</code> step 4.k; 27.5.3.3 <code>GeneratorResume</code> step 2 for the completed case.</dd>
+      <dt>Where</dt><dd><span class="path">builtins/GeneratorPrototype.js:49</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 07-generator-result-realm.js — A's %GeneratorPrototype%.next driving a generator from B</span>
+<span class="fail">FAIL</span> realm of yield result: got A, expected B
+<span class="fail">FAIL</span> realm of completion result: got A, expected B
+<span class="pass">PASS</span> realm of post-completion result: got A, expected A</code></pre>
+  </div>
+
+  <div class="finding" id="f11">
+    <h3><span class="fid">F11</span>Wrong-realm <code>TypeError</code>s on the call path</h3>
+    <div class="meta"><span class="chip low">low</span><span class="chip note">confirmed in jsc</span></div>
+    <p>Three small ones, grouped because the fix and the impact (which frame's <code>TypeError.prototype</code> an exception inherits from) are the same.</p>
+    <ul>
+      <li><b><code>new</code> on a host non-constructor.</b> <code>EvaluateNew</code> step 7 throws in the caller's realm when <code>IsConstructor</code> is false. For a JS callee JSC does exactly that (<span class="path">llint/LLIntSlowPaths.cpp:2120-2121</span>, <span class="path">bytecode/RepatchInlines.h:186-190</span>), but a host <code>JSFunction</code> such as <code>B.Math.max</code> is dispatched to its <code>NativeExecutable</code>'s construct entry — <code>callHostFunctionAsConstructor</code> — which throws with the <em>callee's</em> global object (<span class="path">runtime/JSFunction.cpp:56</span>, reached from <span class="path">LLIntSlowPaths.cpp:2116-2117</span> / <span class="path">RepatchInlines.h:179-182</span>). <code>new B.Math.max</code> → B's TypeError; <code>new (B arrow function)</code> → A's.</li>
+      <li><b>Revoked proxy.</b> Calling a revoked B proxy from A throws B's TypeError (<code>ProxyObject</code>'s call trampoline runs with the proxy's realm), constructing it throws A's; the spec throws in the current (caller's) realm for both. test262 already lists <code>Proxy/apply/null-handler-realm.js</code> as an expected failure; the <code>[[Call]]</code>/<code>[[Construct]]</code> asymmetry is the part worth fixing.</li>
+      <li><b><code>Array.prototype.toString</code>.</b> Its shortcut recognises “<code>join</code> is the built-in” by C function pointer (<span class="path">runtime/ArrayPrototype.cpp:280</span>), so a B array's B <code>join</code> is replaced by A's fast join and a Symbol element throws A's TypeError instead of B's.</li>
+    </ul>
+<pre><code><span class="cm">// 08-typeerror-realm-misc.js</span>
+<span class="fail">FAIL</span> new B.Math.max()  (host fn): got B, expected A
+<span class="pass">PASS</span> new (B arrow fn)   (JS fn, control): got A, expected A
+<span class="fail">FAIL</span> call revoked B proxy: got B, expected A
+<span class="pass">PASS</span> construct revoked B proxy (control): got A, expected A
+<span class="fail">FAIL</span> Array.prototype.toString.call(bArrayWithSymbol): got A, expected B</code></pre>
+  </div>
+</section>
+
+<section id="objmodel">
+  <h2>Object model, legacy reflection and heap</h2>
+
+  <div class="finding" id="f1">
+    <h3><span class="fid">F1</span><code>Function.prototype.caller</code> returns callers from other realms — and walks straight through ShadowRealm wrappers</h3>
+    <div class="meta"><span class="chip high">high</span><span class="chip note">all tiers</span><span class="chip note">confirmed in jsc</span></div>
+    <p>JSC implements <code>caller</code> from the de-facto “legacy function reflection” spec it cites in the source, and follows its numbered steps — 11 (host functions → <code>null</code>), 12 (strict callers → <code>null</code>), 14 (generator/async bodies → <code>null</code>) — but not step 13, <em>“If caller.[[Realm]] is not currentRealm, return null”</em>, and the receiver check openly says “except step 3” (the realm check on the receiver). Between two ordinary realms that is a wart: a sloppy function in frame B can obtain the frame-A function that called it. With <code>--useShadowRealm=1</code> it is fatal, because <code>RetrieveCallerFunctionFunctor</code> additionally treats a <code>JSRemoteFunction</code> frame like a bound function and <em>skips it</em> instead of stopping (a wrapper is a host function; step 11 would have returned <code>null</code>). A sloppy function inside the ShadowRealm therefore receives the raw incubating-realm function that called its wrapper; <code>.constructor</code> on that is the incubating <code>%Function%</code>, and <code>Function("return globalThis")()</code> is the incubating global object. The reverse direction works the same way. No JIT involvement is needed, and one variant shows that not even a wrapped call is: a <code>name</code> getter on the callable being wrapped runs during <code>evaluate()</code> and can read <code>.caller</code> from there. For calibration: V8 gates <code>caller</code> on its security token rather than on realm identity, so Node's <code>vm</code> contexts and its <code>--experimental-shadow-realm</code> fail this reproducer in exactly the same way — this is a hazard of the legacy feature meeting ShadowRealm, not a JSC idiosyncrasy, but it has to be closed in each engine that ships ShadowRealm, and Bun ships it (see below).</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>ECMA-262 leaves <code>caller</code> implementation-defined but §17.1 forbids leaking strict/built-in callers; the proposal JSC follows adds the realm check precisely “to prevent cross-realm leakage”; the ShadowRealm proposal's callable-boundary invariant is that no object reference ever crosses.</dd>
+      <dt>Where</dt><dd><span class="path">runtime/FunctionPrototype.cpp:198-208</span> (receiver check, “except step 3”), <span class="path">:263-309</span> (<code>RetrieveCallerFunctionFunctor</code>; line 292 skips <code>JSRemoteFunction</code>), <span class="path">:320-350</span> (getter; step 13 missing between the step-12 and step-14 comments).</dd>
+    </dl>
+<pre><code><span class="cm">// 05-function-caller-cross-realm.js   (second half needs --useShadowRealm=1)</span>
+const innerProbe = B.eval("(function probe() { return probe.caller; })");
+function outerSloppy() { return innerProbe(); }
+<span class="fail">FAIL</span> plain realms: B function's .caller for a caller from realm A: got function outerSloppy from realm A, expected null
+
+const r = new ShadowRealm();
+const probe = r.evaluate(`(function g() { globalThis.leak = g.caller; })`);
+(function hostSloppy() { return probe(); })();
+r.evaluate(`... leak.constructor("return globalThis")() ...`)
+<span class="fail">FAIL</span> escaped ShadowRealm: outer globalThis reachable, outer ShadowRealm ctor is function
+<span class="fail">FAIL</span> reverse escape: got inner function 'innerSloppy', inner globalThis.leak type = function</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Implement step 13 (<code>if (function-&gt;realm() != globalObject) return null</code>) and step 3, and drop <code>JSRemoteFunction</code> from the skip list at line 292 so a wrapper frame terminates the walk like any other host function. <code>Function.prototype.arguments</code> shares the receiver check and wants the same realm test.</p>
+  </div>
+
+  <div class="finding" id="f12">
+    <h3><span class="fid">F12</span><code>[[IsHTMLDDA]]</code> only masquerades inside its own realm</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip note">all tiers, by design</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>Structure::masqueradesAsUndefined(lexicalGlobalObject)</code> is defined as <code>typeInfo().masqueradesAsUndefined() &amp;&amp; realm() == lexicalGlobalObject</code>, and LLInt, Baseline, DFG and FTL all implement <code>typeof</code>, <code>== null</code>, <code>!x</code> and <code>??</code> through it. So <code>document.all</code> observed from another same-origin frame is an ordinary — indeed callable — object: <code>typeof otherFrame.document.all</code> is <code>"function"</code>, <code>otherFrame.document.all == null</code> is <code>false</code>, <code>if (otherFrame.document.all)</code> takes the branch. HTML attaches <code>[[IsHTMLDDA]]</code> to the object with no reference to the observer's realm, and Blink/Gecko behave that way. This is a deliberate, decade-old trade: it lets each realm keep a <code>masqueradesAsUndefinedWatchpointSet</code> so the JITs can compile <code>typeof x === "undefined"</code> without a type check until <em>that realm</em> creates a masquerader. It is listed because it is exactly the class of behaviour this audit is about and it is externally observable; whether to fix it is a policy call (a VM-wide watchpoint would keep most of the optimization).</p>
+    <dl class="versus">
+      <dt>Where</dt><dd><span class="path">runtime/Structure.h:569-572</span>; consumers in <span class="path">runtime/JSCJSValueInlines.h:272-278</span>, <span class="path">runtime/OperationsInlines.h:40-53</span>, <span class="path">runtime/JSCellInlines.h:293</span>, and the <code>MasqueradesAsUndefined</code> paths of every tier.</dd>
+    </dl>
+<pre><code><span class="cm">// 06-masquerader-cross-realm.js — makeMasquerader() is the shell's stand-in for document.all</span>
+<span class="pass">PASS</span> own realm: typeof: got undefined, expected undefined
+<span class="fail">FAIL</span> other realm: typeof m: got function, expected undefined
+<span class="fail">FAIL</span> other realm: m == null: got false, expected true
+<span class="fail">FAIL</span> other realm: !m: got false, expected true
+<span class="fail">FAIL</span> other realm after JIT tier-up: [typeof, ==null, !m]: got function,false,false, expected undefined,true,true</code></pre>
+  </div>
+
+  <div class="finding" id="f17">
+    <h3><span class="fid">F17</span><code>getFunctionRealm()</code> answers with the Structure's realm, which is not always <code>[[Realm]]</code></h3>
+    <div class="meta"><span class="chip low">low</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>getFunctionRealm()</code> ends in <code>return object-&gt;realm()</code> — the realm recorded in the object's <code>Structure</code>. For a <code>JSFunction</code> the realm that matters everywhere else (its global scope, <code>prototypeForConstruction</code>, host-call dispatch) is <code>scope()-&gt;realm()</code>. The two diverge for a function created by <code>Reflect.construct(B.Function, [src], newTargetFromC)</code>: <code>CreateDynamicFunction</code> gives it a structure from <code>GetPrototypeFromConstructor(newTarget)</code> (realm C's <code>Function.prototype</code>, correct) but creates and scopes it in realm B, which is its <code>[[Realm]]</code>. Use that function as a <code>new.target</code> with a non-object <code>.prototype</code> and JSC's two construction paths disagree: ordinary <code>[[Construct]]</code> falls back to B's <code>%Object.prototype%</code> (right), every <code>InternalFunction</code> constructor going through <code>JSC_GET_DERIVED_STRUCTURE</code> → <code>getFunctionRealm()</code> falls back to C's intrinsics (wrong). Deeply obscure, but it is the primitive the rest of the engine trusts for realm questions. The same function also unwraps <code>JSRemoteFunction</code> to its target's realm, whereas a wrapped function exotic object has its own <code>[[Realm]]</code>; unreachable today because wrappers are not constructors.</p>
+    <dl class="versus">
+      <dt>Where</dt><dd><span class="path">runtime/InternalFunction.cpp:198-227</span>; contrast <span class="path">runtime/JSFunction.cpp:132-154</span> (<code>prototypeForConstruction</code> uses <code>scope()-&gt;realm()</code>) and <span class="path">runtime/FunctionConstructor.cpp</span> (structure from <code>newTarget</code>, scope from the callee realm).</dd>
+    </dl>
+<pre><code><span class="cm">// 17-getfunctionrealm-structure-vs-scope.js</span>
+const f = Reflect.construct(B.Function, ["return 1"], ntFromC); f.prototype = 42;
+<span class="pass">PASS</span> new f()                          -&gt; %Object.prototype% of: got B, expected B
+<span class="fail">FAIL</span> Reflect.construct(Object, [], f) -&gt; %Object.prototype% of: got C, expected B
+<span class="fail">FAIL</span> Reflect.construct(Array, [], f)  -&gt; %Array.prototype% of: got C, expected B
+<span class="fail">FAIL</span> Reflect.construct(Date, [], f)   -&gt; %Date.prototype% of: got C, expected B</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Special-case <code>JSFunction</code> (non-host) to return <code>scope()-&gt;realm()</code>, and stop at <code>JSRemoteFunction</code>.</p>
+  </div>
+
+  <h3 id="shadowrealm">ShadowRealm's callable boundary <span class="chip note">--useShadowRealm=1</span></h3>
+  <p>ShadowRealm's whole value is the invariant that no object reference crosses between the incubating realm and the shadow realm: primitives pass, callables are re-wrapped as fresh <code>JSRemoteFunction</code>s of the receiving realm, and any exception is replaced by a fresh <code>TypeError</code> of the receiving realm. F1 breaks it through reflection; the four findings below break it through the marshalling code itself. Each is a full escape (arbitrary code execution in the other realm via the leaked <code>%Function%</code>) and each reproduces with the JIT off. The feature is “testable”, so these are pre-ship bugs — but they are cheap to fix and the fixes are local.</p>
+
+  <div class="finding" id="f13">
+    <h3><span class="fid">F13</span>Exceptions are only sanitised by the JS unwinder; a wrapper invoked from C++ leaks the raw error object — in both directions</h3>
+    <div class="meta"><span class="chip high">high</span><span class="chip note">confirmed in jsc, all tiers</span></div>
+    <p>The translation of a boundary-crossing exception into a <code>TypeError</code> lives in <code>Interpreter::unwind</code>: <code>UnwindFunctor</code> notes when it walks past a <code>JSRemoteFunction</code> frame and <code>sanitizeRemoteFunctionException()</code> rewrites the exception afterwards. The call trampolines themselves (<code>remoteFunctionCallForJSFunction</code>/<code>Generic</code>) just <code>RETURN_IF_EXCEPTION</code>. That is fine when JS calls the wrapper directly, but whenever the wrapper is invoked from C++ — as a getter, through <code>valueOf</code>/<code>toString</code>/<code>toJSON</code>, as an <code>Array.prototype.sort</code> comparator, a <code>String.prototype.replace</code> callback, a promise reaction, and in WebCore every event listener, timer and rAF callback — the target runs in a <em>nested</em> VM entry whose unwind stops at the entry frame, the trampoline returns the raw exception to its C++ caller, and that caller rethrows it into the other realm untouched. From inside the ShadowRealm the attack needs nothing but any incubating callback that can be made to throw (<code>JSON.parse</code> will do): call it via <code>+{ valueOf: cb }</code>, catch the incubating <code>SyntaxError</code>, climb <code>.constructor.constructor</code>.</p>
+    <dl class="versus">
+      <dt>Where</dt><dd><span class="path">runtime/JSRemoteFunction.cpp:119-120, 155-156</span> (no translation on the trampoline), <span class="path">interpreter/Interpreter.cpp:875-878, 907-934, 977-985</span> (unwind-only sanitisation).</dd>
+    </dl>
+<pre><code><span class="cm">// 13-shadowrealm-exception-sanitization.js</span>
+const thrower = r.evaluate(`(function thrower() { throw { F: Function }; })`);
+<span class="pass">PASS</span> direct call: sanitized TypeError
+<span class="fail">FAIL</span> as getter: raw shadow-realm object leaked (its .F compiles code inside the ShadowRealm)
+<span class="fail">FAIL</span> as valueOf: raw shadow-realm object leaked (its .F compiles code inside the ShadowRealm)
+<span class="fail">FAIL</span> as sort comparator: raw shadow-realm object leaked (...)
+<span class="fail">FAIL</span> as replace callback: raw shadow-realm object leaked (...)
+<span class="fail">FAIL</span> as promise reaction: raw shadow-realm object leaked (...)
+<span class="cm">// inside the ShadowRealm:  try { +{ valueOf: cb } } catch (e) { e.constructor.constructor("return globalThis.secret")() }</span>
+<span class="fail">FAIL</span> inside: escaped, outer secret = INCUBATING-SECRET      <span class="cm">(cb = JSON.parse)</span>
+<span class="fail">FAIL</span> inside: escaped, outer secret = INCUBATING-SECRET      <span class="cm">(cb = x =&gt; x.foo.bar)</span></code></pre>
+    <p class="fix"><b>Fix sketch.</b> Do the translation where the boundary is: in both trampolines (and the <code>remoteFunctionCallGenerator</code> thunk's slow path), catch the exception after <code>call()</code>, and rethrow <code>sanitizeRemoteFunctionException()</code>'s TypeError in the wrapper's realm; keep the unwinder hook only as a fast path, or delete it.</p>
+  </div>
+
+  <div class="finding" id="f14">
+    <h3><span class="fid">F14</span><code>remoteFunctionCallGeneric</code> wraps the return value for the <em>target</em> realm</h3>
+    <div class="meta"><span class="chip high">high</span><span class="chip note">confirmed in jsc</span></div>
+    <p>A one-identifier bug. The JSFunction trampoline ends with <code>wrapReturnValue(globalObject, globalObject, result)</code>; the generic trampoline — used whenever the wrapped target is not a <code>JSFunction</code>: a callable <code>Proxy</code>, an <code>InternalFunction</code>, an API callback object — ends with <code>wrapReturnValue(globalObject, <b>targetGlobalObject</b>, result)</code>, so a callable returned by such a target is wrapped into a <code>JSRemoteFunction</code> whose structure, and therefore <code>[[Prototype]]</code>, belong to the realm it came <em>from</em>. The caller now holds an object whose <code>Object.getPrototypeOf(...).constructor</code> is the other realm's <code>%Function%</code>. Independently found by the ShadowRealm and the JIT/IC agents; the JIT thunk (<code>operationGetWrappedValueForCaller</code>) gets it right, so behaviour also depends on which path executes.</p>
+    <dl class="versus">
+      <dt>Where</dt><dd><span class="path">runtime/JSRemoteFunction.cpp:158</span> vs <span class="path">:122</span>; <code>wrapValue()</code> at <span class="path">:47-60</span> creates the wrapper in whatever “target” realm it is handed.</dd>
+    </dl>
+<pre><code><span class="cm">// 14-shadowrealm-generic-wrap-realm.js</span>
+const viaProxy = r.evaluate(`new Proxy(function () {}, { apply() { return function inner() {}; } })`);
+<span class="pass">PASS</span> JSFunction target: returned wrapper uses our Function.prototype
+<span class="fail">FAIL</span> Proxy target: returned wrapper uses our Function.prototype
+      -&gt; Object.getPrototypeOf(wrapper).constructor is a foreign %Function%; it hands us the ShadowRealm's raw globalThis: true</code></pre>
+    <p class="fix"><b>Fix sketch.</b> <code>wrapReturnValue(globalObject, globalObject, result)</code> at line 158.</p>
+  </div>
+
+  <div class="finding" id="f15">
+    <h3><span class="fid">F15</span><code>evaluate</code> and <code>importValue</code> run user code while copying an error message, and leak whatever it throws</h3>
+    <div class="meta"><span class="chip high">high</span><span class="chip note">confirmed in jsc</span></div>
+    <p>To give the caller a useful <code>TypeError</code>, <code>evalInRealm</code> copies the thrown value's message with <code>createTypeErrorCopy()</code>, which reads an own <code>message</code> data property and calls <code>toWTFString()</code> on it — <code>ToString</code> on an arbitrary shadow-realm object, i.e. user code — and on failure <code>RETURN_IF_EXCEPTION</code> propagates the <em>new</em> exception, a raw shadow-realm value, into the incubating realm. Accessor <code>message</code>s and Symbols are handled; a <code>message</code> object with a throwing <code>toString</code>/<code>@@toPrimitive</code> is not. <code>importValue</code>'s rejection handler <code>@crossRealmThrow</code> does <code>@toString(error)</code> on the module's rejection reason with the same effect (spec: the handler is <code>%ThrowTypeError%</code> and ignores the reason), and its <code>lookupBinding</code> reads <code>module[exportName]</code> from a value that F16 shows can be attacker-shaped.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>3.1.1 PerformShadowRealmEval step 12: if result is an abrupt completion, throw a (fresh) <code>TypeError</code> — the message copy is a courtesy and must not be observable.</dd>
+      <dt>Where</dt><dd><span class="path">runtime/Error.cpp:273-292</span> (<code>createTypeErrorCopy</code>), called from <span class="path">runtime/ShadowRealmPrototype.cpp:117-119, 128-130</span>; <span class="path">builtins/ShadowRealmPrototype.js:57-63</span> (<code>crossRealmThrow</code>), <span class="path">:77-83</span> (<code>lookupBinding</code>).</dd>
+    </dl>
+<pre><code><span class="cm">// 15-shadowrealm-message-tostring.js</span>
+<span class="pass">PASS</span> throw new Error('plain'): TypeError from our realm
+<span class="fail">FAIL</span> message.toString() throws %Function%: raw shadow-realm value leaked (typeof function); ...
+<span class="fail">FAIL</span> message[@@toPrimitive] throws globalThis: raw shadow-realm value leaked (typeof object); ...
+<span class="fail">FAIL</span> ErrorInstance with object message: raw shadow-realm value leaked (typeof function)</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Copy the message only when it is already a string (or use <code>ErrorInstance::sanitizedMessageString</code>, as the unwinder does); make <code>crossRealmThrow</code> ignore its argument.</p>
+  </div>
+
+  <div class="finding" id="f16">
+    <h3><span class="fid">F16</span><code>importValue</code> hands incubating-realm resolving functions to module code</h3>
+    <div class="meta"><span class="chip high">high</span><span class="chip note">confirmed in jsc</span></div>
+    <p><code>importInRealm</code> creates the capability promise in the <em>incubating</em> realm and resolves it with the shadow realm's module promise. Resolution follows the ordinary thenable protocol: when the inner promise fulfils, its value — the module namespace, or whatever a module that exports a function named <code>then</code> resolves it to — is checked for <code>then</code> again, and <code>NewPromiseResolveThenableJob</code> calls that <code>then</code> with <code>resolve</code>/<code>reject</code> functions created in the realm of the promise being resolved: the incubating realm. Two raw incubating functions are thereby delivered to shadow-realm code, and <code>resolve.constructor</code> is the incubating <code>%Function%</code>. The reproducer's module makes its fulfilment value thenable only on the second read of <code>then</code>, so the first (in-realm) resolution passes it through and the second (cross-realm) one bites.</p>
+    <dl class="versus">
+      <dt>Spec</dt><dd>3.1.4 ShadowRealmImportValue: the inner capability and its reactions live entirely in the ShadowRealm's realm; only <code>ExportGetter</code>'s <em>result</em> crosses, via <code>GetWrappedValue</code>.</dd>
+      <dt>Where</dt><dd><span class="path">runtime/ShadowRealmPrototype.cpp:73-85</span> (incubating promise resolved with a shadow-realm value); resolving functions created for the outer promise's realm in <span class="path">runtime/JSPromise.cpp resolvePromise</span> / <span class="path">runtime/JSMicrotask.cpp promiseResolveThenableJob</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 16-shadowrealm-importvalue-capability.js  (+ resources/evil-module.js)   jsc --useShadowRealm=1 -m ...</span>
+<span class="cm">// module:  const V = { get then() { return ++reads &gt;= 2 ? evilThen : undefined; } };</span>
+<span class="cm">//          export function then(resolve) { resolve(V); }</span>
+importValue rejected: TypeError
+<span class="fail">FAIL</span> evilThen got an incubating-realm resolve(); outer secret = INCUBATING-SECRET</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Keep the whole import pipeline inside the shadow realm: create the capability with <code>realmGlobalObject-&gt;promiseStructure()</code>, attach the export-getter reaction there, and let only the wrapped export value (or a fresh TypeError) reach the incubating promise — never resolve an incubating promise with a shadow-realm object.</p>
+  </div>
+
+  <h3>Heap and GC</h3>
+  <p>The collector itself is realm-agnostic — one <code>Heap</code> per <code>VM</code>, subspaces by cell type, no per-realm marking state — so “realm bugs in the GC” reduce to two questions: does any per-realm cache keep another realm alive or hand its objects out under the wrong realm, and does the cross-realm heap walk in <code>JSGlobalObject::haveABadTime()</code> (which must find every array whose prototype chain reaches a newly “bad” realm's <code>Array.prototype</code>/<code>Object.prototype</code>) miss anything. The second held up; the first did not (F18, below). Prototype-keyed <code>StructureCache</code>s are per realm and weak; <code>InternalFunctionAllocationProfile</code> and bound-function structure caches re-check the realm before <em>reuse</em> — but not before <em>retention</em>; DeferredWorkTimer tickets and <code>FinalizationRegistry</code> cleanup are keyed by the registry/promise object's own structure realm (which for a <code>Reflect.construct</code>-derived registry is <code>new.target</code>'s realm rather than the constructor's <code>[[Realm]]</code> — a spec nit only a detached-iframe test could see); and arrays created in realm B with a prototype chain through a bad-time realm A came out <code>SlowPutArrayStorage</code> in every variant I tried (<code>B.Object.create(aArrayProto)</code>, <code>Reflect.construct(B.Array, [], A.F)</code>, <code>class extends A.Array</code> in B, <code>Object.setPrototypeOf</code> after the fact), with indexed setters on A's prototypes firing as they should (a randomized cross-realm differential run over ~70 seeds by the object-model sub-audit agreed).</p>
+
+  <div class="finding" id="f18">
+    <h3><span class="fid">F18</span>Realm-tagged Structures cached on shared cells keep dead realms alive</h3>
+    <div class="meta"><span class="chip med">medium</span><span class="chip note">memory leak</span><span class="chip note">confirmed in jsc</span></div>
+    <p>A <code>Structure</code> holds its realm strongly, so caching a Structure on a cell that outlives — or never belonged to — that realm pins the entire <code>JSGlobalObject</code> and everything reachable from it. Two such caches exist. (a) <code>RegExp::ensureGroupsStructure()</code> caches the Structure of the <code>groups</code> object produced by the last named-capture match on the <code>JSC::RegExp</code> cell itself; that cell is realm-independent and shared VM-wide through <code>RegExpCache</code> (keyed by pattern and flags) and through the code cache, so a page and an iframe that use the same named-group pattern — the same library, in practice — share it, and whichever matched last is kept alive by the other after it is torn down, until someone re-matches or code is discarded. (b) <code>JSBoundFunction</code> caches the bound-function Structure — whose realm is that of the <code>bind</code> being executed — on the <em>target</em> function's <code>FunctionRareData</code>, and the same-realm fast path never displaces a foreign entry; <code>InternalFunctionAllocationProfile</code> behaves the same after <code>Reflect.construct(Other.Array, [], target)</code>. Borrowing “clean” intrinsics from a throw-away iframe (<code>iframe.contentWindow.Function.prototype.bind.call(fn)</code>) is a known hardening idiom; each use leaks the iframe's realm for the lifetime of <code>fn</code>. The reuse paths do compare realms, so this is purely a lifetime bug: correctness is unaffected.</p>
+    <dl class="versus">
+      <dt>Where</dt><dd><span class="path">runtime/RegExp.cpp:228-255</span> (<code>m_cachedGroupsStructureID</code>, strong), <span class="path">runtime/JSBoundFunction.cpp:141-174</span> (<code>m_boundFunctionStructureID</code> on the target's rare data), <span class="path">bytecode/InternalFunctionAllocationProfile.h:47-71</span>.</dd>
+    </dl>
+<pre><code><span class="cm">// 18-realm-leak-cached-structures.js   (--useDollarVM=1 for $vm.globalObjectCount(); counts after two full GCs)</span>
+/(?&lt;y&gt;\d{4})-(?&lt;m&gt;\d{2})/.exec("2024-05");                     <span class="cm">// realm A uses a named-group pattern</span>
+{ let R = createGlobalObject(); R.eval('/(?&lt;y&gt;\\d{4})-(?&lt;m&gt;\\d{2})/.exec("2024-05")'); R = null; }
+<span class="fail">FAIL</span> (a) realms alive after dropping R that ran the same named-group regexp: got 3, expected 2
+<span class="pass">PASS</span> (a) ...after realm A matches the pattern again: got 2, expected 2
+{ let R = createGlobalObject(); R.Function.prototype.bind.call(target, null); R = null; }
+<span class="fail">FAIL</span> (b) realms alive after dropping R whose bind() was applied to an A function: got 3, expected 2</code></pre>
+    <p class="fix"><b>Fix sketch.</b> Make both caches weak (<code>WriteBarrier</code> → <code>Weak</code>/<code>WeakGCMap</code> keyed by realm), or key the groups Structure off the matching realm (<code>globalObject-&gt;regExpGroupsStructure(shape)</code>) instead of the shared cell; for bound functions, cache per (target, realm) in the realm's <code>StructureCache</code> rather than on the target.</p>
+  </div>
+</section>
+
+<section id="bun">
+  <h2>Bun's node:vm: which findings carry over</h2>
+  <p>Bun is built on JavaScriptCore, and its <code>node:vm</code> implementation creates each context as another <code>JSGlobalObject</code> (<code>NodeVMGlobalObject</code>) inside the same <code>JSC::VM</code> as the main program — exactly the “several realms, one VM” situation the findings depend on. So the question “is Bun affected?” is mostly “does Bun's JavaScriptCore snapshot contain the same code?”, plus one Bun-specific fact that changes the severity picture: <b>Bun 1.3.14 exposes <code>ShadowRealm</code> by default</b> (<code>typeof ShadowRealm === "function"</code> in a stock <code>bun</code>, in the main realm and inside <code>vm</code> contexts), whereas WebKit keeps it behind a testable flag.</p>
+  <h3>How this was tested</h3>
+  <p>The same eighteen scripts were run unmodified under Bun 1.3.14 (<span class="path">revision 0d9b296a</span>, WebKit <span class="path">5488984d20e0</span>) through a forty-line harness that maps the jsc shell primitives onto Node APIs: <code>createGlobalObject()</code> becomes <code>vm.runInContext("globalThis", vm.createContext({}))</code>, <code>print</code> becomes <code>console.log</code>, <code>load()</code> is expanded textually so top-level <code>const</code>s keep global-code semantics, and each script's <code>//@ requireOptions("--x=y")</code> header becomes a <code>BUN_JSC_x=y</code> environment variable (<code>useConcurrentJIT=0</code> for the tier tests, <code>forceWeakRandomSeed</code> for F5; Bun needs no flag for ShadowRealm). Two scripts needed a Bun-specific variant: F12 cannot run at all (no <code>[[IsHTMLDDA]]</code> object exists outside a browser), and F18 counts <code>NodeVMGlobalObject</code>s via <code>bun:jsc</code> <code>heapStats()</code> after <code>Bun.gc(true)</code>, using forty throw-away contexts because Bun tends to keep the most recently used context alive regardless. Node 22 ran the same harness as a V8 reference. Harness and variants are in <span class="path">realm-audit/bun/</span>; <code>run-bun.sh</code> reproduces the table.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>WebKit <code>jsc</code></th><th>Bun 1.3.14 <code>node:vm</code></th><th>Node 22 (V8) reference</th><th>Notes for Bun</th></tr></thead>
+    <tbody>
+      <tr><td class="num">F1</td><td>fails</td><td><b>fails, no flag</b></td><td>fails too</td><td><code>caller</code> crosses <code>vm</code> contexts and escapes Bun's default-on ShadowRealm in both directions. V8 behaves the same (security-token check, same token), so this is cross-engine — but live in Bun.</td></tr>
+      <tr><td class="num">F2</td><td>fails</td><td>fails</td><td>passes</td><td><code>vmContextPromise.then()</code> flips realm once the caller is DFG-compiled.</td></tr>
+      <tr><td class="num">F3</td><td>fails</td><td>passes</td><td>passes</td><td>Bun's JSC predates the <code>String.prototype.match/search/split</code> DFG intrinsics.</td></tr>
+      <tr><td class="num">F4</td><td>fails</td><td>fails, wider</td><td>passes</td><td><code>Reflect.ownKeys</code>, <code>Object.getPrototypeOf</code>, <code>Object.assign</code> flip as in WebKit; additionally <code>Object.keys</code> flips (Bun's snapshot predates the <code>calleeMayBeCrossRealm</code> guard on it). The error-realm sub-cases do not reproduce.</td></tr>
+      <tr><td class="num">F5</td><td>fails</td><td>fails</td><td>n/a</td><td>With <code>BUN_JSC_forceWeakRandomSeed=1</code>: hot <code>ctx.Math.random()</code> consumes the main realm's generator.</td></tr>
+      <tr><td class="num">F6</td><td>fails</td><td>partly</td><td>passes</td><td><code>match</code>/<code>matchAll</code>/<code>split</code> results land in the right realm in Bun (older, generic <code>@@match</code> dispatch), but <code>replace</code> with a foreign RegExp still records <code>RegExp.$1</code>/<code>lastMatch</code> in the caller's realm and leaves the RegExp's realm stale.</td></tr>
+      <tr><td class="num">F7</td><td>fails</td><td>fails</td><td>passes</td><td><code>Promise.prototype.then.call(vmPromise)</code> returns a main-realm promise; flips after the context's species watchpoint fires.</td></tr>
+      <tr><td class="num">F8</td><td>fails</td><td>fails</td><td>passes</td><td>Same species shortcut for <code>ArrayBuffer</code>/<code>SharedArrayBuffer.prototype.slice</code>.</td></tr>
+      <tr><td class="num">F9</td><td>fails</td><td>fails</td><td>passes</td><td><code>WebAssembly.Memory</code> buffer belongs to the first realm that reads it.</td></tr>
+      <tr><td class="num">F10</td><td>fails</td><td>fails</td><td>partly</td><td>V8 puts <code>yield</code> results in the generator's realm but the completion result in the caller's.</td></tr>
+      <tr><td class="num">F11</td><td>fails</td><td>fails</td><td>passes</td><td>In Bun the revoked-proxy <code>[[Construct]]</code> case also reports the proxy's realm (consistently wrong rather than inconsistent).</td></tr>
+      <tr><td class="num">F12</td><td>fails</td><td>n/a</td><td>n/a</td><td>No masquerader objects outside a browser embedding.</td></tr>
+      <tr><td class="num">F13</td><td>fails (flag)</td><td><b>fails, no flag</b></td><td>passes</td><td>Raw error objects cross Bun's ShadowRealm boundary through getters, <code>valueOf</code>, sort comparators, <code>replace</code> callbacks and promise reactions; from inside, <code>+{valueOf: JSON.parse}</code> is enough to reach the host realm's <code>Function</code>.</td></tr>
+      <tr><td class="num">F14</td><td>fails (flag)</td><td><b>fails, no flag</b></td><td>passes</td><td>Callable-Proxy targets return wrappers of the wrong realm.</td></tr>
+      <tr><td class="num">F15</td><td>fails (flag)</td><td><b>fails, no flag</b></td><td>passes</td><td><code>evaluate()</code> leaks whatever a <code>message.toString()</code> throws.</td></tr>
+      <tr><td class="num">F16</td><td>fails (flag)</td><td>not reproduced</td><td>—</td><td><code>importValue</code> works in Bun, but every observed <code>then</code> read handed the module in-realm resolving functions (Bun's older promise pipeline creates them in the shadow realm); the probe was armed at reads 1–5.</td></tr>
+      <tr><td class="num">F17</td><td>fails</td><td>fails</td><td>passes</td><td>Same <code>getFunctionRealm()</code>.</td></tr>
+      <tr><td class="num">F18</td><td>fails</td><td>passes</td><td>n/a</td><td>0 of 40 dropped contexts survived in either variant; Bun's snapshot appears to predate both caches (control: 1 of 40 survives regardless).</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Two things stand out. First, everything that is pure C++ runtime or object model (F7–F11, F17) transfers one-to-one: a <code>vm</code> context in Bun is a realm in the full sense, so “sandbox” code that hands promises, buffers, generators or constructors across the context boundary sees exactly the WebKit behaviour, including the watchpoint-dependent flips. Second, the JIT findings transfer according to age: Bun's snapshot has the <code>PromiseThen</code> intrinsic (F2) and the older unguarded intrinsics (F4, F5) but not this summer's String intrinsics (F3), and it lacks the guard that upstream has since added to <code>Object.keys</code> — a reminder that the <code>calleeMayBeCrossRealm</code> sweep is worth back-porting as a unit rather than piecemeal.</p>
+  <p>The ShadowRealm rows are the ones that matter operationally. In WebKit they are pre-ship bugs behind a flag; in Bun 1.3.14 <code>new ShadowRealm()</code> works out of the box, so F1, F13, F14 and F15 are four independent, flagless ways for code inside a ShadowRealm to obtain the host realm's <code>Function</code> constructor (and for host code to be handed raw shadow-realm objects). Anyone using ShadowRealm in Bun as an isolation boundary today does not have one. <code>node:vm</code> itself never promised isolation (Node's documentation says as much), so F1 between plain contexts is “only” a spec deviation there — V8 does the same — but it is worth knowing that a sloppy-mode function inside a Bun <code>vm</code> context can reach its caller's function object in the main realm.</p>
+<pre><code><span class="cm"># realm-audit/bun/run-bun.sh  — excerpt of the Bun 1.3.14 run</span>
+== bun 05-function-caller-cross-realm.js
+<span class="fail">FAIL</span> plain realms: B function's .caller for a caller from realm A: got function outerSloppy from realm A, expected null
+<span class="fail">FAIL</span> escaped ShadowRealm: outer globalThis reachable, outer ShadowRealm ctor is function
+<span class="fail">FAIL</span> reverse escape: got inner function 'innerSloppy', inner globalThis.leak type = function
+== bun 09-dfg-promise-then.js BUN_JSC_useConcurrentJIT=0
+<span class="fail">FAIL</span> realm of bPromise.then(): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+== bun 11-dfg-unguarded-alloc-intrinsics.js BUN_JSC_useConcurrentJIT=0
+<span class="fail">FAIL</span> realm of B.Reflect.ownKeys(o): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+<span class="fail">FAIL</span> realm of B.Object.keys(o)      (guarded sibling, control): LLInt=B DFG/FTL=A expected=B   &lt;== changes with JIT tier
+== bun 13-shadowrealm-exception-sanitization.js
+<span class="pass">PASS</span> direct call: sanitized TypeError
+<span class="fail">FAIL</span> as getter: raw shadow-realm object leaked (its .F compiles code inside the ShadowRealm)
+<span class="fail">FAIL</span> inside: escaped, outer secret = INCUBATING-SECRET
+== bun 18-realm-leak-cached-structures.js
+<span class="pass">PASS</span> (a) contexts that ran a named-group regexp the main realm also uses: 0 of 40 dropped vm contexts still alive
+<span class="pass">PASS</span> (b) contexts whose Function.prototype.bind was applied to a main-realm function: 0 of 40 dropped vm contexts still alive</code></pre>
+</section>
+
+<section id="clean">
+  <h2>Checked and found correct</h2>
+  <p>Negative results are most of the value of an audit like this, so here is what held up — each item was either read to the bottom or exercised cross-realm in the shell (usually both), cold and after tier-up.</p>
+  <h4>Front end and linking</h4>
+  <ul>
+    <li>Parser/BytecodeGenerator take no <code>JSGlobalObject</code>; <code>SourceCodeKey</code> covers every codegen input; nothing realm-specific is cached on <code>Unlinked*</code> objects; symbol tables are cloned per realm; template objects are cached on the per-realm <code>ScriptExecutable</code>; RegExp literals allocate with the run-time realm's structure.</li>
+    <li>Direct <code>eval</code> compares the callee against the <em>caller realm's</em> <code>eval</code> (<span class="path">interpreter/Interpreter.cpp:110</span>), so another realm's <code>eval</code> is correctly an indirect eval in that realm; the direct-eval cache is per <code>CodeBlock</code>.</li>
+  </ul>
+  <h4>LLInt, Baseline, ICs, thunks</h4>
+  <ul>
+    <li>No compile-time realm in Baseline code: <code>loadGlobalObject()</code>, <code>LazyBaselineGlobalObject</code> for truthiness/masquerade checks, scope-resolution thunks reading epoch/var-injection state from the loaded realm, <code>instanceof</code> comparing against the run-time realm's <code>Function.prototype[@@hasInstance]</code>.</li>
+    <li>Handler ICs load the realm from <code>PropertyInlineCache</code> per <code>CodeBlock</code>; shared stubs are keyed by <code>AccessCase::canBeShared</code> tightly enough that the remaining immediates are identical for all sharers. Custom accessors and custom values consistently receive the <em>holder's</em> realm in LLInt (<span class="path">runtime/PropertySlot.cpp</span>), Baseline ICs and DFG — the DFG refuses to inline a custom accessor whose holder is from another realm (<span class="path">bytecode/GetByStatus.cpp:358-360</span>, <span class="path">PutByStatus.cpp:267-268</span>), which I confirmed with <code>B.RegExp.lastMatch</code> read from a hot A function (the getter would throw if it were handed the wrong realm; it never did).</li>
+    <li>Native-call trampolines pass <code>callee-&gt;scope()</code>'s realm for host <code>JSFunction</code>s and <code>InternalFunction::globalObject()</code> otherwise; “not a function/constructor” errors are created in the caller's realm in both LLInt and the call ICs (F11 is the one asymmetry).</li>
+    <li><code>iterator_open</code>/<code>iterator_next</code> fast paths require the fetched <code>@@iterator</code> to be <em>identical</em> to the lexical realm's <code>Array.prototype.values</code> etc., so foreign iterables go generic: a monkey-patched <code>Array.prototype[Symbol.iterator]</code> or <code>%ArrayIteratorPrototype%.next</code> in the iterable's realm is honoured by <code>for-of</code>, spread, destructuring, <code>Array.from</code>, <code>new Set/Map</code>, <code>Math.max(...x)</code> — cold, hot, patched before or after tier-up, monomorphic or mixed-realm call sites.</li>
+  </ul>
+  <h4>DFG/FTL</h4>
+  <ul>
+    <li>Guarded intrinsics: Array/TypedArray <code>entries/keys/values</code>, <code>slice</code>, <code>splice</code>, <code>concat</code>, <code>Object.keys/getOwnPropertyNames/getOwnPropertySymbols</code>, Map/Set iterator creation and <code>next</code>, string iterator, <code>%RegExpStringIterator%.next</code>; <code>RegExp.prototype.exec/test/@@match/@@search</code> carry <code>GetGlobalObject(callee)</code> and pin the receiver to the lexical <code>regExpStructure</code>; Array/TypedArray constructors and <code>handleConstantFunction</code>'s <code>Object</code>/<code>String</code>/<code>RegExp</code>/<code>Map</code>/<code>Set</code>/<code>ArrayBuffer</code>/<code>Symbol</code> use <code>function-&gt;realm()</code>; <code>Array.of</code> checks <code>this</code> against the lexical constructor; <code>indexOf/includes/join/sort</code> pin original array structures of the lexical realm so foreign arrays OSR-exit.</li>
+    <li>Every <code>m_codeBlock-&gt;globalObject()</code> in the bytecode parser is <code>m_inlineStackTop</code>'s (the inlinee's) code block; OSR-exit/materialisation code derives realms per inline frame; StrengthReduction refuses to fold a cross-realm <code>NewRegExpUntyped</code>. A battery of roughly seventy other built-ins (iterators, <code>Object.keys/values/entries</code>, <code>Array.of/from</code>, <code>slice/concat/map/filter/splice/flat</code>, <code>JSON.parse</code>, RegExp <code>exec/split/matchAll</code>, typed arrays, boxed primitives, constructors) was driven cross-realm cold vs hot by the runtime sub-audit with no flips beyond F2–F5.</li>
+  </ul>
+  <h4>Runtime and object model</h4>
+  <ul>
+    <li><code>ArraySpeciesCreate</code> implements the cross-realm <code>%Array%</code> carve-out; typed-array species checks <code>inSameRealm</code>; <code>typedArray.buffer</code> materialises in the view's realm; <code>Array.prototype.concat</code> honours a foreign realm's <code>@@isConcatSpreadable</code>; JSON's fast stringifier checks prototype identity so a foreign <code>Object.prototype.toJSON</code> is honoured; <code>Object.assign</code>/spread clone fast paths require same realm and prototype.</li>
+    <li>Promises other than F2/F7: <code>Promise.resolve</code> wraps foreign promises (constructor identity via <code>promise-&gt;realm()</code>), <code>all/race/any/allSettled</code> route foreign promises through the thenable job (patched foreign <code>then</code> is called the right number of times), <code>await</code> of a foreign promise takes the spec's two extra ticks and honours a patched <code>then</code>, async-generator results use the generator's realm.</li>
+    <li><code>GetPrototypeFromConstructor</code> fallbacks: <code>Reflect.construct</code> with a cross-realm <code>new.target</code> whose <code>.prototype</code> is not an object yields <code>new.target</code>'s realm's intrinsic for plain functions, classes, <code>Array</code>, <code>Promise</code>, generator functions, and a bound <code>new.target</code> unwraps to its target's realm; allocation-profile caches are keyed so that no cross-realm poisoning occurs; <code>Reflect.construct(B.Object, [v], ntA)</code> follows the spec's “NewTarget is not the active function” branch.</li>
+    <li>Reified custom-accessor functions (<code>Object.getOwnPropertyDescriptor(B.RegExp, "lastMatch").get</code>) are created in the holder's realm and are identical whichever realm asks; the legacy <code>RegExp</code> static accessors read and write the receiver's realm; <code>Intl</code>'s legacy-constructor symbol is per realm; <code>Iterator.from</code> wraps foreign iterators; two dozen built-ins called cross-realm with bad arguments (<code>B.Array(-1)</code>, <code>B.JSON.parse("{")</code>, <code>B.BigInt(1.5)</code>, <code>new B.Uint8Array(-1)</code>, calling a B class without <code>new</code>, …) threw the callee realm's error as the spec requires — F11 lists the exceptions.</li>
+    <li>Cross-realm “having a bad time”: with an indexed accessor on realm A's <code>Array.prototype</code>, objects and arrays created in other realms (including realms created afterwards) whose chain reaches it were <code>SlowPutArrayStorage</code> and hit the setter, in the interpreter and from a hot DFG store — see the heap note above.</li>
+  </ul>
+</section>
+
+<section id="method">
+  <h2>Method and reproduction</h2>
+  <p>The audit combined three things. First, a read of every place a <code>JSGlobalObject*</code> is <em>chosen</em> rather than merely passed along — DFG's intrinsic and accessor inlining, the C++ fast paths that skip an observable protocol step, ShadowRealm marshalling, legacy reflection, lazily materialised wrappers — done partly by me and partly by five parallel sub-audits (DFG/FTL, runtime fast paths, ShadowRealm, LLInt/Baseline/IC sharing, object model/GC) whose candidate lists I then tried to break. Second, differential testing in a JSCOnly release build of this checkout: the same operation performed on same-realm and foreign-realm objects (<code>createGlobalObject()</code>), and the same call executed cold and after 10<sup>5</sup> iterations with <code>--useConcurrentJIT=0</code>, comparing which realm's prototypes, errors and per-realm state were involved. Third, checking each surviving candidate against the current spec text; several plausible candidates died here or in the shell (custom-accessor inlining, allocation-profile poisoning, iterator fast paths, JSON, species for arrays and typed arrays), and they are recorded in the previous section rather than silently dropped.</p>
+  <p>Every finding above is backed by a script that prints <code>PASS</code>/<code>FAIL</code> lines; the outputs quoted are verbatim. The scripts are committed next to this report on the audit branch (<span class="path">realm-audit/repros/</span> in <span class="path">claude/javascriptcore-realm-bugs-njnwvw</span>) and run against a stock shell:</p>
+<pre><code>Tools/Scripts/build-jsc --jsc-only --release          <span class="cm"># or: cmake -DPORT=JSCOnly … &amp;&amp; ninja jsc</span>
+realm-audit/repros/run-all.sh /abs/path/to/jsc          <span class="cm"># all of them; flags come from each file's //@ requireOptions header</span>
+jsc realm-audit/repros/01-string-regexp-fastpath.js     <span class="cm"># or one at a time (loads are caller-relative)</span>
+jsc --useConcurrentJIT=0 realm-audit/repros/09-dfg-promise-then.js
+realm-audit/bun/run-bun.sh                              <span class="cm"># the same suite under Bun (RUNTIME=node for the V8 reference)</span></code></pre>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Script</th><th>Finding</th><th>Flags</th></tr></thead>
+    <tbody>
+      <tr><td><span class="path">01-string-regexp-fastpath.js</span></td><td>F6</td><td>—</td></tr>
+      <tr><td><span class="path">02-promise-then-species.js</span></td><td>F7</td><td>—</td></tr>
+      <tr><td><span class="path">03-arraybuffer-slice-species.js</span></td><td>F8</td><td>—</td></tr>
+      <tr><td><span class="path">04-wasm-memory-buffer.js</span></td><td>F9</td><td>—</td></tr>
+      <tr><td><span class="path">05-function-caller-cross-realm.js</span></td><td>F1</td><td><code>--useShadowRealm=1</code> for the second half</td></tr>
+      <tr><td><span class="path">06-masquerader-cross-realm.js</span></td><td>F12</td><td>—</td></tr>
+      <tr><td><span class="path">07-generator-result-realm.js</span></td><td>F10</td><td>—</td></tr>
+      <tr><td><span class="path">08-typeerror-realm-misc.js</span></td><td>F11</td><td>—</td></tr>
+      <tr><td><span class="path">09-dfg-promise-then.js</span></td><td>F2</td><td><code>--useConcurrentJIT=0</code></td></tr>
+      <tr><td><span class="path">10-dfg-string-regexp-intrinsics.js</span></td><td>F3</td><td><code>--useConcurrentJIT=0</code></td></tr>
+      <tr><td><span class="path">11-dfg-unguarded-alloc-intrinsics.js</span></td><td>F4</td><td><code>--useConcurrentJIT=0</code></td></tr>
+      <tr><td><span class="path">12-dfg-math-random-realm.js</span></td><td>F5</td><td><code>--useConcurrentJIT=0 --forceWeakRandomSeed=1 --forcedWeakRandomSeed=42</code></td></tr>
+      <tr><td><span class="path">13-shadowrealm-exception-sanitization.js</span></td><td>F13</td><td><code>--useShadowRealm=1</code></td></tr>
+      <tr><td><span class="path">14-shadowrealm-generic-wrap-realm.js</span></td><td>F14</td><td><code>--useShadowRealm=1</code></td></tr>
+      <tr><td><span class="path">15-shadowrealm-message-tostring.js</span></td><td>F15</td><td><code>--useShadowRealm=1</code></td></tr>
+      <tr><td><span class="path">16-shadowrealm-importvalue-capability.js</span> + <span class="path">resources/evil-module.js</span></td><td>F16</td><td><code>--useShadowRealm=1 -m</code></td></tr>
+      <tr><td><span class="path">17-getfunctionrealm-structure-vs-scope.js</span></td><td>F17</td><td>—</td></tr>
+      <tr><td><span class="path">18-realm-leak-cached-structures.js</span></td><td>F18</td><td><code>--useDollarVM=1</code></td></tr>
+      <tr><td><span class="path">../bun/harness.js</span>, <span class="path">run-bun.sh</span>, <span class="path">run16.mjs</span>, <span class="path">18-bun-realm-leak.mjs</span></td><td>Bun/Node runs</td><td><code>BUN_JSC_*</code> from the headers</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small">Caveats. V8 behaviour was checked by running the same scripts under Node 22 (see the Bun section); the Blink/Gecko statement in F12 is from knowledge of those engines, not from running them here. “Spec” citations are to the ECMA-262 2025 draft, the WebAssembly JS API, HTML, the ShadowRealm proposal and the legacy-function-reflection proposal as of this writing. test262 has no cross-realm coverage for any of F2–F10 or F17–F18, which is presumably how they survived; each reproducer is a candidate <span class="path">JSTests/stress</span> test once the corresponding fix lands.</p>
+</section>
+
+</article>
+
+<script>
+  (() => {
+    const list = document.querySelector('nav.toc ol');
+    const heads = document.querySelectorAll('article.doc > section:not(.appendix) > h2');
+    const sections = document.querySelectorAll('article.doc section:not(.appendix)');
+    if (!list || heads.length === 0 || heads.length < sections.length) return;
+    list.textContent = '';
+    heads.forEach((h, i) => {
+      const sec = h.parentElement;
+      if (!sec.id) sec.id = 'auto-s' + (i + 1);
+      const a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.textContent = h.textContent;
+      const li = document.createElement('li');
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+  })();
+</script>
