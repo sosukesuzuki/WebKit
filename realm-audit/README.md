@@ -2,6 +2,8 @@
 
 Report: `jsc-realm-audit.html` (self-contained; the published copy lives at
 https://claude.ai/code/artifact/0c3f0c7f-8fb8-44d3-9283-a938c5610bef).
+Japanese edition: `jsc-realm-audit.ja.html`
+(https://claude.ai/code/artifact/c01aeac3-445a-4832-a7b5-34f4dab105ec).
 
 `repros/` holds one jsc-shell reproducer per finding (F1-F18). Each prints
 `PASS`/`FAIL` lines; `FAIL` means the bug reproduced. Per-script shell flags are
