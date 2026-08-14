@@ -23,7 +23,7 @@
   --code-ink: #24303C;
   --kw: #6D3E9E;
   --shadow: 0 1px 0 rgba(27,36,48,0.06);
-  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic Medium", "Yu Gothic", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic Medium", "Yu Gothic", Meiryo, sans-serif;
   --font-serif: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif CJK JP", "Noto Serif JP", "Yu Mincho", YuMincho, "Songti SC", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "Osaka-Mono", "MS Gothic", monospace;
   color-scheme: light;
@@ -139,7 +139,7 @@ nav.toc a:hover { color: var(--accent-ink); text-decoration: underline; }
 @media (max-width: 40rem) { nav.toc ol { columns: 1; } }
 
 /* ---------- sections ---------- */
-section.sec { margin: 0 0 4rem; }
+section.sec { margin: 0 0 4rem; content-visibility: auto; contain-intrinsic-size: auto 4200px; }
 section.sec > h2 {
   display: grid;
   grid-template-columns: 3.4rem 1fr;
@@ -279,8 +279,7 @@ dl.gloss dd { margin: 0; }
 .steps > li { list-style: none; position: relative; padding-left: 2.4rem; margin-bottom: 0.7rem; }
 .steps > li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0.35rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent-ink); font-size: 0.78rem; line-height: 1.5rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; padding-top: 1rem; font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
-@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-@media print { .page { max-width: none; } figure.fig, .box { break-inside: avoid; } }
+@media print { .page { max-width: none; } section.sec { content-visibility: visible; } figure.fig, .box { break-inside: avoid; } }
 </style>
 </head>
 <body>
