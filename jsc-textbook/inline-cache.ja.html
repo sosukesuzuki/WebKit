@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>JSC Inline Cache 講義</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+  --bg: #F3F5F7;
+  --surface: #FFFFFF;
+  --surface-2: #E9EDF1;
+  --ink: #1B2430;
+  --ink-2: #3D4956;
+  --muted: #66727F;
+  --rule: #D3D9DF;
+  --rule-strong: #A9B3BD;
+  --accent: #0F766E;
+  --accent-ink: #0B5A54;
+  --accent-soft: #D9EEEA;
+  --warn: #B45309;
+  --warn-soft: #F6E4CF;
+  --code-bg: #EAEEF1;
+  --code-ink: #24303C;
+  --kw: #6D3E9E;
+  --shadow: 0 1px 0 rgba(27,36,48,0.06);
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151A20;
+    --surface: #1C232B;
+    --surface-2: #232C36;
+    --ink: #E4E9EE;
+    --ink-2: #C0C9D3;
+    --muted: #8E9BA9;
+    --rule: #303A45;
+    --rule-strong: #4A5663;
+    --accent: #3FB8A9;
+    --accent-ink: #7ED4C8;
+    --accent-soft: #173832;
+    --warn: #E0A048;
+    --warn-soft: #3A2A14;
+    --code-bg: #10151B;
+    --code-ink: #D5DDE5;
+    --kw: #C39BE8;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151A20;
+  --surface: #1C232B;
+  --surface-2: #232C36;
+  --ink: #E4E9EE;
+  --ink-2: #C0C9D3;
+  --muted: #8E9BA9;
+  --rule: #303A45;
+  --rule-strong: #4A5663;
+  --accent: #3FB8A9;
+  --accent-ink: #7ED4C8;
+  --accent-soft: #173832;
+  --warn: #E0A048;
+  --warn-soft: #3A2A14;
+  --code-bg: #10151B;
+  --code-ink: #D5DDE5;
+  --kw: #C39BE8;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic Medium", "Yu Gothic", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.95;
+  font-feature-settings: "palt" 0;
+}
+.serif, h1, .chapter-no, .fig-no, .sec-no, .def-no, .tbl-no {
+  font-family: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif CJK JP", "Noto Serif JP", "Yu Mincho", YuMincho, "Songti SC", Georgia, "Times New Roman", serif;
+}
+code, pre {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "Osaka-Mono", "MS Gothic", monospace;
+}
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem 6rem; }
+.prose { max-width: 44rem; }
+
+/* ---------- masthead ---------- */
+header.mast {
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 3.5rem 0 2rem;
+  margin-bottom: 2.5rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.chapter-no { font-size: 0.95rem; letter-spacing: 0.18em; color: var(--muted); }
+header.mast h1 {
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  line-height: 1.35;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+}
+header.mast .sub { color: var(--ink-2); font-size: 1.02rem; max-width: 44rem; margin: 0; }
+.colophon {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1rem 1.25rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 0.75rem;
+  line-height: 1.7;
+}
+.colophon dt { font-weight: 600; letter-spacing: 0.06em; }
+.colophon dd { margin: 0; }
+
+/* ---------- toc ---------- */
+nav.toc {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.25rem 1.5rem 1rem;
+  margin: 0 0 3rem;
+  max-width: 44rem;
+  box-shadow: var(--shadow);
+}
+nav.toc h2 { margin: 0 0 0.5rem; font-size: 0.85rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 600; }
+nav.toc ol { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.93rem; line-height: 1.8; }
+nav.toc li { break-inside: avoid; display: grid; grid-template-columns: 2.1rem 1fr; }
+nav.toc li .sec-no { color: var(--muted); font-size: 0.85rem; padding-top: 0.05rem; }
+nav.toc a { text-decoration: none; color: var(--ink); }
+nav.toc a:hover { color: var(--accent-ink); text-decoration: underline; }
+@media (max-width: 40rem) { nav.toc ol { columns: 1; } }
+
+/* ---------- sections ---------- */
+section.sec { margin: 0 0 4rem; }
+section.sec > h2 {
+  display: grid;
+  grid-template-columns: 3.4rem 1fr;
+  align-items: baseline;
+  font-size: 1.45rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule-strong);
+  font-weight: 650;
+  text-wrap: balance;
+}
+section.sec > h2 .sec-no { font-size: 1.15rem; color: var(--muted); font-weight: 500; }
+h3 { font-size: 1.1rem; margin: 2.2rem 0 0.6rem; font-weight: 650; line-height: 1.6; }
+h3 .h3-no { color: var(--muted); font-weight: 500; margin-right: 0.6em; font-size: 0.95em; }
+p { margin: 0 0 1.1rem; }
+ul, ol { padding-left: 1.5rem; margin: 0 0 1.1rem; }
+li { margin: 0.15rem 0; }
+li > ul, li > ol { margin-bottom: 0.3rem; }
+strong { font-weight: 700; }
+em { font-style: normal; font-weight: 600; text-emphasis: filled sesame; -webkit-text-emphasis: filled sesame; }
+.lead { font-size: 1.02rem; color: var(--ink-2); }
+
+/* inline code / source refs */
+code {
+  font-size: 0.86em;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: 0.08em 0.35em;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+.src {
+  font-size: 0.78em;
+  color: var(--muted);
+}
+.src code { background: transparent; padding: 0; color: var(--muted); font-size: 1em; }
+pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0.85rem 1rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 0 0 1.25rem;
+  tab-size: 4;
+}
+pre code { background: transparent; padding: 0; font-size: 1em; color: inherit; overflow-wrap: normal; }
+pre .c { color: var(--muted); }
+pre .k { color: var(--kw); }
+pre .hi { color: var(--accent-ink); font-weight: 600; }
+pre .w { color: var(--warn); font-weight: 600; }
+
+/* ---------- boxes ---------- */
+.box {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  padding: 0.9rem 1.15rem 0.5rem;
+  margin: 0 0 1.4rem;
+  font-size: 0.93rem;
+  line-height: 1.85;
+  box-shadow: var(--shadow);
+}
+.box > .box-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.box p:last-child, .box ul:last-child, .box ol:last-child { margin-bottom: 0.4rem; }
+.box.def { border-left: 3px solid var(--accent); }
+.box.def .box-label { color: var(--accent-ink); }
+.box.def .def-no { font-weight: 600; margin-right: 0.5em; }
+.box.note { border-left: 3px solid var(--warn); }
+.box.note .box-label { color: var(--warn); }
+.box.column { background: var(--surface-2); border-style: dashed; }
+.box.srcmap { font-size: 0.85rem; }
+.box.srcmap ul { padding-left: 1.1rem; margin: 0; }
+.box.srcmap li { margin: 0; }
+.box.srcmap code { background: transparent; padding: 0; }
+
+/* ---------- tables ---------- */
+.tbl { overflow-x: auto; margin: 0 0 1.5rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; line-height: 1.6; background: var(--surface); }
+th, td { border-top: 1px solid var(--rule); padding: 0.45rem 0.7rem; text-align: left; vertical-align: top; }
+thead th { border-top: 2px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; color: var(--ink-2); background: var(--surface-2); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 2px solid var(--rule-strong); }
+td code { white-space: nowrap; }
+caption { caption-side: top; text-align: left; font-size: 0.8rem; color: var(--muted); padding: 0 0 0.35rem; }
+caption .tbl-no { font-weight: 700; margin-right: 0.5em; color: var(--ink-2); }
+
+/* ---------- figures ---------- */
+figure.fig {
+  margin: 1.5rem 0 2rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1rem 1rem 0.6rem;
+  box-shadow: var(--shadow);
+}
+figure.fig svg { display: block; width: 100%; height: auto; max-width: 100%; color: var(--ink); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+figure.fig svg .jp { font-family: "Hiragino Sans", "Noto Sans CJK JP", "Yu Gothic", Meiryo, sans-serif; }
+figure.fig figcaption { font-size: 0.82rem; color: var(--ink-2); line-height: 1.7; margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed var(--rule); }
+figure.fig figcaption .fig-no { font-weight: 700; margin-right: 0.6em; color: var(--ink); }
+.svg-wrap { overflow-x: auto; }
+.svg-wrap svg { min-width: 30rem; }
+svg .bx { fill: var(--surface); stroke: currentColor; stroke-width: 1.1; }
+svg .bx2 { fill: var(--surface-2); stroke: currentColor; stroke-width: 1.1; }
+svg .bxa { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.3; }
+svg .bxw { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.3; }
+svg .ln { stroke: currentColor; stroke-width: 1.1; fill: none; }
+svg .lna { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+svg .lnw { stroke: var(--warn); stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
+svg .lnd { stroke: currentColor; stroke-width: 1; fill: none; stroke-dasharray: 3 3; opacity: 0.7; }
+svg text { fill: currentColor; font-size: 12px; }
+svg .t-s { font-size: 10.5px; }
+svg .t-xs { font-size: 9.5px; fill: var(--muted); }
+svg .t-b { font-weight: 700; }
+svg .t-a { fill: var(--accent-ink); }
+svg .t-w { fill: var(--warn); }
+svg .t-m { fill: var(--muted); }
+svg .arr { fill: currentColor; }
+svg .arra { fill: var(--accent); }
+svg .arrw { fill: var(--warn); }
+
+/* ---------- misc ---------- */
+.exercise { counter-reset: ex; }
+.exercise li { list-style: none; position: relative; padding-left: 3rem; margin-bottom: 0.9rem; }
+.exercise li::before { counter-increment: ex; content: "問 " counter(ex); position: absolute; left: 0; top: 0; font-weight: 700; color: var(--accent-ink); font-size: 0.85rem; }
+dl.gloss { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.35rem 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+dl.gloss dt { font-weight: 700; white-space: nowrap; }
+dl.gloss dt code { font-size: 0.85em; }
+dl.gloss dd { margin: 0; }
+@media (max-width: 40rem) { dl.gloss { grid-template-columns: minmax(0, 1fr); gap: 0; } dl.gloss dt { white-space: normal; } dl.gloss dd { margin-bottom: 0.6rem; } .colophon { grid-template-columns: minmax(0, 1fr); } .colophon dd { margin-bottom: 0.4rem; } }
+.steps { counter-reset: step; padding-left: 0; }
+.steps > li { list-style: none; position: relative; padding-left: 2.4rem; margin-bottom: 0.7rem; }
+.steps > li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0.35rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent-ink); font-size: 0.78rem; line-height: 1.5rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; padding-top: 1rem; font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media print { body { background: #fff; color: #000; } .page { max-width: none; } figure.fig, .box { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="mast">
+  <div class="chapter-no">JavaScriptCore 内部構造 ／ 章</div>
+  <h1>インラインキャッシュ<br>—— <span class="serif">PropertyInlineCache</span> の設計と実装</h1>
+  <p class="sub">JavaScriptCore（JSC）が <code>o.x</code> のようなプロパティアクセスを高速化するために用いる<strong>インラインキャッシュ（Inline Cache, IC）</strong>を、LLInt のメタデータキャッシュから、Baseline／DFG の Handler IC、FTL の Repatching IC、そして VM 全体で共有される Megamorphic キャッシュまで、実際のソースコードに沿って一段ずつ読み解く。</p>
+  <dl class="colophon">
+    <dt>対象リビジョン</dt><dd>WebKit <code>f8225fcd97</code>（2026-08-13 時点の trunk）</dd>
+    <dt>パス表記</dt><dd>特記のない限り <code>Source/JavaScriptCore/</code> からの相対パス。行番号は上記リビジョンのもの</dd>
+    <dt>対象アーキテクチャ</dt><dd>64bit（x86_64 / ARM64）。この tree には 32bit 用 LLInt はもう存在しない</dd>
+    <dt>前提知識</dt><dd>JavaScript のオブジェクトモデル（プロトタイプチェーン・getter/setter）、C++、多段 JIT（LLInt → Baseline → DFG → FTL）の存在を知っていること</dd>
+  </dl>
+</header>
+
+<nav class="toc" aria-label="目次">
+  <h2>目次</h2>
+  <ol>
+    <li><span class="sec-no">§1</span><a href="#s1">問題：<code>o.x</code> はなぜ遅いか</a></li>
+    <li><span class="sec-no">§2</span><a href="#s2">土台：Structure と PropertyOffset</a></li>
+    <li><span class="sec-no">§3</span><a href="#s3">全体地図：階層ごとの IC の形</a></li>
+    <li><span class="sec-no">§4</span><a href="#s4">LLInt のメタデータキャッシュ</a></li>
+    <li><span class="sec-no">§5</span><a href="#s5">PropertyInlineCache オブジェクト</a></li>
+    <li><span class="sec-no">§6</span><a href="#s6">スローパスからケース生成まで</a></li>
+    <li><span class="sec-no">§7</span><a href="#s7">AccessCase：1 ケースの記述</a></li>
+    <li><span class="sec-no">§8</span><a href="#s8">Handler IC（Baseline／DFG）</a></li>
+    <li><span class="sec-no">§9</span><a href="#s9">Repatching IC（FTL）</a></li>
+    <li><span class="sec-no">§10</span><a href="#s10">多相性の段階と Megamorphic</a></li>
+    <li><span class="sec-no">§11</span><a href="#s11">無効化と GC</a></li>
+    <li><span class="sec-no">§12</span><a href="#s12">IC はプロファイラでもある</a></li>
+    <li><span class="sec-no">§13</span><a href="#s13">観察する：オプションと演習</a></li>
+    <li><span class="sec-no">§14</span><a href="#s14">まとめ・用語集・ソースマップ</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section class="sec" id="s1">
+<h2><span class="sec-no">§1</span><span class="sec-title">問題：<code>o.x</code> はなぜ遅いか</span></h2>
+<div class="prose">
+
+<p class="lead">インラインキャッシュは「<strong>同じ場所で実行されるプロパティアクセスは、たいてい同じ形のオブジェクトを相手にする</strong>」という経験則を、実行時に発見して機械語やデータ構造へ焼き付ける仕組みである。まず、それが無いと何が起きるかを確認する。</p>
+
+<h3><span class="h3-no">1.1</span>仕様どおりに <code>o.x</code> を評価すると</h3>
+<p>ECMAScript の <code>o.x</code> は <code>[[Get]]</code> 内部メソッドの呼び出しであり、素直に実装すると次のような仕事になる。</p>
+<ol>
+  <li><code>o</code> がオブジェクトかどうかを調べる（プリミティブなら対応するプロトタイプへ迂回する）。</li>
+  <li><code>o</code> 自身のプロパティ表から <code>"x"</code> を探す（ハッシュ表の検索）。</li>
+  <li>見つからなければ <code>o.[[Prototype]]</code> をたどって 2 を繰り返す。チェーンの末尾まで無ければ <code>undefined</code>。</li>
+  <li>見つかったものがデータプロパティなら値を返す。アクセサなら getter を <code>this = o</code> で呼ぶ。Proxy や DOM オブジェクトのような exotic object なら、そのオブジェクト固有の <code>[[Get]]</code> を呼ぶ。</li>
+</ol>
+<p>JSC でこの「一般の道」に相当するのが <code>JSValue::get</code> → <code>JSObject::getPropertySlot</code> → <code>getOwnPropertySlot</code> の連鎖であり、結果は <code>PropertySlot</code> という構造体に詰められて返る。1 回のアクセスにハッシュ計算・仮想関数呼び出し・ループが伴い、<code>o.x</code> 1 個につき数十〜数百命令かかる。JavaScript プログラムはプロパティアクセスの塊なので、これがそのまま実行速度を決めてしまう。</p>
+
+<h3><span class="h3-no">1.2</span>観察：アクセスサイトはたいてい単相である</h3>
+<p>一方で、ソースコード上の特定の 1 箇所（<em>アクセスサイト</em>）に注目すると、そこを通るオブジェクトの「形」は驚くほど偏っている。<code>function area(r) { return r.w * r.h; }</code> の <code>r.w</code> には、ほとんどの場合同じコンストラクタで作られた、同じレイアウトのオブジェクトが来る。この性質は Smalltalk-80 の実装（Deutsch &amp; Schiffman, 1984）でメソッド呼び出しの高速化に使われたのが最初で、Self（Hölzle ら, 1991）が「複数の形を同時に覚える」多相インラインキャッシュ（PIC）へ拡張した。JSC の IC はこの系譜の直系であり、用語（monomorphic / polymorphic / megamorphic）もそのまま受け継いでいる。</p>
+
+<div class="box def">
+  <span class="box-label">定義</span>
+  <p><span class="def-no">定義 1.1</span><strong>インラインキャッシュ</strong>とは、あるアクセスサイトについて「<em>直前までに観測したオブジェクトの形</em>」と「<em>その形に対する答え</em>（値の格納位置など）」の組を、そのサイト専用の記憶域に保持しておき、次回以降は<strong>形の一致確認</strong>だけで一般の道を省略する仕組みである。「インライン」の語源は、記憶域が呼び出し元の機械語の中に埋め込まれていたことによる。JSC では機械語に埋め込む形態（§9）と、機械語の外のデータ構造に置く形態（§4, §8）の両方が使われるが、どちらも IC と呼ぶ。</p>
+</div>
+
+<p>したがって IC には、どの実装にも共通する 3 つの部品がある。</p>
+<ul>
+  <li><strong>ガード</strong>（guard）—「今来たオブジェクトは覚えている形と同じか」を判定する安価な検査。JSC ではほぼ常に <code>StructureID</code> の 32bit 比較 1 回である（§2）。</li>
+  <li><strong>ペイロード</strong>—ガードが通ったときに実行する、答えそのもの（「オフセット 3 のスロットを読む」「このプロトタイプオブジェクトのオフセット 1 を読む」「この getter を呼ぶ」）。</li>
+  <li><strong>スローパス</strong>（slow path）—ガードが外れたときに呼ぶ一般の道。ここで正しい答えを計算すると同時に、<em>次回のために IC を育てる</em>（§6）。</li>
+</ul>
+<p>加えて JSC の IC には、他の処理系より強く意識されている第 4 の部品がある。<strong>無効化</strong>（invalidation）である。ペイロードが「プロトタイプ上の <code>x</code> は存在しない」といった<em>他のオブジェクトに関する仮定</em>を含む場合、その仮定が崩れた瞬間にキャッシュを捨てなければならない。JSC はこれを watchpoint という仕組みで行う（§11）。</p>
+
+<h3><span class="h3-no">1.3</span>本章の読み方</h3>
+<p>本章では、キャッシュされる対象として主に <code>get_by_id</code>（<code>o.x</code>）と <code>put_by_id</code>（<code>o.x = v</code>）を追う。JSC の IC 基盤は <code>in</code>、<code>delete</code>、<code>instanceof</code>、<code>o[k]</code>（by-val）、private field、private brand まで同じ枠組みで扱うが（<code>AccessType</code> は 30 種類ある。§5）、仕組みは <code>get_by_id</code> を理解すれば残りは差分で済む。</p>
+<p>各節の末尾には「ソース」ボックスで読むべきファイルと行を示す。IC は JSC の中でも特に変化の速い部分であり、たとえばこのリビジョンでは長年 <code>StructureStubInfo</code> と呼ばれていたクラスが <code>PropertyInlineCache</code> に改名され、Baseline と DFG の IC が「Handler IC」と呼ばれる新方式へ全面移行している。古い資料と名前が食い違ったら、本章の名前のほうが新しいと考えてよい。</p>
+
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s2">
+<h2><span class="sec-no">§2</span><span class="sec-title">土台：Structure と PropertyOffset</span></h2>
+<div class="prose">
+
+<p class="lead">IC のガードが「32bit 比較 1 回」で済み、ペイロードが「固定オフセットのロード 1 回」で済むのは、JSC のオブジェクト表現がそのように設計されているからである。本節では IC が依存するランタイム構造だけを、IC の視点から必要最小限に整理する。</p>
+
+<h3><span class="h3-no">2.1</span>Structure（隠れクラス）</h3>
+<p>JSC のオブジェクトは、プロパティ名からスロット番号への対応表を自分では持たない。その対応表とプロトタイプ・型情報・各種フラグをまとめた <code>Structure</code> というセルを別に持ち、<strong>同じ順序で同じプロパティを追加されたオブジェクトは同じ Structure を共有する</strong>。他処理系でいう hidden class / shape / map と同じ概念である。</p>
+<p>プロパティを追加すると、オブジェクトは「元の Structure に <code>x</code> を足したもの」を表す別の Structure へ<em>遷移</em>（transition）する。遷移先は元の Structure の遷移表（<code>m_transitionTable</code>）に記憶されるので、2 個目以降のオブジェクトは同じ経路をたどって同じ Structure に到達する。<span class="src"><code>runtime/Structure.cpp:562-626</code></span></p>
+
+<div class="box def">
+  <span class="box-label">定義</span>
+  <p><span class="def-no">定義 2.1</span>IC における「オブジェクトの<strong>形</strong>」とは、そのオブジェクトが現在指している Structure のことである。Structure が同じなら、（a）どのプロパティがどのオフセットにあるか、（b）プロトタイプが何か（<a href="#s2-5">2.5</a> の poly proto を除く）、（c）getter/setter や読み取り専用属性の有無、（d）C++ 側で <code>[[Get]]</code> をオーバーライドしているかどうか、がすべて同じであることが保証される。IC はこの保証の上に成り立つ。</p>
+</div>
+
+<h3><span class="h3-no">2.2</span>StructureID：ガードを 32bit 比較にする仕掛け</h3>
+<p>すべての JS セルは先頭 4 バイトに <code>StructureID</code> を持つ。<span class="src"><code>runtime/JSCell.h:293-302</code></span> これは <code>uint32_t</code> であり、その正体は <em>Structure のアドレスの下位 32bit</em> である。<span class="src"><code>runtime/StructureID.h:71-97</code></span> Structure は専用の、サイズにアラインされた予約領域にだけ確保されるので、上位 32bit は VM 内で常に一定（<code>g_jscConfig.structureIDBase</code>）になり、下位 32bit だけで一意に識別できる。<span class="src"><code>heap/StructureAlignedMemoryAllocator.cpp:106-124</code></span></p>
+<p>その結果、IC のガードは次の 1 命令（＋分岐）で済む。</p>
+<pre><code><span class="c">; base レジスタが指すセルの先頭 4 バイトと、覚えておいた ID を比較する</span>
+cmp   dword ptr [base + 0], <span class="hi">0x1234abc0</span>      <span class="c">; JSCell::structureIDOffset() == 0</span>
+jne   miss</code></pre>
+<p>ID の値 0 は「なし」を意味し、リンク直後の LLInt キャッシュが「必ず外れる」状態を表すのに使われる（§4）。最下位ビットは、butterfly を差し替えている最中であることを並行 GC に知らせる「nuke」ビットとして一時的に立てられる。<span class="src"><code>runtime/StructureID.h:39-51</code></span></p>
+
+<h3><span class="h3-no">2.3</span>PropertyOffset と 2 種類の格納場所</h3>
+<p>プロパティの値は 2 箇所のどちらかに置かれる。オブジェクトセル本体の末尾に確保された <strong>inline storage</strong> と、セルの 8 バイト目にあるポインタ（<em>butterfly</em>）が指す外部領域の <strong>out-of-line storage</strong> である。<code>PropertyOffset</code>（実体は <code>int</code>）はこの両方を 1 本の番号で表す。</p>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 760 300" role="img" aria-label="JSObject のセル本体（StructureID・型情報・butterfly ポインタ・inline slot 0〜5）と、butterfly が指す外部領域（下向きに伸びる out-of-line slot と IndexingHeader、上向きに伸びる添字要素）の関係、および PropertyOffset の番号付け">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+  </defs>
+  <!-- cell -->
+  <text x="20" y="22" class="t-b jp">オブジェクトセル本体（JSFinalObject, 既定 64 バイト）</text>
+  <rect x="20" y="34" width="150" height="30" class="bxa"/>
+  <text x="95" y="53" text-anchor="middle" class="t-s t-b t-a">StructureID (4B)</text>
+  <rect x="170" y="34" width="150" height="30" class="bx"/>
+  <text x="245" y="53" text-anchor="middle" class="t-s">型 / indexingType (4B)</text>
+  <text x="330" y="53" class="t-xs">offset 0</text>
+  <rect x="20" y="64" width="300" height="30" class="bx2"/>
+  <text x="170" y="83" text-anchor="middle" class="t-s">butterfly ポインタ (8B)</text>
+  <text x="330" y="83" class="t-xs">offset 8</text>
+  <g>
+    <rect x="20" y="94" width="300" height="26" class="bx"/><text x="170" y="111" text-anchor="middle" class="t-s">inline slot — PropertyOffset 0</text><text x="330" y="111" class="t-xs">offset 16</text>
+    <rect x="20" y="120" width="300" height="26" class="bx"/><text x="170" y="137" text-anchor="middle" class="t-s">inline slot — PropertyOffset 1</text><text x="330" y="137" class="t-xs">offset 24</text>
+    <rect x="20" y="146" width="300" height="26" class="bx"/><text x="170" y="163" text-anchor="middle" class="t-s">inline slot — PropertyOffset 2</text>
+    <rect x="20" y="172" width="300" height="26" class="bx"/><text x="170" y="189" text-anchor="middle" class="t-s">…</text>
+    <rect x="20" y="198" width="300" height="26" class="bx"/><text x="170" y="215" text-anchor="middle" class="t-s">inline slot — PropertyOffset 5</text><text x="330" y="215" class="t-xs">offset 56</text>
+  </g>
+  <text x="20" y="250" class="t-xs jp">inline offset は 0 ≤ o &lt; 64（firstOutOfLineOffset）。</text>
+  <text x="20" y="266" class="t-xs jp">アドレス = cell + 16 + o × 8</text>
+  <!-- arrow butterfly -->
+  <path d="M320 79 C 400 79, 400 150, 470 150" class="ln" marker-end="url(#a1)"/>
+  <!-- butterfly region -->
+  <text x="470" y="22" class="t-b jp">butterfly が指す外部領域</text>
+  <rect x="480" y="34" width="250" height="26" class="bx"/><text x="605" y="51" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 66</text><text x="612" y="51" class="t-xs"></text>
+  <rect x="480" y="60" width="250" height="26" class="bx"/><text x="605" y="77" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 65</text>
+  <rect x="480" y="86" width="250" height="26" class="bx"/><text x="605" y="103" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 64</text>
+  <rect x="480" y="112" width="250" height="26" class="bx2"/><text x="605" y="129" text-anchor="middle" class="t-s">IndexingHeader（length 等, 8B）</text>
+  <line x1="470" y1="150" x2="740" y2="150" class="lna"/>
+  <rect x="480" y="150" width="250" height="26" class="bx"/><text x="605" y="167" text-anchor="middle" class="t-s">添字要素 [0]</text>
+  <rect x="480" y="176" width="250" height="26" class="bx"/><text x="605" y="193" text-anchor="middle" class="t-s">添字要素 [1]</text>
+  <rect x="480" y="202" width="250" height="26" class="bx"/><text x="605" y="219" text-anchor="middle" class="t-s">…</text>
+  <text x="480" y="250" class="t-xs jp">太線 = butterfly ポインタの指す位置。out-of-line offset（o ≥ 64）は</text>
+  <text x="480" y="266" class="t-xs jp">ヘッダの下へ逆向きに伸びる。o = 64 の番地は butterfly − 16</text>
+  <text x="480" y="282" class="t-xs jp">out-of-line 容量は 0 → 4 → 8 → 16 … と倍々に増える</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 2.1</span>オブジェクトの格納レイアウトと <code>PropertyOffset</code> の番号付け。<code>o &lt; 64</code> なら inline、<code>o ≥ 64</code> なら out-of-line。JIT はコンパイル時に定数比較でどちらかを決めるだけでよく（<code>offsetRelativeToBase</code> <span class="src"><code>runtime/JSObject.h:1309-1314</code></span>）、実行時にオフセットが決まる Megamorphic や Handler IC の共有 thunk では <code>AssemblyHelpers::loadProperty</code> が同じ判定を実行時に行う。<span class="src"><code>jit/AssemblyHelpers.cpp:374-397</code></span></figcaption>
+</figure>
+
+<p>ここで重要なのは、<strong>Structure が決まればオフセットも inline/out-of-line の別も決まる</strong>ということである（inline 容量は Structure の <code>m_inlineCapacity</code> に含まれ、番号付けにも織り込まれている <span class="src"><code>runtime/PropertyOffset.h:136-144</code></span>）。ゆえに IC のペイロードは「Structure S のとき、オフセット o をロードせよ」という 1 組の定数だけで完全に記述できる。</p>
+<p>プロパティ追加で out-of-line 容量が足りなくなると butterfly の再確保が必要になる。容量は 0 → 4 → 8 → 16 … と段階的にしか増えないので<span class="src"><code>runtime/Structure.h:499-517</code></span>、遷移をキャッシュする put IC は「旧 Structure と新 Structure の容量が同じか」で再確保の要否を静的に判定できる（§7, §8）。</p>
+
+<h3><span class="h3-no">2.4</span>Dictionary：形の保証が崩れるオブジェクト</h3>
+<p>遷移が長くなりすぎたり（1 本の遷移列で 128 回、<code>put_by_id</code> 文脈では 512 回 <span class="src"><code>runtime/Structure.h:250-258</code></span>）、プロパティが削除されたりすると、Structure は <em>dictionary</em> モードに切り替わる。dictionary Structure はオブジェクトと 1 対 1 に対応し、以後プロパティを追加しても<strong>Structure を遷移させずにその場で書き換える</strong>。<span class="src"><code>runtime/StructureInlines.h:397-447</code></span> つまり定義 2.1 の保証（b）（c）が「Structure が同じでも中身が変わりうる」という形で破れる。</p>
+<p>dictionary には 2 段階ある。</p>
+<ul>
+  <li><strong>cacheable dictionary</strong>：追加はその場で行うが、削除はまだ遷移で表す。StructureID はそのオブジェクト固有なので、<em>そのオブジェクト自身のプロパティ</em>への自己アクセス（self access）は依然キャッシュできる。ただし「プロトタイプチェーン上に <code>x</code> は無い」といった<em>不在</em>の事実は、その場での追加で黙って覆るのでキャッシュできない。<span class="src"><code>bytecode/PropertyCondition.cpp:137-142</code></span></li>
+  <li><strong>uncacheable dictionary</strong>：削除もその場で行い、オフセットの再利用が起きるので、何もキャッシュできない。<code>propertyAccessesAreCacheable()</code> が偽を返す。<span class="src"><code>runtime/Structure.h:332-337</code></span></li>
+</ul>
+<p>IC の C++ 側は dictionary に出会うと、いきなり諦めるのではなく、まず <em>flatten</em>（辞書を通常の Structure に戻し、オフセットを詰め直す）を 1 回だけ試み、次回のアクセスで改めてキャッシュを狙う。flatten は<strong>StructureID を変えずに</strong>オフセットを付け替えるため、flatten した瞬間のオフセットではキャッシュできず「次回に持ち越す」必要があるのが、この <code>RetryCacheLater</code> の理由である。2 度目（<code>hasBeenFlattenedBefore()</code>）は諦める。<span class="src"><code>bytecode/Repatch.cpp:340-360</code>, <code>runtime/Structure.cpp:1025-1111</code></span></p>
+
+<h3 id="s2-5"><span class="h3-no">2.5</span>Poly proto：プロトタイプが Structure に含まれない場合</h3>
+<p>通常の Structure は <code>m_prototype</code> にプロトタイプを保持しており（mono proto）、Structure 一致 ⇒ プロトタイプ一致が成り立つ。しかし、同じクラス定義から異なるレルムやクロージャごとに別々の <code>prototype</code> オブジェクトが生じると、Structure がプロトタイプごとに分裂して IC が無駄に多相化する。JSC はこれを検出すると（<code>Structure::shouldConvertToPolyProto</code> <span class="src"><code>runtime/StructureInlines.h:487-531</code></span>）、以後そのコンストラクタが作るオブジェクトを <em>poly proto</em> Structure に切り替える。poly proto Structure は <code>m_prototype</code> を空にし、代わりに<strong>各オブジェクトの inline slot 0</strong>（<code>knownPolyProtoOffset</code>）にプロトタイプを格納する。<span class="src"><code>runtime/Structure.cpp:409-426</code></span></p>
+<p>IC から見ると、poly proto の場合は「Structure を見ただけではプロトタイプが分からない」ので、プロトタイプチェーンをたどるアクセスでは各段のオブジェクトを実際にロードして Structure を確認する必要がある。このために <code>PolyProtoAccessChain</code>（各段の期待 StructureID の配列）という別のペイロード表現が用意されている（§6.4）。IC が 2 つ目のケースを追加しようとした際に「これは poly proto に転換すべき組だ」と気付くと、IC 自身をリセットして watchpoint を発火させる <code>ResetStubAndFireWatchpoints</code> という特殊な結果を返す。<span class="src"><code>bytecode/PropertyInlineCache.cpp:117-157</code></span></p>
+
+<h3><span class="h3-no">2.6</span>Watchpoint：仮定が崩れたことを知る仕組み</h3>
+<p>最後に、§11 で本格的に扱う watchpoint を導入しておく。<code>WatchpointSet</code> は <code>ClearWatchpoint → IsWatched → IsInvalidated</code> と一方向に進む 3 状態の小さなオブジェクトで、<code>Watchpoint</code>（コールバック）を登録しておくと、対応する事象が起きて <code>fireAll</code> されたときに呼び出される。<span class="src"><code>bytecode/Watchpoint.h:152-282</code></span> IC にとって特に重要なのは、<strong>各 Structure が 1 つずつ持つ遷移 watchpoint set</strong>（<code>m_transitionWatchpointSet</code>）である。ある Structure から別の Structure へ遷移が起きると、元の Structure のこの set が発火する。IC が「プロトタイプ P の Structure は S_P のままである」という仮定に依存するとき、S_P の遷移 watchpoint set に自分を登録しておけば、P にプロパティが足されたり削られたりした瞬間に通知を受けられる。</p>
+<p>この set は生成時から <code>IsWatched</code> 状態で作られる。<span class="src"><code>runtime/Structure.cpp:339</code></span> したがって誰も監視していなくても、一度でも遷移元になった Structure の set は <code>IsInvalidated</code> になっており、これが「この Structure はもう遷移木の葉ではない」という印として使われる。葉でない Structure（＝そこから先へ進んだオブジェクトが既にいる）に監視を仕掛けても即座に無効なので、IC はその条件を watchpoint ではなく明示的な比較で守ることになる（§11.1）。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>runtime/JSCell.h:293-302</code> — セルヘッダ。<code>runtime/JSObject.h:631-634, 837-892, 944-950</code> — butterfly、inline storage、既定容量</li>
+    <li><code>runtime/PropertyOffset.h</code> — オフセット番号付け。<code>runtime/Butterfly.h:214</code> — <code>offsetOfPropertyStorage() == -8</code></li>
+    <li><code>runtime/StructureID.h</code>、<code>heap/StructureAlignedMemoryAllocator.cpp:106-124</code> — 32bit ID の根拠</li>
+    <li><code>runtime/Structure.h:250-263, 323-351, 412-419, 499-517, 697-759, 818-839</code> — 遷移閾値、cacheability、poly proto、容量、watchpoint、ビットフィールド</li>
+    <li><code>runtime/JSObjectInlines.h:494-645</code> — <code>putDirectInternal</code>：追加・置換・遷移の実体と <code>PutPropertySlot</code> への記録</li>
+    <li><code>bytecode/PolyProtoAccessChain.h</code>、<code>runtime/StructureInlines.h:487-531</code> — poly proto</li>
+    <li><code>bytecode/Watchpoint.h</code>、<code>runtime/Structure.cpp:1378-1400</code> — watchpoint と遷移時の発火</li>
+  </ul>
+</div>
+
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s3">
+<h2><span class="sec-no">§3</span><span class="sec-title">全体地図：階層ごとの IC の形</span></h2>
+<div class="prose">
+
+<p class="lead">JSC には実行階層（tier）が 4 つあり、IC の「記憶域をどこに置くか」は階層ごとに異なる。一方で「何をキャッシュするか」を決める C++ 側の判断ロジックは JIT 階層の間で完全に共有されている。この分担を先に頭に入れておくと、以降の節が読みやすい。</p>
+</div>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 860 470" role="img" aria-label="4 つの実行階層（LLInt、Baseline、DFG、FTL）それぞれのアクセスサイトが、どの形の IC 記憶域を持ち、どの C++ コード（LLIntSlowPaths または Repatch.cpp・AccessCase・InlineCacheCompiler）によって育てられ、限界に達すると VM 全体の MegamorphicCache に落ちるかを示す地図">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+    <marker id="a3w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
+  </defs>
+  <!-- column headers -->
+  <text x="20" y="24" class="t-b jp">実行階層</text>
+  <text x="150" y="24" class="t-b jp">アクセスサイトが持つ IC 記憶域</text>
+  <text x="560" y="24" class="t-b jp">育てる側（C++）</text>
+
+  <!-- LLInt row -->
+  <rect x="20" y="40" width="110" height="70" class="bx2"/>
+  <text x="75" y="70" text-anchor="middle" class="t-b">LLInt</text>
+  <text x="75" y="88" text-anchor="middle" class="t-xs jp">インタプリタ</text>
+  <rect x="150" y="40" width="380" height="70" class="bx"/>
+  <text x="162" y="60" class="t-s t-b">bytecode metadata（GetByIdModeMetadata, 16 バイト）</text>
+  <text x="162" y="78" class="t-s jp">単相のみ：structureID + offset (+ holder)</text>
+  <text x="162" y="96" class="t-xs jp">§4　CodeBlock ごと・命令ごとに 1 個</text>
+  <path d="M530 75 L560 75" class="ln" marker-end="url(#a3)"/>
+  <rect x="562" y="40" width="278" height="70" class="bx"/>
+  <text x="574" y="62" class="t-s t-b">llint/LLIntSlowPaths.cpp</text>
+  <text x="574" y="80" class="t-xs">performLLIntGetByID / slow_path_put_by_id</text>
+  <text x="574" y="97" class="t-xs jp">JIT 側とは独立した小さな実装</text>
+
+  <!-- Baseline row -->
+  <rect x="20" y="130" width="110" height="70" class="bx2"/>
+  <text x="75" y="160" text-anchor="middle" class="t-b">Baseline</text>
+  <text x="75" y="178" text-anchor="middle" class="t-xs jp">テンプレート JIT</text>
+  <rect x="150" y="130" width="380" height="160" class="bxa"/>
+  <text x="162" y="150" class="t-s t-b t-a">HandlerPropertyInlineCache　§8</text>
+  <text x="162" y="168" class="t-s jp">機械語は書き換えない。IC オブジェクトの中に</text>
+  <text x="162" y="186" class="t-s jp">InlineCacheHandler の連結リストを持ち、実行時に辿る。</text>
+  <text x="162" y="204" class="t-s jp">単相ケースは IC の自フィールドを読む inline 検査で処理。</text>
+  <text x="162" y="228" class="t-xs jp">記憶域：BaselineJITData / DFG::JITData の先頭側配列に</text>
+  <text x="162" y="244" class="t-xs jp">CodeBlock ごとに実体化（機械語は jitDataRegister からの相対で参照）</text>
+  <text x="162" y="270" class="t-xs jp">handler の機械語は VM 全体で共有される thunk が中心</text>
+  <!-- DFG row -->
+  <rect x="20" y="220" width="110" height="70" class="bx2"/>
+  <text x="75" y="250" text-anchor="middle" class="t-b">DFG</text>
+  <text x="75" y="268" text-anchor="middle" class="t-xs jp">最適化 JIT</text>
+
+  <!-- FTL row -->
+  <rect x="20" y="310" width="110" height="70" class="bx2"/>
+  <text x="75" y="340" text-anchor="middle" class="t-b">FTL</text>
+  <text x="75" y="358" text-anchor="middle" class="t-xs jp">最上位 JIT (B3)</text>
+  <rect x="150" y="310" width="380" height="70" class="bx"/>
+  <text x="162" y="330" class="t-s t-b">RepatchingPropertyInlineCache　§9</text>
+  <text x="162" y="350" class="t-s jp">関数本体に埋め込んだ固定長の機械語スラブを実行時に書き換え、</text>
+  <text x="162" y="368" class="t-s jp">多相化したら全ケースを 1 本に再コンパイルした stub へジャンプ。</text>
+
+  <!-- shared C++ box spanning Baseline..FTL -->
+  <path d="M530 210 L560 210" class="ln" marker-end="url(#a3)"/>
+  <path d="M530 345 L560 345" class="ln" marker-end="url(#a3)"/>
+  <rect x="562" y="130" width="278" height="250" class="bx"/>
+  <text x="574" y="152" class="t-s t-b jp">JIT 階層で共通の判断・生成ロジック</text>
+  <text x="574" y="176" class="t-s">jit/JITOperations.cpp</text>
+  <text x="590" y="192" class="t-xs">*Optimize → *Megamorphic → *GaveUp　§6.1</text>
+  <text x="574" y="214" class="t-s">bytecode/Repatch.cpp</text>
+  <text x="590" y="230" class="t-xs jp">tryCache*：キャッシュ可能性の判定木　§6.2</text>
+  <text x="574" y="252" class="t-s">bytecode/AccessCase.*</text>
+  <text x="590" y="268" class="t-xs jp">1 ケースの宣言的な記述　§7</text>
+  <text x="574" y="290" class="t-s">bytecode/InlineCacheCompiler.*</text>
+  <text x="590" y="306" class="t-xs jp">記述 → 機械語（handler または stub）　§8, §9</text>
+  <text x="574" y="328" class="t-s">bytecode/PropertyInlineCache.*</text>
+  <text x="590" y="344" class="t-xs jp">IC 1 個の状態・カウンタ・GC 連携　§5, §11</text>
+  <text x="574" y="366" class="t-xs jp">両方式の違いは InlineCacheCompiler の出口だけ</text>
+
+  <!-- megamorphic -->
+  <path d="M290 380 L290 405" class="lnw" marker-end="url(#a3w)"/>
+  <path d="M700 380 L700 405" class="lnw" marker-end="url(#a3w)"/>
+  <rect x="150" y="407" width="690" height="48" class="bxw"/>
+  <text x="162" y="427" class="t-s t-b t-w">MegamorphicCache（VM に 1 個, runtime/MegamorphicCache.h）　§10</text>
+  <text x="162" y="445" class="t-s jp">ケース数が上限（既定 8）を超えたサイトは、(StructureID, 名前) → 答え のグローバルなハッシュ表に切り替わる</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 3.1</span>階層ごとの IC 記憶域と、それを育てる C++ コードの対応。LLInt だけが独立した小さな実装を持ち、Baseline／DFG／FTL は判断ロジックを共有して記憶域の形式（Handler か Repatching か）だけが異なる。どの階層のサイトも、多相化が進みすぎると VM 全体で 1 つの MegamorphicCache に合流する。</figcaption>
+</figure>
+
+<div class="prose">
+<h3><span class="h3-no">3.1</span>なぜ Baseline／DFG と FTL で方式が違うのか</h3>
+<p><code>PropertyInlineCache.h</code> の冒頭コメントがこの設計判断を端的に述べている。<span class="src"><code>bytecode/PropertyInlineCache.h:97-119</code></span> 要約すると次のとおりである。</p>
+<ul>
+  <li><strong>Repatching IC</strong> は、観測したケース集合にぴったり合わせた専用コードを生成でき、ケースが増えれば StructureID の二分探索（binary switch）で分岐できるので、実行スループットは最も高い。反面、実行時に機械語を書き換えるコストが大きい（命令キャッシュのフラッシュ、プラットフォームによっては書き込み権限の切り替え）うえ、ケースが 1 つ増えるたびに stub 全体を作り直す。</li>
+  <li><strong>Handler IC</strong> は、ケースを 1 つ足すのに連結リストへノードを 1 個つなぐだけでよく、機械語も大半が VM 全体で共有された thunk なので、生成コストがきわめて低い。反面、実行時には間接分岐を 1 段以上余計にたどる。</li>
+</ul>
+<p>Baseline と DFG のコードは「まだプロファイル中」で、コードが捨てられ（jettison）作り直されることも多い。ここでは生成コストの安さが効く。FTL に到達したコードは十分に熱く、形も定常状態に達している見込みが高いので、書き換えコストを払ってでも実行速度を取る。<code>useHandlerICInFTL</code> というオプションがあり FTL でも Handler IC を使う作業が進行中だが、このリビジョンでは「未完成」として強制的に無効化されている。<span class="src"><code>runtime/Options.cpp:839</code></span></p>
+
+<h3><span class="h3-no">3.2</span>階層比較表</h3>
+</div>
+
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 3.1</span>階層ごとの IC の実装形態の比較（<code>get_by_id</code> の場合）</caption>
+<thead><tr><th></th><th>LLInt</th><th>Baseline</th><th>DFG</th><th>FTL</th></tr></thead>
+<tbody>
+<tr><td>記憶域</td><td><code>GetByIdModeMetadata</code>（16B）を命令のメタデータ内に</td><td><code>HandlerPropertyInlineCache</code>。<code>BaselineJITData</code> の配列</td><td>同左。<code>DFG::JITData</code> の配列</td><td><code>RepatchingPropertyInlineCache</code>。<code>CommonData</code> の Bag</td></tr>
+<tr><td>機械語からの参照</td><td>metadata テーブル経由</td><td><code>jitDataRegister − (i+1)×sizeof</code></td><td>同左</td><td>アドレスを即値として埋め込み</td></tr>
+<tr><td>レジスタ</td><td>offlineasm の固定</td><td><code>BaselineJITRegisters</code> の固定割当</td><td>被演算子を同じ固定レジスタへ退避して呼ぶ</td><td>B3 が選んだ任意のレジスタ（<code>m_usedRegisters</code> に記録）</td></tr>
+<tr><td>覚えられるケース数</td><td>1（最後に見たもので上書き）</td><td>最大 8（<code>maxAccessVariantListSize</code>）</td><td>同左</td><td>同左</td></tr>
+<tr><td>ケース追加のコスト</td><td>フィールド代入</td><td>ノード 1 個を prepend（機械語は共有 thunk）</td><td>同左</td><td>stub 全体を再生成（バッファリングあり）</td></tr>
+<tr><td>単相時の速い道</td><td>asm 内で structureID 比較</td><td>IC の自フィールドと比較する inline 検査</td><td>同左</td><td>スラブに structureID 定数を焼き込み</td></tr>
+<tr><td>スローパスの差し替え</td><td>なし</td><td><code>m_slowOperation</code> フィールドへの代入</td><td>同左</td><td>call 命令のターゲットを書き換え</td></tr>
+<tr><td>コード共有</td><td>—</td><td>関数の機械語全体を CodeBlock 間で共有可（IC は CodeBlock ごと）</td><td>handler の機械語を共有</td><td>共有なし</td></tr>
+<tr><td>この階層が消費するプロファイル</td><td>—</td><td>LLInt の mode（ProtoLoad なら inline 検査を prototype 形にする）</td><td>Baseline IC を <code>GetByStatus</code> として読み、単相ならインライン展開（§12）</td><td>加えて最大 8 変種を <code>MultiGetByOffset</code> に展開</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="prose">
+<div class="box column">
+  <span class="box-label">コラム</span>
+  <p><strong>「Data IC」という名前について。</strong> ソース中には <code>emitDataICPrologue</code>、<code>generateDataICFastPath</code> のように「DataIC」という語が多く残っている。これは Handler IC の前身にあたる「IC の状態を機械語ではなくデータに置く」方式の名前で、現在の Handler IC はその発展形である。本章では設計コメントに合わせて Handler IC と呼ぶが、関数名に現れる DataIC は同じものを指すと読んでよい。同様に、実験的な Baseline 代替である LOL JIT（<code>lol/</code>、既定では無効）もプロパティ命令については Baseline の IC 生成コードをそのまま流用している。</p>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s4">
+<h2><span class="sec-no">§4</span><span class="sec-title">LLInt のメタデータキャッシュ</span></h2>
+<div class="prose">
+
+<p class="lead">最も単純な IC はインタプリタにある。JIT 側の重厚な基盤（§5 以降）は一切使わず、命令ごとのメタデータに structureID とオフセットを書き込むだけである。しかし「ガード・ペイロード・スローパス・無効化」の 4 部品はすべて揃っており、IC の骨格を学ぶ教材として最適である。</p>
+
+<h3><span class="h3-no">4.1</span>記憶域：<code>GetByIdModeMetadata</code></h3>
+<p>LLInt のバイトコード命令は、リンク済み <code>CodeBlock</code> ごとに<em>メタデータ表</em>（<code>MetadataTable</code>）を持ち、命令はそこに自分専用の可変領域を確保できる。<code>get_by_id</code> のメタデータは 16 バイトの共用体 <code>GetByIdModeMetadata</code> ただ 1 つである。<span class="src"><code>bytecode/BytecodeList.rb:410-419</code>, <code>bytecode/GetByIdMetadata.h</code></span></p>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 800 260" role="img" aria-label="GetByIdModeMetadata 16 バイトのバイト配置。先頭 4 バイトが structureID、次の 4 バイトが cachedOffset、残り 8 バイトが ProtoLoad モードでは cachedSlot ポインタ、それ以外のモードでは 14 バイト目が mode、15 バイト目が hitCountForLLIntCaching として使われることを示す">
+  <text x="20" y="22" class="t-b jp">GetByIdModeMetadata（16 バイト）のバイト配置</text>
+  <g class="t-xs">
+    <text x="20" y="48">byte</text>
+    <text x="180" y="48" text-anchor="middle">0 – 3</text>
+    <text x="320" y="48" text-anchor="middle">4 – 7</text>
+    <text x="510" y="48" text-anchor="middle">8 – 13</text>
+    <text x="665" y="48" text-anchor="middle">14</text>
+    <text x="745" y="48" text-anchor="middle">15</text>
+  </g>
+  <!-- Default -->
+  <text x="20" y="84" class="t-s t-b">Default</text>
+  <rect x="110" y="64" width="140" height="30" class="bxa"/><text x="180" y="83" text-anchor="middle" class="t-s t-a">structureID</text>
+  <rect x="250" y="64" width="140" height="30" class="bx"/><text x="320" y="83" text-anchor="middle" class="t-s">cachedOffset</text>
+  <rect x="390" y="64" width="240" height="30" class="bx2"/><text x="510" y="83" text-anchor="middle" class="t-xs jp">（未使用）</text>
+  <rect x="630" y="64" width="70" height="30" class="bx"/><text x="665" y="83" text-anchor="middle" class="t-xs">mode=1</text>
+  <rect x="700" y="64" width="80" height="30" class="bx"/><text x="740" y="83" text-anchor="middle" class="t-xs">hitCount</text>
+  <!-- ProtoLoad -->
+  <text x="20" y="134" class="t-s t-b">ProtoLoad</text>
+  <rect x="110" y="114" width="140" height="30" class="bxa"/><text x="180" y="133" text-anchor="middle" class="t-s t-a">structureID</text>
+  <rect x="250" y="114" width="140" height="30" class="bx"/><text x="320" y="133" text-anchor="middle" class="t-s">cachedOffset</text>
+  <rect x="390" y="114" width="390" height="30" class="bx"/><text x="585" y="133" text-anchor="middle" class="t-s jp">cachedSlot（保持元オブジェクトへの 64bit ポインタ）</text>
+  <path d="M630 146 L630 156 L780 156 L780 146" class="lnd"/>
+  <text x="780" y="172" text-anchor="end" class="t-xs jp">上位 2 バイトはユーザ空間ポインタでは常に 0</text>
+  <text x="780" y="186" text-anchor="end" class="t-xs jp">⇒ mode = 0 (ProtoLoad)、hitCount = 0 と読める</text>
+  <!-- ArrayLength -->
+  <text x="20" y="230" class="t-s t-b">ArrayLength</text>
+  <rect x="110" y="210" width="520" height="30" class="bx2"/><text x="370" y="229" text-anchor="middle" class="t-xs jp">（未使用：Structure は見ず、IsArray ビットだけを検査する）</text>
+  <rect x="630" y="210" width="70" height="30" class="bx"/><text x="665" y="229" text-anchor="middle" class="t-xs">mode=3</text>
+  <rect x="700" y="210" width="80" height="30" class="bx"/><text x="740" y="229" text-anchor="middle" class="t-xs">0</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 4.1</span><code>GetByIdModeMetadata</code> の共用体。<code>ProtoLoad</code> の列挙値をわざわざ 0 にしてあるのは、64bit ポインタ <code>cachedSlot</code> を 8 バイト目に書き込むだけで、その上位 2 バイトが自動的に「mode = ProtoLoad, hitCount = 0」を意味するようにするためである。<span class="src"><code>bytecode/GetByIdMetadata.h:34-39, 71-102</code></span> 16 バイトに 4 モードを詰め込むためのトリックである（<code>cachedSlot</code> を常に 64bit 幅にしているのも、この共用体の配置をターゲットによらず一定に保つためだとコメントにある）。</figcaption>
+</figure>
+
+<p>モードは 4 つある。</p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 4.1</span><code>GetByIdMode</code> の 4 モード</caption>
+<thead><tr><th>モード</th><th>意味</th><th>ガード</th><th>ペイロード</th></tr></thead>
+<tbody>
+<tr><td><code>Default</code> (1)</td><td>自分自身のデータプロパティ。リンク直後の初期状態でもある（structureID = 0 なので必ず外れる）</td><td>base の structureID == 記憶した ID</td><td>base の <code>cachedOffset</code> をロード</td></tr>
+<tr><td><code>ProtoLoad</code> (0)</td><td>プロトタイプチェーン上のデータプロパティ</td><td>base の structureID == 記憶した ID（保持元の Structure は<strong>検査しない</strong>——watchpoint が保証する）</td><td><code>cachedSlot</code> が指すオブジェクトの <code>cachedOffset</code> をロード</td></tr>
+<tr><td><code>ArrayLength</code> (3)</td><td><code>配列.length</code></td><td>indexingType に <code>IsArray</code> が立ち、shape が空でない</td><td>butterfly の <code>publicLength</code> を int32 として返す</td></tr>
+<tr><td><code>Unset</code> (2)</td><td>プロパティ不在（<code>undefined</code>）</td><td>structureID</td><td>定数 <code>undefined</code>。ただし現リビジョンではこのモードに入る経路が無い（<a href="#s4-note">注 4.1</a>）</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3><span class="h3-no">4.2</span>ファストパス：offlineasm</h3>
+<p>ガードとペイロードは <code>LowLevelInterpreter64.asm</code> の <code>performGetByIDHelper</code> マクロにある。<span class="src"><code>llint/LowLevelInterpreter64.asm:1639-1684</code></span> mode バイトを読み、<code>Default → ProtoLoad → ArrayLength → Unset</code> の順に比較で振り分けるだけの素朴な構造である。Default 部分を抜粋する（<code>t3</code> = base セル、<code>t2</code> = メタデータ）。</p>
+<pre><code>loadb  Metadata::modeMetadata.mode[t2], t1
+bbneq  t1, constexpr GetByIdMode::Default, .opGetByIdProtoLoad
+loadi  <span class="hi">JSCell::m_structureID[t3]</span>, t1                 <span class="c">; base の先頭 4 バイト</span>
+loadi  <span class="hi">Metadata::defaultMode.structureID[t2]</span>, t0    <span class="c">; 覚えていた ID</span>
+bineq  t0, t1, <span class="w">slowLabel</span>                            <span class="c">; ガード</span>
+loadis Metadata::defaultMode.cachedOffset[t2], t1
+loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロード（図 2.1 の判定を実行時に行う）</span></code></pre>
+<p><code>loadPropertyAtVariableOffset</code> <span class="src"><code>:1591-1601</code></span> は、オフセットが 64 未満なら base 自身、以上なら butterfly を基点に選び、最後は共通の 1 命令 <code>loadq</code> でロードする。負のオフセット計算を <code>negi</code> で行い、両経路の定数項を <code>(firstOutOfLineOffset − 2) × 8</code> に揃えて 1 つの <code>loadq</code> に合流させるという、小さいが典型的な offlineasm の技巧が見られる。</p>
+
+<h3><span class="h3-no">4.3</span>スローパス：キャッシュを書き込む</h3>
+<p>ガードが外れると <code>llint_slow_path_get_by_id</code> → <code>performLLIntGetByID</code> に落ちる。<span class="src"><code>llint/LLIntSlowPaths.cpp:851-915</code></span> ここではまず一般の道 <code>baseValue.get()</code> で正しい答えを求め、副産物として得られた <code>PropertySlot</code> を見てキャッシュ可否を決める。判定は次の 3 分岐だけである。</p>
+<ol class="steps">
+  <li><strong>自分自身の値プロパティだった</strong>（<code>slot.isValue() &amp;&amp; slot.slotBase() == baseValue</code>）：<code>Default</code> モードにして structureID とオフセットを書く。ただし Structure が <code>propertyAccessesAreCacheable()</code>（§2.4）を満たし、impure property（DOM の名前付きプロパティなど、C++ 側が黙って生やしうるプロパティ）を持たない型であること。同時に <code>hitCountForLLIntCaching</code> を 0 にし、以後このサイトではプロトタイプキャッシュを二度と試みない。</li>
+  <li><strong>プロトタイプ上の値プロパティだった</strong>：<code>hitCountForLLIntCaching</code>（初期値は <code>Options::prototypeHitCountForLLIntCaching()</code> = 2）を減らし、0 になった時点で初めて <code>setupGetByIdPrototypeCache</code> を呼ぶ。プロトタイプキャッシュは watchpoint の設置というコストを伴うので、2 回観測するまで様子を見るわけである。</li>
+  <li><strong><code>JSArray</code> の <code>length</code> だった</strong>：<code>ArrayLength</code> モードにする（<code>length</code> は cacheable な slot として返ってこないので、別枠で判定している）。</li>
+</ol>
+<p>getter、custom accessor、文字列の <code>length</code>、そして不在（miss）は LLInt ではキャッシュされない。これらは Baseline 以降の仕事である。</p>
+
+<h3><span class="h3-no">4.4</span>プロトタイプキャッシュと adaptive watchpoint</h3>
+<p><code>setupGetByIdPrototypeCache</code> <span class="src"><code>llint/LLIntSlowPaths.cpp:794-849</code></span> は、JIT 側と同じ <code>generateConditionsForPrototypePropertyHit</code>（§6.4）を呼んで「途中のプロトタイプには <code>x</code> が無い（Absence）」「保持元には <code>x</code> がオフセット o にある（Presence）」という条件の集合を得る。そして条件 1 つにつき 1 個の <code>LLIntPrototypeLoadAdaptiveStructureWatchpoint</code> を、その条件が言及するオブジェクトの<em>現在の Structure</em> の遷移 watchpoint set に登録し、<code>CodeBlock::m_llintGetByIdWatchpointMap</code>（キーは (base の StructureID, 命令位置)）に保管する。最後にメタデータを <code>ProtoLoad</code> に切り替える。</p>
+<p>この watchpoint が発火したとき——つまりチェーン上のどれかのオブジェクトの Structure が変わったとき——の振る舞いが「adaptive」の名の由来である。<span class="src"><code>bytecode/LLIntPrototypeLoadAdaptiveStructureWatchpoint.cpp:71-134</code></span></p>
+<ul>
+  <li>条件を新しい Structure に対して評価し直し、<strong>まだ成り立っていれば</strong>（例：プロトタイプに無関係なプロパティ <code>y</code> が足されただけ）、新しい Structure の遷移 watchpoint set に自分を登録し直して終わり。キャッシュは生き残る。</li>
+  <li>成り立たなくなっていれば、メタデータを <code>Default</code>（structureID = 0）に戻す。<code>hitCount</code> は 0 のままなので、このサイトは以後、自己アクセスとしてなら再キャッシュされるが、プロトタイプキャッシュには二度と入らない。</li>
+</ul>
+<p>「仮定が形式的に破れたか」ではなく「仮定の<em>内容</em>が破れたか」で無効化を判断するこの adaptive 方式は、JIT の IC（§11）でも DFG の watchpoint でも同じ形で使われる。プロトタイプオブジェクトはプログラム起動時に大量のメソッドを次々と生やされるのが普通なので、これが無いとキャッシュはほとんど生き残れない。</p>
+
+<h3><span class="h3-no">4.5</span><code>put_by_id</code>：遷移のキャッシュ</h3>
+<p><code>put_by_id</code> のメタデータは <code>oldStructureID / offset / newStructureID / structureChain</code> の 4 フィールドである。<span class="src"><code>bytecode/BytecodeList.rb:294-306</code></span> <code>newStructureID == 0</code> なら「既存プロパティの上書き（replace）」、非 0 なら「プロパティ追加による遷移（transition）」を表す。ファストパス <span class="src"><code>llint/LowLevelInterpreter64.asm:1745-1815</code></span> の遷移側は次のことを行う。</p>
+<ol>
+  <li>base の structureID が <code>oldStructureID</code> に一致することを確認する。</li>
+  <li><code>structureChain</code> が設定されていれば（<code>put_by_id</code> が direct でない、すなわち通常の代入なら）、<em>現在の</em>プロトタイプチェーンを 1 段ずつたどり、各段のオブジェクトの structureID が記憶しておいた <code>StructureChain</code> の対応要素と一致することを確認する。これは「チェーン上のどこにも setter や読み取り専用の <code>x</code> が現れていない」ことの検査であり、LLInt は watchpoint を使う代わりに毎回歩いて確かめる。</li>
+  <li>base の先頭 4 バイトに <code>newStructureID</code> を書き込む。<strong>これが Structure 遷移の実体</strong>である。あとは値をオフセットに格納し、write barrier を実行する。</li>
+</ol>
+<p>スローパス <span class="src"><code>llint/LLIntSlowPaths.cpp:1068-1155</code></span> が遷移をキャッシュする条件は厳しめで、新旧 Structure の out-of-line 容量が等しい（butterfly の再確保が要らない）こと、新 Structure が dictionary でないこと、旧 Structure が <code>mayBePrototype()</code> でないこと、チェーンが poly proto を含まないこと、が要求される。再確保を伴う遷移のキャッシュは Baseline 以降に任せている。replace をキャッシュする際には <code>didCachePropertyReplacement()</code> を呼び、そのオフセットの「置換 watchpoint」を発火させておく。以後この IC がスローパスを通らずに値を書き換えるので、「このプロパティの値は変わっていない」と信じている最適化コードに事前に知らせておく必要があるからである（§11.3）。</p>
+
+<div class="box note" id="s4-note">
+  <span class="box-label">注 4.1</span>
+  <p><code>Unset</code> モード（不在のキャッシュ）は共用体・asm・<code>setUnsetMode()</code> まで一式が存在するが、唯一の呼び出し元である <code>setupGetByIdPrototypeCache</code> に到達する条件が <code>!slot.isUnset()</code> で絞られているため、<span class="src"><code>llint/LLIntSlowPaths.cpp:863</code></span> 現リビジョンでは到達不能である。同様に <code>get_by_val</code> には LLInt レベルのプロパティキャッシュは無く（<code>ArrayProfile</code> と添字アクセスのファストパスのみ）、<code>get_by_id_with_this</code> と <code>in_by_id</code> はメタデータすら持たない。ソースを読む際は「存在するコード」と「実際に使われている経路」を区別すること。</p>
+</div>
+
+<h3><span class="h3-no">4.6</span>この節で学ぶべきこと</h3>
+<p>LLInt の IC には JIT 版のすべての要素が縮小版で含まれている。すなわち、（1）ガードは structureID 比較、（2）ペイロードは (structure, offset[, holder]) の組、（3）スローパスは「一般の道で答えを出し、その副産物 <code>PropertySlot</code> からキャッシュ可否を判断する」、（4）他オブジェクトに関する仮定は条件集合として表現し watchpoint で守る、（5）put の遷移キャッシュは「structureID の書き換え」そのもの、である。同じメタデータは Baseline JIT が自分の IC の初期形状を決めるプロファイルとしても読み（§8.4）、DFG が最終手段のプロファイルとして読む（<code>GetByStatus::computeFromLLInt</code>、§12）。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/GetByIdMetadata.h</code> — 共用体。<code>get_length</code>・<code>iterator_open</code>・<code>iterator_next</code>・<code>instanceof</code> も同じ共用体を使う（<code>bytecode/BytecodeList.rb</code>）</li>
+    <li><code>llint/LowLevelInterpreter64.asm:1591-1614</code>（ロード／ストアマクロ）、<code>1639-1700</code>（<code>get_by_id</code>）、<code>1745-1815</code>（<code>put_by_id</code>）、<code>1818-1905</code>（<code>get_by_val</code>）</li>
+    <li><code>llint/LLIntSlowPaths.cpp:794-915</code>（get 側）、<code>1068-1155</code>（put 側）</li>
+    <li><code>bytecode/LLIntPrototypeLoadAdaptiveStructureWatchpoint.{h,cpp}</code></li>
+    <li><code>bytecode/CodeBlock.cpp:1335-1390</code>（GC 中の遷移伝播）、<code>1494-1746</code>（GC 終了時の掃除）</li>
+    <li>オプション：<code>useLLIntICs</code>（<code>runtime/OptionsList.h:641</code>）、<code>prototypeHitCountForLLIntCaching</code>（<code>:546</code>）</li>
+  </ul>
+</div>
+
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s5">
+<h2><span class="sec-no">§5</span><span class="sec-title">PropertyInlineCache オブジェクト</span></h2>
+<div class="prose">
+
+<p class="lead">JIT 階層では、アクセスサイト 1 つにつき <code>PropertyInlineCache</code> が 1 個対応する。IC の現在状態・観測した事実・生成したコードへの参照・各種カウンタをまとめて持つ、IC 基盤の中心的なデータ構造である。以前は <code>StructureStubInfo</code> と呼ばれていた。</p>
+
+<h3><span class="h3-no">5.1</span>クラス構成</h3>
+<p><code>PropertyInlineCache</code> は基底クラスで、1 ビットの <code>m_icType</code> により <code>HandlerPropertyInlineCache</code>（Baseline／DFG）か <code>RepatchingPropertyInlineCache</code>（FTL）のどちらかである。<span class="src"><code>bytecode/PropertyInlineCache.h:121-127, 456-672</code></span> 派生クラス固有のフィールドは驚くほど少ない。</p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 5.1</span>派生クラス固有のフィールド</caption>
+<thead><tr><th>クラス</th><th>固有フィールド</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td rowspan="2"><code>HandlerPropertyInlineCache</code></td><td><code>m_slowOperation</code></td><td>スローパスが間接呼び出しする C++ 関数。<code>Optimize</code> → <code>Megamorphic</code> → <code>GaveUp</code> と差し替えられる（§6.1）</td></tr>
+<tr><td><code>m_inlinedHandler</code></td><td>コールサイトの inline 検査に昇格させた handler（§8.3）</td></tr>
+<tr><td rowspan="4"><code>RepatchingPropertyInlineCache</code></td><td><code>startLocation</code></td><td>関数本体内のスラブの先頭アドレス</td></tr>
+<tr><td><code>m_slowPathCallLocation</code></td><td>差し替え対象の call 命令の位置</td></tr>
+<tr><td><code>m_stub</code></td><td><code>PolymorphicAccess</code>：ケース（<code>AccessCase</code>）の一覧（§9）</td></tr>
+<tr><td><code>m_usedRegisters</code></td><td>サイトで生きているレジスタ集合。stub 生成時に退避が必要なものを知るため</td></tr>
+</tbody>
+</table>
+</div>
+<p>基底クラスに置かれた共通フィールドのうち重要なものを挙げる。<span class="src"><code>bytecode/PropertyInlineCache.h:399-453</code></span></p>
+<ul>
+  <li><code>accessType</code> — このサイトの命令の種類（<a href="#s5-2">5.2</a>）。<code>codeOrigin</code>／<code>callSiteIndex</code> — どのバイトコード位置か（インライン展開された関数内でも一意）。</li>
+  <li><code>m_identifier</code>（<code>CacheableIdentifier</code>）— by-id 系ならプロパティ名。by-val 系では空で、名前は各ケースが個別に持つ。</li>
+  <li><code>m_cacheType</code>（<a href="#s5-3">5.3</a>）と、単相状態のペイロード <code>m_inlineAccessBaseStructureID</code>／<code>byIdSelfOffset</code>／<code>m_inlineHolder</code>。</li>
+  <li><code>m_handler</code> — <code>InlineCacheHandler</code> 連結リストの先頭。Handler IC では主役、Repatching IC でも生成した stub をラップする「単位 handler」として使われ、GC 連携コードを両者で共有している。</li>
+  <li><code>doneLocation</code>／<code>slowPathStartLocation</code> — stub が成功時・失敗時に飛び戻る番地（Repatching IC）。</li>
+  <li>観測フラグ：<code>tookSlowPath</code>（GaveUp 経路を通った）、<code>sawNonCell</code>（プリミティブが来た）、<code>everConsidered</code>（一度でもキャッシュを検討した）、<code>resetByGC</code>。これらは §12 の <code>summary()</code> の材料になる。</li>
+  <li>抑制用カウンタ：<code>countdown</code>、<code>repatchCount</code>、<code>numberOfCoolDowns</code>、<code>bufferingCountdown</code>、<code>m_bufferedStructures</code>（<a href="#s5-4">5.4</a>）。</li>
+  <li>レジスタ割当 <code>m_baseGPR</code>／<code>m_valueGPR</code>／<code>m_extraGPR</code>／<code>m_propertyCacheGPR</code> 等。Handler IC では <code>initializePredefinedRegisters()</code> が <code>BaselineJITRegisters</code> の固定値を入れる。<span class="src"><code>bytecode/PropertyInlineCache.cpp:658-761</code></span> DFG も同じ固定レジスタへ被演算子を寄せてから IC を呼ぶため、handler の機械語を Baseline と DFG の間で共有できる。</li>
+</ul>
+
+<h3 id="s5-2"><span class="h3-no">5.2</span>AccessType：何の命令のサイトか</h3>
+<p><code>AccessType</code> は 30 種類あり、<span class="src"><code>bytecode/PropertyInlineCache.h:54-91</code></span> 大きく次のように分類できる。<code>hasConstantIdentifier()</code> <span class="src"><code>:749-786</code></span> が真の種類（by-id 系）ではプロパティ名がコンパイル時定数なので structureID 検査だけで済み、偽の種類（by-val 系、instanceof、brand）ではキー値の検査がガードに加わる。</p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 5.2</span><code>AccessType</code> の分類</caption>
+<thead><tr><th>系統</th><th>種類</th><th>名前は定数か</th></tr></thead>
+<tbody>
+<tr><td>読み出し</td><td><code>GetById</code>, <code>GetByIdWithThis</code>, <code>GetByIdDirect</code>, <code>GetPrivateNameById</code></td><td>定数</td></tr>
+<tr><td></td><td><code>GetByVal</code>, <code>GetByValWithThis</code>, <code>GetPrivateName</code></td><td>実行時</td></tr>
+<tr><td>書き込み</td><td><code>PutById{Strict,Sloppy}</code>, <code>PutByIdDirect{Strict,Sloppy}</code>, <code>DefinePrivateNameById</code>, <code>SetPrivateNameById</code></td><td>定数</td></tr>
+<tr><td></td><td><code>PutByVal…</code>（4 種）, <code>DefinePrivateNameByVal</code>, <code>SetPrivateNameByVal</code></td><td>実行時</td></tr>
+<tr><td>存在検査</td><td><code>InById</code> ／ <code>InByVal</code>, <code>HasPrivateName</code>, <code>HasPrivateBrand</code></td><td>定数 ／ 実行時</td></tr>
+<tr><td>削除</td><td><code>DeleteById{Strict,Sloppy}</code> ／ <code>DeleteByVal{Strict,Sloppy}</code></td><td>定数 ／ 実行時</td></tr>
+<tr><td>その他</td><td><code>InstanceOf</code>, <code>CheckPrivateBrand</code>, <code>SetPrivateBrand</code></td><td>実行時</td></tr>
+</tbody>
+</table>
+</div>
+<p>strict／sloppy や direct の別が <code>AccessType</code> に織り込まれているのは、Handler IC の共有 thunk がスローパス関数や振る舞いを IC のフィールドから読むのではなく <code>AccessType</code> ごとに 1 本ずつ用意されているためである（例：<code>putByIdStrictSetterHandler</code> と <code>putByIdSloppySetterHandler</code>）。</p>
+
+<h3 id="s5-3"><span class="h3-no">5.3</span>CacheType：IC の大まかな状態</h3>
+<p><code>CacheType</code> は IC が今どんな形で答えを持っているかを表す。<span class="src"><code>bytecode/InlineCacheHandler.h:44-53</code></span></p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 5.3</span><code>CacheType</code></caption>
+<thead><tr><th>値</th><th>意味</th><th>Handler IC での実現</th><th>Repatching IC での実現</th></tr></thead>
+<tbody>
+<tr><td><code>Unset</code></td><td>何も覚えていない</td><td>リストにスローパス handler のみ</td><td>スラブはスローパスへの呼び出し</td></tr>
+<tr><td><code>GetByIdSelf</code> / <code>PutByIdReplace</code> / <code>InByIdSelf</code></td><td>自分自身のプロパティ 1 ケース</td><td>inline 検査に昇格した handler の <code>cacheType</code>（IC 全体の <code>m_cacheType</code> は <code>Stub</code>）</td><td><code>InlineAccess</code> がスラブに焼き込んだ状態</td></tr>
+<tr><td><code>GetByIdPrototype</code></td><td>プロトタイプ上のプロパティ 1 ケース</td><td>同上（holder 付き）</td><td>（使わない）</td></tr>
+<tr><td><code>ArrayLength</code> / <code>StringLength</code></td><td><code>length</code> 特殊ケース</td><td><code>ArrayLength</code> はコード生成時に予約（<code>preconfiguredCacheType</code>）</td><td>スラブに焼き込み</td></tr>
+<tr><td><code>Stub</code></td><td>ケースを生成済み</td><td>handler リストに 1 個以上のケース</td><td>スラブは <code>PolymorphicAccess</code> stub へのジャンプ</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>preconfiguredCacheType</code> は、コード生成時に「このサイトの inline 検査はどの形にしておくか」を決めた値である。Baseline は LLInt のメタデータが <code>ProtoLoad</code> なら <code>GetByIdPrototype</code> を、<code>get_length</code> 命令なら <code>ArrayLength</code> を、それ以外は <code>GetByIdSelf</code> を選ぶ。<span class="src"><code>jit/JITPropertyAccess.cpp:557-628</code></span> DFG は <code>GetByStatus::preferredCacheType()</code> から決める。<span class="src"><code>bytecode/GetByStatus.cpp:811-820</code></span> 実行時に生成された handler の <code>cacheType</code> がこれと一致したときだけ、inline 検査に昇格できる（§8.3）。</p>
+
+<h3 id="s5-4"><span class="h3-no">5.4</span>カウンタ：育てすぎないための抑制</h3>
+<p>IC を育てる操作（ケースの追加、stub の再生成）はそれ自体が高価であり、形が絶えず変わるサイトで毎回行うと逆に遅くなる。<code>considerRepatchingCacheImpl()</code> <span class="src"><code>bytecode/PropertyInlineCache.h:237-331</code></span> は、スローパスが「今回 IC を育ててよいか」を問い合わせる関門で、以下の 3 段階の抑制を行う。すべてのスローパス operation は、まずこの関門を通ってから <code>Repatch.cpp</code> に進む。</p>
+<ol class="steps">
+  <li><strong><code>countdown</code></strong>（初期値 1）— 0 のときだけ先へ進み、そうでなければ減らして「今回は何もしない」。初期値が 1 なので、<em>JIT の IC は最初のスローパス通過ではキャッシュせず、2 回目で初めて育つ</em>。stub 内で「キャッシュ不能な理由で失敗した」経路（<code>m_failAndIgnore</code>）はこの値を +1 して、次のスローパスに育てさせないようにする。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:8050-8060</code></span></li>
+  <li><strong>クールダウン</strong>— 育てるたびに <code>repatchCount</code> を増やし、<code>repatchCountForCoolDown</code>（既定 8）を超えたら <code>countdown</code> に <code>initialCoolDownCount</code>（既定 20）<code>&lt;&lt; numberOfCoolDowns</code> を設定して、しばらく（回を追うごとに指数的に長く）育てるのをやめる。</li>
+  <li><strong>バッファリングと重複除去</strong>— <code>bufferingCountdown</code>（既定 6）が残っている間は、既に <code>m_bufferedStructures</code> に載っている Structure については「何もしない」を返し、新しい Structure のときだけ先へ進む。Repatching IC ではさらに、この期間中に追加されたケースは <code>PolymorphicAccess</code> の一覧に溜めるだけでコード生成せず、<code>bufferingCountdown</code> が 0 になった時点でまとめて 1 回だけ再生成する（§9.3）。</li>
+</ol>
+
+<h3><span class="h3-no">5.5</span>ライフサイクル：unlinked から linked へ</h3>
+<p>Baseline と DFG のコンパイラは、コンパイル時には <code>PropertyInlineCache</code> 本体を作らない。代わりに <code>accessType</code>・識別子・<code>preconfiguredCacheType</code>・命令位置などだけを持つ小さな POD、<code>BaselineUnlinkedPropertyInlineCache</code>／<code>DFG::UnlinkedPropertyInlineCache</code> を配列に記録する。<span class="src"><code>bytecode/PropertyInlineCache.h:788-803</code>, <code>dfg/DFGJITCode.h:55-69</code></span> 機械語は「<code>jitDataRegister</code> から <code>(i+1) × sizeof(HandlerPropertyInlineCache)</code> だけ手前」という相対位置で i 番目の IC を参照するようにコンパイルされる。<span class="src"><code>jit/JITInlines.h:566-569</code>, <code>dfg/DFGJITCompiler.cpp:507-510</code></span></p>
+<p>実体の <code>HandlerPropertyInlineCache</code> は、コードを <code>CodeBlock</code> に据え付ける時点で <code>BaselineJITData</code>／<code>DFG::JITData</code> の先頭側に配列として確保され、<code>initializeFromUnlinkedPropertyInlineCache()</code> で POD から初期化される。<span class="src"><code>bytecode/CodeBlock.cpp:789-850</code>, <code>bytecode/PropertyInlineCache.cpp:763-826</code></span> この分離のおかげで、Baseline の機械語は同じ <code>UnlinkedCodeBlock</code> から作られた別の <code>CodeBlock</code>（別のグローバルオブジェクトで実行される同じ関数など）の間で共有でき（<code>useBaselineJITCodeSharing</code>）、しかも IC の中身は CodeBlock ごとに独立している。FTL だけは従来どおり、コンパイル中に本物の <code>RepatchingPropertyInlineCache</code> を確保してそのアドレスを機械語に埋め込む。<span class="src"><code>ftl/FTLState.cpp:172-178</code></span></p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/PropertyInlineCache.h</code> — 全体。特に <code>97-119</code>（設計コメント）、<code>237-331</code>（抑制関門）、<code>398-453</code>（フィールド）</li>
+    <li><code>bytecode/PropertyInlineCache.cpp:658-761</code>（固定レジスタ）、<code>763-826</code>（unlinked からの初期化）</li>
+    <li><code>jit/BaselineJITCode.h:88-153</code>、<code>dfg/DFGJITCode.h:160-230</code> — <code>ButterflyArray</code> としての JITData</li>
+    <li><code>runtime/OptionsList.h:104-110, 264</code> — カウンタの既定値</li>
+  </ul>
+</div>
+
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s6">
+<h2><span class="sec-no">§6</span><span class="sec-title">スローパスからケース生成まで</span></h2>
+<div class="prose">
+
+<p class="lead">IC が育つのは、必ずガードが外れてスローパスに落ちた瞬間である。本節では JIT 階層に共通の C++ 側の流れ——スローパス operation → 抑制関門 → <code>Repatch.cpp</code> の判定木 → <code>AccessCase</code> の生成 → <code>addAccessCase</code>——を、<code>get_by_id</code> を例に追う。Handler IC と Repatching IC の違いは、この流れの最後の一歩にしか現れない。</p>
+</div>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 880 430" role="img" aria-label="ガード失敗から IC が育つまでの流れ。operationGetByIdOptimize が一般の道で答えを求め、considerRepatchingCacheBy の関門を通ると repatchGetBy と tryCacheGetBy が PropertySlot を検査する。結果は RetryCacheLater、GiveUpOnCache、または AccessCase の生成のいずれかで、生成された AccessCase は addAccessCase により Handler IC なら handler として prepend、Repatching IC なら PolymorphicAccess に溜められて stub が再生成される。megamorphic 化した場合はスローパスが差し替えられる">
+  <defs>
+    <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+    <marker id="a6w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
+    <marker id="a6a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arra"/></marker>
+  </defs>
+  <!-- row 1 -->
+  <rect x="20" y="20" width="130" height="56" class="bxw"/>
+  <text x="85" y="43" text-anchor="middle" class="t-s t-b t-w jp">ガード失敗</text>
+  <text x="85" y="62" text-anchor="middle" class="t-xs jp">JIT コード → スローパス</text>
+  <path d="M150 48 L178 48" class="ln" marker-end="url(#a6)"/>
+  <rect x="180" y="20" width="200" height="56" class="bx"/>
+  <text x="280" y="43" text-anchor="middle" class="t-s t-b">operationGetByIdOptimize</text>
+  <text x="280" y="62" text-anchor="middle" class="t-xs jp">一般の道で答えを計算 → PropertySlot</text>
+  <path d="M380 48 L408 48" class="ln" marker-end="url(#a6)"/>
+  <rect x="410" y="20" width="200" height="56" class="bx"/>
+  <text x="510" y="43" text-anchor="middle" class="t-s t-b">considerRepatchingCacheBy</text>
+  <text x="510" y="62" text-anchor="middle" class="t-xs jp">§5.4 の関門（countdown 等）</text>
+  <path d="M610 48 L648 48" class="ln" marker-end="url(#a6)"/>
+  <text x="629" y="40" text-anchor="middle" class="t-xs jp">通過</text>
+  <rect x="650" y="20" width="210" height="56" class="bx"/>
+  <text x="755" y="40" text-anchor="middle" class="t-s t-b">repatchGetBy →</text>
+  <text x="755" y="55" text-anchor="middle" class="t-s t-b">tryCacheGetBy</text>
+  <text x="755" y="70" text-anchor="middle" class="t-xs jp">§6.2 の判定木</text>
+  <!-- deny loop -->
+  <path d="M510 76 L510 96 L280 96 L280 78" class="lnd" marker-end="url(#a6)"/>
+  <text x="395" y="110" text-anchor="middle" class="t-xs jp">拒否：答えだけ返して IC には触れない</text>
+  <!-- bus from tryCache to outcomes -->
+  <path d="M755 76 L755 128" class="ln"/>
+  <path d="M120 128 L755 128" class="ln"/>
+  <path d="M120 128 L120 150" class="ln" marker-end="url(#a6)"/>
+  <path d="M400 128 L400 150" class="lnw" marker-end="url(#a6w)"/>
+  <path d="M755 128 L755 150" class="ln" marker-end="url(#a6)"/>
+  <text x="770" y="115" class="t-xs jp">判定結果</text>
+  <!-- outcomes row -->
+  <rect x="20" y="152" width="230" height="64" class="bx2"/>
+  <text x="135" y="172" text-anchor="middle" class="t-s t-b">RetryCacheLater</text>
+  <text x="135" y="190" text-anchor="middle" class="t-xs jp">dictionary を flatten した等：今回は何もせず</text>
+  <text x="135" y="206" text-anchor="middle" class="t-xs jp">次回のスローパスで再挑戦</text>
+  <rect x="290" y="152" width="230" height="64" class="bxw"/>
+  <text x="405" y="172" text-anchor="middle" class="t-s t-b t-w">GiveUpOnCache</text>
+  <text x="405" y="190" text-anchor="middle" class="t-xs jp">スローパスを *GaveUp に差し替え</text>
+  <text x="405" y="206" text-anchor="middle" class="t-xs jp">以後この IC は育たない</text>
+  <rect x="600" y="152" width="260" height="64" class="bx"/>
+  <text x="730" y="172" text-anchor="middle" class="t-s t-b jp">AccessCase を 1 個つくる　§7</text>
+  <text x="730" y="190" text-anchor="middle" class="t-xs jp">Load / Miss / Getter / Transition … の種類と</text>
+  <text x="730" y="206" text-anchor="middle" class="t-xs jp">structure・offset・条件集合</text>
+  <!-- addAccessCase -->
+  <path d="M730 216 L730 246" class="ln" marker-end="url(#a6)"/>
+  <rect x="560" y="248" width="300" height="40" class="bx"/>
+  <text x="710" y="273" text-anchor="middle" class="t-s t-b">PropertyInlineCache::addAccessCase</text>
+  <!-- split -->
+  <path d="M640 288 L640 322" class="lna" marker-end="url(#a6a)"/>
+  <path d="M790 288 L790 322" class="lna" marker-end="url(#a6a)"/>
+  <rect x="470" y="324" width="190" height="90" class="bxa"/>
+  <text x="565" y="345" text-anchor="middle" class="t-s t-b t-a jp">Handler IC　§8</text>
+  <text x="565" y="364" text-anchor="middle" class="t-xs">compileHandler()</text>
+  <text x="565" y="380" text-anchor="middle" class="t-xs jp">1 ケース = 1 handler を作り</text>
+  <text x="565" y="396" text-anchor="middle" class="t-xs jp">リスト先頭に prepend。即座に有効</text>
+  <rect x="670" y="324" width="190" height="90" class="bxa"/>
+  <text x="765" y="345" text-anchor="middle" class="t-s t-b t-a jp">Repatching IC　§9</text>
+  <text x="765" y="364" text-anchor="middle" class="t-xs">PolymorphicAccess に追加</text>
+  <text x="765" y="380" text-anchor="middle" class="t-xs jp">溜めてから compile() で</text>
+  <text x="765" y="396" text-anchor="middle" class="t-xs jp">stub を丸ごと再生成</text>
+  <!-- megamorphic outcome from addAccessCase -->
+  <path d="M560 268 L250 268 L250 322" class="lnw" marker-end="url(#a6w)"/>
+  <rect x="120" y="324" width="260" height="90" class="bxw"/>
+  <text x="250" y="345" text-anchor="middle" class="t-s t-b t-w">GeneratedMegamorphicCode</text>
+  <text x="250" y="364" text-anchor="middle" class="t-xs jp">ケース数が 8 に達し畳み込めた　§10</text>
+  <text x="250" y="380" text-anchor="middle" class="t-xs jp">スローパスを *Megamorphic に差し替え</text>
+  <text x="250" y="396" text-anchor="middle" class="t-xs jp">（GeneratedFinalCode なら *GaveUp に）</text>
+  <text x="400" y="262" text-anchor="middle" class="t-xs t-w jp">結果の種類によっては</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 6.1</span>ガード失敗から IC が育つまで。実線は通常の流れ、破線（琥珀色）はキャッシュを諦める・切り替える流れ。<code>tryCacheGetBy</code> が返す 4 値 <code>GiveUpOnCache / RetryCacheLater / AttemptToCache / PromoteToMegamorphic</code> <span class="src"><code>bytecode/Repatch.cpp:333-338</code></span> のうち、スローパス関数の差し替えを引き起こすのは <code>GiveUpOnCache</code> と <code>PromoteToMegamorphic</code> の 2 つである。</figcaption>
+</figure>
+
+<div class="prose">
+<h3><span class="h3-no">6.1</span>3 種類のスローパス operation</h3>
+<p>1 つの <code>AccessType</code> につき、スローパスとして呼ばれうる C++ 関数は 3 種類ある。<span class="src"><code>jit/JITOperations.cpp</code></span></p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 6.1</span><code>get_by_id</code> のスローパス operation（<code>put</code>／<code>in</code> も同じ三つ組を持つ。<code>delete</code> や <code>instanceof</code> のように megamorphic 版が無い種類は <code>Optimize</code>／<code>GaveUp</code> の 2 つ）</caption>
+<thead><tr><th>関数</th><th>いつ設定されるか</th><th>すること</th></tr></thead>
+<tbody>
+<tr><td><code>operationGetByIdOptimize</code></td><td>初期状態</td><td>答えを計算し、関門を通れば <code>repatchGetBy</code> で IC を育てる</td></tr>
+<tr><td><code>operationGetByIdMegamorphic</code></td><td>IC が megamorphic 化したとき</td><td>VM 全体の <code>MegamorphicCache</code> を引き、外れたら一般の道で答えを求めて表に登録する（§10）。登録できない事象が続くと <code>GaveUp</code> へ</td></tr>
+<tr><td><code>operationGetByIdGaveUp</code></td><td>キャッシュ不能と判明したとき</td><td><code>tookSlowPath = true</code> を立てて答えを返すだけ。以後 IC は二度と育たない</td></tr>
+</tbody>
+</table>
+</div>
+<p>これらは引数として <code>(base, PropertyInlineCache*)</code> しか受け取らない。プロパティ名もグローバルオブジェクトも IC から取り出す（<code>propertyCache-&gt;identifier()</code>、<code>propertyCache-&gt;globalObject()</code>）。差し替えの実装は、Handler IC では <code>m_slowOperation</code> フィールドへの代入 1 行、Repatching IC では call 命令の書き換えである。<span class="src"><code>bytecode/Repatch.cpp:324-331</code></span></p>
+<p><code>Optimize</code> 版の骨格は次のとおりで、<strong>答えの計算とキャッシュ判断が同じ <code>PropertySlot</code> を共有している</strong>点が要である。一般の道が「どこで・どんな種類のプロパティとして見つけたか」を slot に残していくので、IC 側はそれを読むだけでよい。</p>
+<pre><code>baseValue.getPropertySlot(globalObject, identifier, [&amp;](bool found, PropertySlot&amp; slot) {
+    <span class="k">if</span> (propertyCache-&gt;<span class="hi">considerRepatchingCacheBy</span>(vm, codeBlock, baseValue.structureOrNull(), identifier))
+        <span class="hi">repatchGetBy</span>(globalObject, codeBlock, baseValue, identifier, slot, *propertyCache, GetByKind::ById, <span class="k">false</span>);
+    <span class="k">return</span> found ? slot.getValue(globalObject, identifier) : jsUndefined();
+});</code></pre>
+
+<h3><span class="h3-no">6.2</span><code>tryCacheGetBy</code>：キャッシュ可能性の判定木</h3>
+<p><code>tryCacheGetBy</code> <span class="src"><code>bytecode/Repatch.cpp:471-744</code></span> は約 270 行の関数で、IC 基盤の「知識」の大半がここに集約されている。判定は概ね次の順序で行われる。</p>
+<ol class="steps">
+  <li><strong>プリミティブは対象外。</strong> base がセルでなければ <code>GiveUpOnCache</code>（<code>"str".length</code> のようなアクセスは、文字列がセルなのでここは通る）。</li>
+  <li><strong>特殊な名前・特殊なオブジェクト。</strong> <code>length</code> は配列（<code>ArrayLength</code>）・文字列（<code>StringLength</code>）・arguments オブジェクトについて専用ケース、正規表現の <code>lastIndex</code>、モジュール名前空間オブジェクト、<code>Proxy</code>（<code>ProxyObjectLoad</code>：Proxy のトラップ呼び出し自体をケースにする）を、Structure を見る前に振り分ける。</li>
+  <li><strong>slot が cacheable か。</strong> <code>!slot.isCacheable() &amp;&amp; !slot.isUnset()</code> なら諦める。一般の道の C++ 側は、オフセット付きの <code>setValue</code>／<code>setCacheableCustom</code>／<code>setCacheableGetterSlot</code> を使ったときだけ cacheable と印を付け、それ以外の設定関数は自動的に caching 不可になる。<span class="src"><code>runtime/PropertySlot.h:218-346</code></span> つまり「キャッシュしてよい」は各オブジェクト実装が積極的に宣言するものであり、既定は不可である。DOM のような exotic な実装が安全側に倒れるための重要な設計方針である。</li>
+  <li><strong>base の Structure が cacheable か</strong>（<code>actionForCell</code>、§2.4）。<code>JSGlobalProxy</code>（window の代理）ならターゲットに付け替えて続行し、ケースに「global proxy 経由」の印を付ける。</li>
+  <li><strong>単相の自己アクセスは最速経路へ。</strong> IC がまだ <code>Unset</code> で、値プロパティかつ <code>slot.slotBase() == base</code>（自分自身のプロパティ）なら、<code>InlineAccess::generateSelfPropertyAccess</code> でスラブに直接焼き込む。これは Repatching IC でのみ成功し、Handler IC では常に失敗して次へ進む（Handler IC では通常のケース生成が同じ役割を果たす。§8.3）。</li>
+  <li><strong>プロトタイプ上か不在なら、条件集合を作る</strong>（<a href="#s6-4">6.4</a>）。<code>prepareChainForCaching</code> でチェーンを点検し、poly proto なら <code>PolyProtoAccessChain</code>、そうでなければ <code>ObjectPropertyConditionSet</code> を生成する。作れなければ諦める。</li>
+  <li><strong>ケースの種類を決めて <code>AccessCase</code> を生成する。</strong> 値なら <code>Load</code>、不在なら <code>Miss</code>、JS の getter なら <code>Getter</code>（組み込みの特定 getter は <code>IntrinsicGetter</code>——たとえば TypedArray の <code>length</code>／<code>byteLength</code>、<code>Map</code>／<code>Set</code> の <code>size</code>、<code>__proto__</code>、RegExp のフラグ getter などは呼び出さずにその場で展開できる。<span class="src"><code>bytecode/InlineCacheCompiler.cpp</code> の <code>canEmitIntrinsicGetter</code></span>）、C++ の getter なら <code>CustomAccessorGetter</code>／<code>CustomValueGetter</code>。</li>
+  <li><strong><code>addAccessCase</code></strong> に渡し、結果に応じて戻り値を決める（<a href="#s6-3">6.3</a>）。</li>
+</ol>
+<p><code>tryCachePutBy</code> <span class="src"><code>bytecode/Repatch.cpp:1022-1319</code></span> も構造は同じで、<code>PutPropertySlot</code> の種類（<code>ExistingProperty</code> → <code>Replace</code>、<code>NewProperty</code> → <code>Transition</code>、setter、custom）で分岐する。<code>Transition</code> の場合は、書き込み<em>前</em>の Structure（operation が事前に控えておく）から現在の Structure への遷移が確かに 1 段の追加遷移であることを <code>addPropertyTransitionToExistingStructureConcurrently</code> で確認し、さらに通常の代入なら「チェーン上に setter や読み取り専用が無い」条件集合（<code>generateConditionsForPropertySetterMiss</code>）を要求する。<code>mayBePrototype()</code> な Structure への追加はキャッシュしない。<code>Replace</code> の場合は §4.5 と同じく <code>didCachePropertyReplacement()</code> を先に呼ぶ。</p>
+
+<h3 id="s6-3"><span class="h3-no">6.3</span><code>addAccessCase</code> と <code>AccessGenerationResult</code></h3>
+<p><code>PropertyInlineCache::addAccessCase</code> <span class="src"><code>bytecode/PropertyInlineCache.cpp:159-285</code></span> は、ここで初めて Handler／Repatching で分岐する。結果は <code>AccessGenerationResult</code> <span class="src"><code>bytecode/InlineCacheCompiler.h:51-110</code></span> で返り、その種類が IC の次の状態を決める。</p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 6.2</span><code>AccessGenerationResult::Kind</code></caption>
+<thead><tr><th>種類</th><th>意味</th><th>呼び出し側の反応</th></tr></thead>
+<tbody>
+<tr><td><code>MadeNoChanges</code></td><td>既存ケースで既にカバーされている等</td><td>何もしない（次回また来る。§5.4 の関門が頻度を抑える）</td></tr>
+<tr><td><code>GaveUp</code></td><td>コードが生成できなかった（実行メモリ不足等）</td><td><code>GiveUpOnCache</code></td></tr>
+<tr><td><code>Buffered</code></td><td>Repatching IC：一覧に溜めただけ</td><td>何もしない</td></tr>
+<tr><td><code>GeneratedNewCode</code></td><td>新しい handler／stub を据え付けた</td><td>次回のスローパスでさらに育てうる</td></tr>
+<tr><td><code>GeneratedFinalCode</code></td><td>据え付けたが、ケース数が上限（8）に達した</td><td><code>GiveUpOnCache</code>：以後スローパスは <code>GaveUp</code></td></tr>
+<tr><td><code>GeneratedMegamorphicCode</code></td><td>megamorphic ケースに畳み込んだ</td><td><code>PromoteToMegamorphic</code>：スローパスを <code>Megamorphic</code> に</td></tr>
+<tr><td><code>ResetStubAndFireWatchpoints</code></td><td>poly proto へ転換すべきと判明</td><td>IC をリセットし、指定された watchpoint を発火</td></tr>
+</tbody>
+</table>
+</div>
+<p>なお <code>GeneratedFinalCode</code> のときも据え付けたコード自体は残るので、8 ケースまでは IC で捌き、9 種類目以降だけがスローパスに落ちる。megamorphic に畳み込めない種類のサイト（getter とデータが混在するなど）は、この「8 ケース＋スローパス」が最終形になる。</p>
+
+<h3 id="s6-4"><span class="h3-no">6.4</span>他オブジェクトに関する仮定：<code>ObjectPropertyConditionSet</code></h3>
+<p><code>o.x</code> が <code>o</code> のプロトタイプ <code>P</code> 上で見つかった場合、「Structure(o) == S」というガードだけでは不十分である。S から P が決まる（mono proto）としても、その後 <code>o</code> と <code>P</code> の間の中間プロトタイプに <code>x</code> が足されたり、P の <code>x</code> が削除されたりすれば答えが変わるからである。JSC はこの種の「他オブジェクトに関する仮定」を、<code>ObjectPropertyCondition</code>（対象オブジェクト ＋ 条件）の集合として<em>データとして</em>表現し、AccessCase に添付する。</p>
+<div class="box def">
+  <span class="box-label">定義</span>
+  <p><span class="def-no">定義 6.1</span><code>PropertyCondition</code> の主な種類。<span class="src"><code>bytecode/PropertyCondition.h:37-46</code></span></p>
+  <ul>
+    <li><strong>Presence(uid, offset, attributes)</strong> — そのオブジェクトに <code>uid</code> がこのオフセット・属性で存在する。</li>
+    <li><strong>Absence(uid, prototype)</strong> — そのオブジェクトに <code>uid</code> が無く、かつそのオブジェクトのプロトタイプが <code>prototype</code> である（次の段へ進んでよいことも同時に保証する）。</li>
+    <li><strong>AbsenceOfSetEffect(uid, prototype)</strong> — <code>uid</code> への代入がそのオブジェクトで横取りされない（setter・読み取り専用・custom setter が無い）。put の遷移キャッシュ用。</li>
+    <li><strong>Equivalence(uid, value)</strong> — <code>uid</code> の値が特定の値に等しい。主に DFG の定数畳み込み用で、IC では稀。</li>
+  </ul>
+</div>
+<p>生成関数は用途ごとに用意されている。<span class="src"><code>bytecode/ObjectPropertyConditionSet.cpp:288-420</code></span> どれも base 自身は含めず（base は structureID ガードで守られる）、<code>prototypeForLookup()</code> から先のチェーンを歩いてオブジェクトごとに 1 条件を作る。</p>
+<ul>
+  <li><code>generateConditionsForPrototypePropertyHit</code> — 中間の各プロトタイプに Absence、保持元に Presence。</li>
+  <li><code>generateConditionsForPropertyMiss</code> — チェーン末尾まで全段に Absence。</li>
+  <li><code>generateConditionsForPropertySetterMiss</code> — 全段に AbsenceOfSetEffect。</li>
+</ul>
+<p>途中に Proxy、dictionary（§2.4）、poly proto があれば生成に失敗し、IC は諦める（poly proto は <code>PolyProtoAccessChain</code> という別表現に切り替わる）。この条件集合が、コード生成時に「watchpoint で守る」か「明示的な比較で守る」かに振り分けられ（§11.1）、GC 時には「参照しているオブジェクトがまだ生きているか」の点検対象になる（§11.4）。<strong>仮定を宣言的なデータとして持ち、守り方の決定をコード生成時まで遅らせる</strong>のが、JSC の IC が LLInt から FTL まで同じ条件表現を共有できている理由である。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>jit/JITOperations.cpp</code> — <code>operationGetByIdOptimize</code>／<code>GaveUp</code>／<code>Megamorphic</code>（<code>get_by_id</code> 群は 289-640 付近）</li>
+    <li><code>bytecode/Repatch.cpp:333-360</code>（<code>InlineCacheAction</code>, <code>actionForCell</code>）、<code>471-779</code>（get）、<code>1022-1353</code>（put）、<code>1617-1762</code>（in）、<code>1900-1953</code>（instanceof）</li>
+    <li><code>bytecode/PropertyInlineCache.cpp:159-285</code> — <code>addAccessCase</code></li>
+    <li><code>bytecode/InlineCacheCompiler.h:51-110</code> — <code>AccessGenerationResult</code></li>
+    <li><code>runtime/PropertySlot.h</code>、<code>runtime/PutPropertySlot.h</code> — cacheability の宣言側</li>
+    <li><code>bytecode/PropertyCondition.h</code>、<code>bytecode/ObjectPropertyConditionSet.{h,cpp}</code>（生成関数 288-420、<code>prepareChainForCaching</code> 577-671）</li>
+  </ul>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s7">
+<h2><span class="sec-no">§7</span><span class="sec-title">AccessCase：1 ケースの記述</span></h2>
+<div class="prose">
+
+<p class="lead"><code>AccessCase</code> は「ある 1 つの形に対する答え」を、機械語ではなくデータとして記述したものである。<code>Repatch.cpp</code> が生成し、<code>InlineCacheCompiler</code> が機械語に翻訳し、GC が生死を点検し、DFG が <code>GetByStatus</code> として読む——IC 基盤の各部分をつなぐ共通言語がこのクラスである。</p>
+
+<h3><span class="h3-no">7.1</span>フィールド</h3>
+<p>基底クラスのフィールドは 7 つしかない。<span class="src"><code>bytecode/AccessCase.h:396-414</code></span></p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 7.1</span><code>AccessCase</code> のフィールド</caption>
+<thead><tr><th>フィールド</th><th>意味</th></tr></thead>
+<tbody>
+<tr><td><code>m_type</code></td><td>ケースの種類（<a href="#s7-2">7.2</a>）</td></tr>
+<tr><td><code>m_structureID</code></td><td>ガードすべき base の Structure（弱参照）。<strong><code>Transition</code>／<code>Delete</code> 系では遷移<em>後</em>の Structure</strong> を持ち、遷移前は <code>previousID()</code> でたどる。新 Structure が旧 Structure を強参照しているので、1 本で 2 つを保持できるからである</td></tr>
+<tr><td><code>m_offset</code></td><td>読み書きする <code>PropertyOffset</code>。不在ケース等では <code>invalidOffset</code></td></tr>
+<tr><td><code>m_conditionSet</code></td><td>§6.4 の条件集合（自己アクセスなら空）</td></tr>
+<tr><td><code>m_polyProtoAccessChain</code></td><td>poly proto のときの、条件集合の代替表現。両者は排他</td></tr>
+<tr><td><code>m_identifier</code></td><td>プロパティ名。by-val 系のサイトではケースごとに異なるので、ここで持つ</td></tr>
+<tr><td><code>m_viaGlobalProxy</code></td><td>base が <code>JSGlobalProxy</code> で、実体はその先にあることを示す印</td></tr>
+</tbody>
+</table>
+</div>
+<p>追加情報が要る種類は派生クラスになる。<code>GetterSetterAccessCase</code>（custom accessor の関数ポインタ、DOM 属性情報、custom の場合の保持元）、<code>IntrinsicGetterAccessCase</code>（展開対象の組み込み関数）、<code>ProxyableAccessCase</code>（<code>Load</code>／<code>Miss</code> 等の一般形。追加の watchpoint set を持てる）、<code>ModuleNamespaceAccessCase</code>、<code>InstanceOfAccessCase</code> である。GC からは <code>forEachDependentCell</code> によって「このケースが参照している全セル」（Structure、条件集合の各オブジェクト、custom の保持元、intrinsic の関数など）が列挙され、1 つでも死んでいればケースごと IC がリセットされる（§11.4）。<span class="src"><code>bytecode/AccessCase.cpp:809-983</code></span></p>
+
+<h3 id="s7-2"><span class="h3-no">7.2</span>種類の分類</h3>
+<p><code>AccessCase::AccessType</code> は約 140 種類あるが、<span class="src"><code>bytecode/AccessCase.h:57-196</code></span> 大半は typed array の要素型ごとの添字アクセスの組み合わせ爆発であり、概念的には次の程度に整理できる。</p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 7.2</span><code>AccessCase</code> の種類（概念別）</caption>
+<thead><tr><th>グループ</th><th>代表的な種類</th><th>ペイロードの内容</th><th>C++／JS を呼ぶか</th></tr></thead>
+<tbody>
+<tr><td>データの読み出し</td><td><code>Load</code>, <code>Miss</code>, <code>GetGetter</code></td><td>base か保持元（<code>tryGetAlternateBase()</code>）のオフセットをロード／<code>undefined</code> を返す</td><td>呼ばない</td></tr>
+<tr><td>アクセサ</td><td><code>Getter</code>, <code>Setter</code>, <code>CustomValueGetter</code>, <code>CustomAccessorGetter</code>, <code>CustomValueSetter</code>, <code>CustomAccessorSetter</code>, <code>IntrinsicGetter</code></td><td>getter/setter セルをロードして呼び出す。custom は C++ 関数ポインタを直接呼ぶ。intrinsic はその場で展開</td><td>呼ぶ（intrinsic は原則呼ばない）</td></tr>
+<tr><td>書き込み</td><td><code>Replace</code>, <code>Transition</code></td><td>オフセットに格納。<code>Transition</code> は加えて structureID を書き換え、必要なら butterfly を（再）確保する</td><td>再確保が C++ 頼みのときだけ</td></tr>
+<tr><td>削除</td><td><code>Delete</code>, <code>DeleteNonConfigurable</code>, <code>DeleteMiss</code></td><td>削除遷移（structureID の書き換え＋スロットのクリア）／<code>false</code>／<code>true</code></td><td>呼ばない</td></tr>
+<tr><td>存在検査</td><td><code>InHit</code>, <code>InMiss</code>, <code>InstanceOfHit</code>, <code>InstanceOfMiss</code>, <code>CheckPrivateBrand</code>, <code>SetPrivateBrand</code></td><td>定数の真偽値を返す（答えは Structure から確定している）</td><td>呼ばない</td></tr>
+<tr><td>特殊オブジェクト</td><td><code>ArrayLength</code>, <code>StringLength</code>, <code>DirectArgumentsLength</code>, <code>RegExpLastIndexLoad</code>, <code>ModuleNamespaceLoad</code>, <code>ProxyObjectLoad</code> …</td><td>種類ごとの専用コード。ガードも structureID ではなく型検査になることが多い</td><td>Proxy 系は呼ぶ</td></tr>
+<tr><td>添字アクセス</td><td><code>IndexedInt32Load</code>, <code>IndexedDoubleLoad</code>, <code>IndexedContiguousStore</code>, <code>IndexedTypedArrayFloat64Load</code> …（by-val 用）</td><td>indexing shape ごとの要素アクセス。ガードは shape ビット</td><td>呼ばない</td></tr>
+<tr><td>非文字列キー</td><td><code>IndexedUndefinedKeyLoad</code>, <code>IndexedNullKeyMiss</code>, <code>IndexedTrueKeyTransition</code> …</td><td><code>o[undefined]</code> のようなキーを、名前 <code>"undefined"</code> へのアクセスとして扱う</td><td>呼ばない</td></tr>
+<tr><td>megamorphic</td><td><code>LoadMegamorphic</code>, <code>LoadMegamorphicGetter</code>, <code>StoreMegamorphic</code>, <code>InMegamorphic</code>, <code>IndexedMegamorphic*</code>, <code>InstanceOfMegamorphic</code></td><td>個別の形を覚えず、VM 全体の表を引く（§10）／一般ループ</td><td>store は呼びうる</td></tr>
+</tbody>
+</table>
+</div>
+<p>「C++／JS を呼ぶか」（<code>doesCalls()</code> <span class="src"><code>bytecode/AccessCase.cpp:985</code></span>）は重要な属性である。呼ぶケースを含む stub は、呼び出し前後でレジスタを退避・復元し、例外ハンドラを用意し、GC がスタック上の stub を見つけたときに参照セルをマークできるようにする必要がある（§8.5, §11.4）。DFG にとっても「このサイトは呼び出しを含む」（<code>MakesCalls</code>）は、その IC を <code>GetByIdFlush</code> として扱うかどうかの判断材料になる（§12）。</p>
+
+<h3><span class="h3-no">7.3</span><code>Transition</code> の 4 つの形</h3>
+<p>put の遷移ケースは、旧 Structure と新 Structure の out-of-line 容量（§2.3）の関係で 4 通りに分かれ、生成される機械語も、Handler IC の共有 thunk も 4 本に対応している。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:3650-3800</code>, <code>bytecode/InlineCacheCompiler.h</code> の <code>putByIdTransition*Handler</code></span></p>
+<ol>
+  <li><strong>非確保</strong>（容量が同じ）— スロットへ格納し structureID を書くだけ。LLInt がキャッシュするのもこの形だけである（§4.5）。</li>
+  <li><strong>新規確保</strong>（0 → 4）— stub 内で GC アロケータから直接 butterfly を確保する（インラインアロケーション。アロケータが空なら失敗経路へ）。</li>
+  <li><strong>再確保</strong>（4 → 8 など）— 同じく stub 内で確保し、旧 butterfly の内容をコピーする。</li>
+  <li><strong>C++ による再確保</strong>— オブジェクトが添字要素を持ちうる（<code>couldHaveIndexingHeader()</code>）場合は、新規確保・再確保のどちらであっても stub 内では行わず <code>operationReallocateButterfly…</code> を呼ぶ。<code>doesCalls()</code> が真になるのはこの形だけである。</li>
+</ol>
+<p>いずれの形でも、<strong>新しい butterfly と新しい structureID の書き込みは最後に行う</strong>。途中で失敗経路に抜けた場合に、それまでの作業が無かったことになるようにするためである。<span class="src"><code>bytecode/InlineCacheCompiler.cpp</code>（Transition ケース内のコメント "We set the new butterfly and the structure last"）</span> <code>createTransition</code> は、確保を伴う形に必要な数のスクラッチレジスタが確保できないプラットフォームではケース生成自体を拒否する。<span class="src"><code>bytecode/AccessCase.cpp:218</code></span></p>
+
+<h3><span class="h3-no">7.4</span>ケース同士の関係を判定する 3 つの述語</h3>
+<ul>
+  <li><strong><code>couldStillSucceed()</code></strong> — 条件集合の各条件が今も成立しているか。IC を再生成する際、既に無効になったケースを黙って捨てるために使う。<span class="src"><code>bytecode/AccessCase.cpp:1143</code></span></li>
+  <li><strong><code>canReplace(other)</code></strong> — 自分が <code>other</code> を不要にするか。structureID でガードされるケース同士なら「同じ識別子・同じ Structure」であること、<code>ArrayLength</code> や <code>IndexedInt32Load</code> のように型ビットでガードされるケースなら「同じ種類」であることが基準になる。<span class="src"><code>bytecode/AccessCase.cpp:1157</code></span> Repatching IC の再生成時に、同じガードを持つ古いケースを一覧から落とすために使う（新しいほうが新しい真実とみなされる）。Handler IC では逆に「既存ケースが新ケースを置き換えられる＝既にカバー済み」なら追加しない、という重複除去にも使う。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:7163-7169</code></span></li>
+  <li><strong><code>canBeShared(a, b)</code></strong> — 種類・オフセット・Structure・識別子・条件集合・poly proto chain・保持元がすべて等しいか。<strong>異なるサイトの IC 同士で機械語を共有できるか</strong>の判定であり、Handler IC の <code>SharedJITStubSet</code>（§8.4）の鍵になる。<span class="src"><code>bytecode/AccessCase.cpp:1631</code></span></li>
+</ul>
+<p>この 3 つが揃っていることが、ケース一覧を「宣言的なデータ」として扱える根拠である。IC は機械語を直接いじって状態を変えるのではなく、常に「一覧を編集してから翻訳し直す」形で進化する。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/AccessCase.h</code> — 種類一覧（57-196）、クラス本体（198-427）</li>
+    <li><code>bytecode/AccessCase.cpp</code> — <code>create*</code>、<code>fromPropertyInlineCache</code>（単相 inline 状態をケースに変換）、<code>doesCalls</code>、<code>couldStillSucceed</code>、<code>canReplace</code>、<code>canBeShared</code>、<code>forEachDependentCell</code>（809-983）、<code>propagateTransitions</code>（1418-1442）</li>
+    <li><code>bytecode/GetterSetterAccessCase.h</code>、<code>IntrinsicGetterAccessCase.h</code>、<code>ProxyableAccessCase.h</code>、<code>ModuleNamespaceAccessCase.h</code>、<code>InstanceOfAccessCase.h</code> — 派生クラス</li>
+  </ul>
+</div>
+
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s8">
+<h2><span class="sec-no">§8</span><span class="sec-title">Handler IC（Baseline／DFG）</span></h2>
+<div class="prose">
+
+<p class="lead">Handler IC は、このリビジョンの JSC で Baseline と DFG のすべてのプロパティ IC が採用している方式である。設計の核心は「<strong>コールサイトの機械語は一切書き換えず、IC の状態をすべてデータ構造（<code>InlineCacheHandler</code> の連結リスト）に置く</strong>」ことにある。その帰結として、handler の機械語を VM 全体で共有できるようになり、ケース追加のコストが劇的に下がった。</p>
+
+<h3><span class="h3-no">8.1</span>コールサイトの機械語</h3>
+<p>Baseline JIT が <code>get_by_id</code> に対して出力するコードは、概念的には次の 3 命令である。<span class="src"><code>jit/JITInlineCacheGenerator.cpp:58-63, 153-206</code>, <code>jit/JITPropertyAccess.cpp:557-592</code></span></p>
+<pre><code><span class="c">; propertyCacheGPR ← jitDataRegister − (i+1) × sizeof(HandlerPropertyInlineCache)      … IC のアドレス</span>
+<span class="c">; --- 単相用の inline 検査（by-id 系のみ。定数は一切埋め込まず IC のフィールドを読む） ---</span>
+load32  [base + 0], scratch
+cmp32   scratch, <span class="hi">[propertyCacheGPR + offsetOfInlineAccessBaseStructureID]</span>
+jne     .dispatch
+load32  <span class="hi">[propertyCacheGPR + offsetOfByIdSelfOffset]</span>, scratch
+loadProperty base, scratch → result                <span class="c">; 図 2.1 の判定を実行時に行う</span>
+jmp     .done
+<span class="c">; --- 一般経路：handler リストの先頭を呼ぶ（別の場所に配置される） ---</span>
+.dispatch:
+loadPtr <span class="hi">[propertyCacheGPR + offsetOfHandler]</span>, handlerGPR
+call    <span class="hi">[handlerGPR + offsetOfCallTarget]</span>
+jmp     .done</code></pre>
+<p>ここには Structure ID もオフセットも handler のアドレスも<em>定数として</em>現れない。すべて <code>PropertyInlineCache</code> のフィールドから実行時に読む。したがってこの機械語は、IC の中身が違う別の <code>CodeBlock</code> でもそのまま使え（§5.5 の共有）、IC が育っても書き換える必要が無い。by-val 系や <code>instanceof</code> のように inline 検査を持たない種類では、後半の 2 命令だけが出力される。</p>
+<p>DFG も同じコードを出力する。ただし handler の機械語が Baseline の固定レジスタ規約（<code>BaselineJITRegisters::GetById::baseJSR</code> 等）を前提としているため、DFG はレジスタをすべて退避（<code>flushRegisters()</code>）してから被演算子をその固定レジスタに寄せて IC を呼び出す。つまり DFG から見た Handler IC は 1 回の関数呼び出しに近い。<span class="src"><code>dfg/DFGSpeculativeJIT64.cpp:161-194, 7370-7414</code></span> DFG が本当に速くしたいアクセスは IC ではなくインライン展開で処理する（§12）ので、この設計で問題ないという判断である。</p>
+
+<h3><span class="h3-no">8.2</span><code>InlineCacheHandler</code> とチェーン</h3>
+</div>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 900 470" role="img" aria-label="HandlerPropertyInlineCache の m_handler が InlineCacheHandler #2 を指し、#2 の m_next が #1 を指し、#1 の m_next が終端のスローパス handler を指す連結リスト。各 handler は structureID・offset・holder などのデータと、共有 thunk の機械語を指す callTarget と jumpTarget を持つ。共有 thunk は structureID を検査して一致すればロードして ret、不一致なら m_next をたどってその jumpTarget へジャンプする">
+  <defs>
+    <marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+    <marker id="a8a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arra"/></marker>
+    <marker id="a8w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
+  </defs>
+  <!-- IC object -->
+  <rect x="20" y="24" width="230" height="130" class="bx"/>
+  <text x="135" y="46" text-anchor="middle" class="t-s t-b">HandlerPropertyInlineCache</text>
+  <line x1="20" y1="56" x2="250" y2="56" class="ln"/>
+  <text x="32" y="76" class="t-xs">inlineAccessBaseStructureID</text>
+  <text x="32" y="92" class="t-xs">byIdSelfOffset / inlineHolder</text>
+  <text x="32" y="114" class="t-s t-b">m_handler ●</text>
+  <text x="32" y="132" class="t-xs">m_slowOperation = *Optimize</text>
+  <text x="32" y="147" class="t-xs jp">m_inlinedHandler（§8.3）</text>
+  <!-- arrow to handler #2 -->
+  <path d="M118 110 L340 110 L340 194" class="lna" marker-end="url(#a8a)"/>
+  <text x="348" y="176" class="t-xs t-a jp">最新のケースが先頭</text>
+
+  <!-- handler #2 -->
+  <rect x="240" y="196" width="200" height="140" class="bxa"/>
+  <text x="340" y="217" text-anchor="middle" class="t-s t-b t-a">InlineCacheHandler #2</text>
+  <line x1="240" y1="226" x2="440" y2="226" class="lna"/>
+  <text x="250" y="245" class="t-xs">m_structureID = S₂</text>
+  <text x="250" y="261" class="t-xs">m_offset = 5,  holder = ∅</text>
+  <text x="250" y="277" class="t-xs">callTarget / jumpTarget ●</text>
+  <text x="250" y="299" class="t-s t-b">m_next ●</text>
+  <text x="250" y="322" class="t-xs">accessCase, watchpoint</text>
+  <path d="M440 294 L468 294" class="lna" marker-end="url(#a8a)"/>
+
+  <!-- handler #1 -->
+  <rect x="470" y="196" width="200" height="140" class="bxa"/>
+  <text x="570" y="217" text-anchor="middle" class="t-s t-b t-a">InlineCacheHandler #1</text>
+  <line x1="470" y1="226" x2="670" y2="226" class="lna"/>
+  <text x="480" y="245" class="t-xs">m_structureID = S₁</text>
+  <text x="480" y="261" class="t-xs">m_offset = 65,  holder = P</text>
+  <text x="480" y="277" class="t-xs">callTarget / jumpTarget ●</text>
+  <text x="480" y="299" class="t-s t-b">m_next ●</text>
+  <text x="480" y="322" class="t-xs jp">（prototype 上のケース）</text>
+  <path d="M670 294 L698 294" class="lnw" marker-end="url(#a8w)"/>
+
+  <!-- slow path handler -->
+  <rect x="700" y="196" width="180" height="140" class="bxw"/>
+  <text x="790" y="217" text-anchor="middle" class="t-s t-b t-w jp">終端：スローパス</text>
+  <line x1="700" y1="226" x2="880" y2="226" class="lnw"/>
+  <text x="710" y="245" class="t-xs jp">AccessType ごとに VM で</text>
+  <text x="710" y="259" class="t-xs jp">1 個を共有する handler</text>
+  <text x="710" y="281" class="t-xs jp">機械語は IC の</text>
+  <text x="710" y="295" class="t-xs jp">m_slowOperation を呼ぶ</text>
+  <text x="710" y="317" class="t-xs jp">→ 図 6.1 へ</text>
+
+  <!-- shared thunk -->
+  <path d="M340 336 L340 372" class="lnd" marker-end="url(#a8)"/>
+  <path d="M570 336 L570 372" class="lnd" marker-end="url(#a8)"/>
+  <rect x="240" y="374" width="640" height="82" class="bx2"/>
+  <text x="252" y="393" class="t-s t-b jp">共有 thunk（VM に 1 本ずつ）：getByIdLoadOwnPropertyHandler ／ …LoadPrototypePropertyHandler</text>
+  <text x="252" y="413" class="t-xs">prologue;  cmp32 [base+0], [handlerGPR+structureID];  jne miss;</text>
+  <text x="252" y="428" class="t-xs">ld [handlerGPR+offset];  loadProperty;  epilogue;  ret</text>
+  <text x="252" y="446" class="t-xs">miss:  handlerGPR = [handlerGPR+m_next];  jmp [handlerGPR+jumpTarget]   ← prologue を飛ばした番地</text>
+  <!-- note -->
+  <text x="290" y="60" class="t-xs jp">#1 と #2 は種類（own / prototype）が違っても、異なるのはノード内のデータだけで、</text>
+  <text x="290" y="76" class="t-xs jp">機械語は種類ごとの共有 thunk を指す。ケース追加 = ノードを 1 個作って m_handler の前につなぐ。</text>
+  <text x="290" y="96" class="t-xs jp">コールサイト：handlerGPR = IC.m_handler;  call [handlerGPR + callTarget]</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 8.1</span>2 ケースを覚えた <code>get_by_id</code> サイトの Handler IC。コールサイトは <code>m_handler</code> を呼ぶだけで、handler は自分の <code>structureID</code> と比較し、外れれば <code>m_next</code> の <code>jumpTarget</code> へジャンプして次に委ねる。リストは常にスローパス handler で終端されるので、どの handler も「次が無い」場合を考えなくてよい。<span class="src"><code>bytecode/InlineCacheHandler.h:55-177</code>, <code>bytecode/InlineCacheCompiler.cpp:5261-5311</code></span></figcaption>
+</figure>
+
+<div class="prose">
+<p><code>InlineCacheHandler</code> はキャッシュラインにアラインされ、ホットなフィールド（<code>m_structureID</code>、<code>m_next</code>、<code>m_callTarget</code>、<code>m_jumpTarget</code>、<code>m_offset</code>、<code>m_uid</code>）が先頭に集められている（ARM64 では <code>m_uid</code> がオフセット 40 にあることを <code>static_assert</code> で固定している）。<span class="src"><code>bytecode/InlineCacheHandler.h:141-176</code></span> 種類ごとに異なる補助データは共用体で、Load 系なら保持元、Transition 系なら新 structureID と新旧の butterfly サイズ、custom accessor なら関数ポインタと realm、というように <code>createPreCompiled()</code> が <code>AccessCase</code> から転記する。<span class="src"><code>bytecode/InlineCacheHandler.cpp:106-190</code></span></p>
+<p><code>m_callTarget</code> と <code>m_jumpTarget</code> の 2 本があるのは、コールサイトからは <code>call</code> で入り（prologue を実行する）、前の handler からは prologue 済みの状態で <code>jmp</code> で入るためで、<code>m_jumpTarget = m_callTarget + prologue のバイト数</code>（x86_64 で 1、ARM64E で 4、ARM64 で 0）である。<span class="src"><code>bytecode/InlineCacheHandler.cpp:63-72</code>, <code>bytecode/InlineCacheCompiler.h:429-440</code></span></p>
+<p>ケースの追加は <code>prependHandler()</code> <span class="src"><code>bytecode/PropertyInlineCache.cpp:887-905</code></span> で行われ、新しい handler の <code>m_next</code> に現在の先頭をつないでから <code>m_handler</code> を差し替える。<strong>最近見た形ほど先に検査される</strong>（LIFO）。この差し替えはポインタ 1 本の代入なので、実行中のコードとの競合を心配する必要がなく、命令キャッシュのフラッシュも要らない。</p>
+
+<h3><span class="h3-no">8.3</span>単相の高速化：inline 検査への昇格</h3>
+<p>図 8.1 の一般経路は、単相のサイトに対しても「IC をロード → handler をロード → 間接 call → 比較 → ロード → ret」という手順を要し、Repatching IC の「比較 → ロード」より明らかに遅い。これを補うのが §8.1 の inline 検査と <code>m_inlinedHandler</code> である。</p>
+<p><code>prependHandler()</code> は、生成された handler の <code>cacheType</code>（<code>GetByIdSelf</code>／<code>GetByIdPrototype</code>／<code>PutByIdReplace</code>／<code>InByIdSelf</code>）がコンパイル時に予約した <code>preconfiguredCacheType</code> と一致し、かつまだ昇格枠が空いていれば、その handler をリストにつなぐ代わりに <code>m_inlinedHandler</code> に保持し、その structureID・オフセット・保持元を <strong>IC 自身のフィールド</strong>（<code>m_inlineAccessBaseStructureID</code> 等）に転記する。<span class="src"><code>bytecode/PropertyInlineCache.cpp:828-863</code></span> コールサイトの inline 検査はこのフィールドを読むので、以後この形はリストに触れずに処理される。昇格枠は 1 つだけで、2 つ目以降のケースは通常どおりリストに入る。</p>
+<p>ここで §4 と §5.3 の伏線が回収される。Baseline は LLInt のメタデータが <code>ProtoLoad</code> だったサイトの <code>preconfiguredCacheType</code> を <code>GetByIdPrototype</code> にしておくため、プロトタイプ上のメソッド呼び出し（<code>obj.method()</code> の <code>method</code> の読み出しという最も頻出のパターン）でも inline 検査が効く。DFG は <code>GetByStatus::preferredCacheType()</code> で同じ判断をする。</p>
+
+<h3 id="s8-4"><span class="h3-no">8.4</span>3 段階の機械語共有</h3>
+<p><code>InlineCacheCompiler::compileOneAccessCaseHandler()</code> <span class="src"><code>bytecode/InlineCacheCompiler.cpp:7184-8098</code></span> は、新しい機械語を生成する前に 3 段階の共有を試みる。生成コストが低いのはこのためである。</p>
+<ol class="steps">
+  <li><strong>事前コンパイル済み thunk</strong>（<code>CommonJITThunkID::*Handler</code>）— <code>Load</code>／<code>Miss</code>／<code>Replace</code>／<code>Transition</code> の 4 形／getter／setter／custom／<code>InHit</code>／<code>Delete</code>／<code>InstanceOf</code>／private brand など、頻出の種類には、structureID やオフセットを <em>handler のフィールドから読む</em>汎用の thunk が VM に 1 本ずつ用意されている（<code>InlineCacheCompiler.h</code> 末尾に約 100 本の宣言がある）。条件集合のうち「明示的な比較が必要な条件」（§11.1）が 1 つも無ければ、これが使われる。この場合、機械語は一切生成されず、<code>InlineCacheHandler</code> のデータを埋めるだけで済む。<strong>実際のプログラムで生成される handler の大半はこの段階で片付く。</strong></li>
+  <li><strong>stateless stub</strong> — <code>ArrayLength</code> や添字アクセスのように、ケースがデータを一切持たない種類（<code>isStateless()</code>）は、(サイトの種類, ケースの種類) をキーに <code>SharedJITStubSet::m_statelessStubs</code> で 1 度だけ生成・共有される。</li>
+  <li><strong><code>SharedJITStubSet</code></strong> — 上記に該当せず個別に生成する場合でも、生成前に <code>AccessCase::canBeShared()</code>（§7.4）で等価なケースの stub が既に無いかを VM 全体のハッシュ集合から探し、あればそれを使う。無ければ <code>generateWithGuard()</code> で生成し（このとき structureID や条件のオブジェクトは Repatching IC と同様に<em>定数として</em>焼き込まれる）、生成物を集合に登録する。<span class="src"><code>bytecode/SharedJITStubSet.h</code></span> 同じクラスの同じプロパティにアクセスするサイトはプログラム中に無数にあるので、これも高い確率で当たる。</li>
+</ol>
+<p>共有の前提は、handler の機械語がサイト固有の情報（レジスタ割当、戻り先、例外ハンドラ）を含まないことである。レジスタは §5.1 の固定規約で、戻り先は <code>ret</code> で、スローパス関数は IC の <code>m_slowOperation</code> の間接呼び出しで、それぞれ抽象化されている。共有された 1 本の stub は複数の <code>CodeBlock</code> から参照されるため、所有者の集合（<code>m_owners</code>）を持ち、watchpoint による無効化も所有者ごとに配送される（§11.2）。</p>
+
+<h3><span class="h3-no">8.5</span>呼び出しを伴う handler と prologue の設計</h3>
+<p>Handler IC の prologue（<code>emitDataICPrologue</code> <span class="src"><code>bytecode/InlineCacheCompiler.cpp:1345-1404</code></span>）には 2 つの設計上の工夫がある。</p>
+<ul>
+  <li><strong><code>callFrameRegister</code> を変更しない。</strong> handler は呼び出し元の JS 関数のフレームの中で、その関数の一部として実行される。したがって例外の巻き戻し（unwind）や、operation が <code>CallFrame*</code> を必要とする場面で、handler 用の特別扱いが不要になる。</li>
+  <li><strong>フレームの保存を遅延する。</strong> ほとんどの handler は「比較してロードして戻る」だけの葉であり、リンクレジスタ／フレームポインタを退避する必要が無い。ARM64 では prologue は戻り番地に署名する（<code>pacibsp</code>）だけで、getter や C++ を実際に呼ぶことになった時点で初めて <code>emitDataICPrepareForCall</code> が LR/FP をプッシュする。x86_64 では <code>call</code> 命令が戻り番地をスタックに積んでしまうので、prologue で FP をプッシュして形を揃える。</li>
+</ul>
+<p>JS の getter/setter を呼ぶケース（<code>Getter</code>／<code>Setter</code>）では、handler は <code>InlineCacheHandlerWithJSCall</code> となり、末尾に <code>DataOnlyCallLinkInfo</code>——すなわち<strong>呼び出し先を覚える別の IC（call IC）</strong>——を抱える。<span class="src"><code>bytecode/InlineCacheHandler.h:179-192</code></span> stub は生きているレジスタをスタックに退避し、呼び出し先フレームを組み立て、この call IC 経由で getter を呼び、戻ってからレジスタを復元する。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:3399-3600</code></span> getter が例外を投げた場合に備えて専用の例外ハンドラも生成される。プロパティ IC の中に呼び出し IC が入れ子になっているわけで、DFG から見ると「getter のインライン展開」に必要な情報（どの関数が呼ばれたか）がここから得られる（§12）。</p>
+
+<h3><span class="h3-no">8.6</span>終端とリセット</h3>
+<p>IC の初期化時（§5.5）、<code>m_handler</code> には <code>AccessType</code> ごとに VM で 1 個共有されるスローパス handler が入る。<span class="src"><code>bytecode/InlineCacheHandler.cpp:201-219</code></span> その機械語は「<code>propertyCacheGPR</code> から <code>m_slowOperation</code> を読んで呼び、例外を検査して <code>ret</code>」であり、<span class="src"><code>bytecode/InlineCacheCompiler.cpp:1438-1466</code></span> 図 6.1 の入口である。新しい handler は常にこの終端の手前に積まれていく。</p>
+<p>無効化（watchpoint 発火または GC）によるリセットは <code>resetStubAsJumpInAccess()</code> で、<span class="src"><code>bytecode/PropertyInlineCache.cpp:915-930</code></span> リストの各 handler から自分を所有者から外し、<code>m_handler</code> を（VM 共有の）スローパス handler だけの状態に戻す。megamorphic ケースが生成されたときも同様に、リスト全体を megamorphic handler 1 個で置き換える（<code>prependHandler</code> の <code>isMegamorphic</code> 分岐）。</p>
+<p>リセットが handler の<em>実行中</em>に起きる可能性（getter の中でプロトタイプが書き換えられ、watchpoint が発火する）については、<code>PropertyInlineCache.h</code> のコメントが 2 点の根拠で安全性を説明している。<span class="src"><code>bytecode/PropertyInlineCache.h:532-551</code></span> （1）handler の機械語は自分の <code>InlineCacheHandler</code> のフィールドを<em>呼び出しの前にしか</em>読まないので、呼び出しから戻った後にノードが解放されていても触らない。（2）機械語自体は <code>GCAwareJITStubRoutine</code> により、参照が 0 になっても直ちには解放されず、GC がスタック上に無いことを確認してから解放される（§11.4）。</p>
+
+<div class="box column">
+  <span class="box-label">コラム</span>
+  <p><strong>Handler IC は「IC の状態をデータ化」した帰結として、非 JIT 環境への道も開いている。</strong> <code>getByIdLoadHandlerImpl</code> には「いずれ offlineasm で実装して非 JIT 環境と共有する必要があるかもしれない」という FIXME がある。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:5273</code></span> handler の機械語が定数を含まない汎用コードである以上、原理的には事前に用意した固定のコードでも動くからである。JIT の使えない環境（ロックダウンモード等）でも多相 IC の恩恵を得る、という将来像がここから読み取れる。</p>
+</div>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/PropertyInlineCache.h:456-580</code> — Handler IC の設計コメント（本節の一次資料）</li>
+    <li><code>bytecode/InlineCacheHandler.{h,cpp}</code> — ノードのレイアウトと生成</li>
+    <li><code>jit/JITInlineCacheGenerator.cpp:58-63, 132-206</code>、<code>jit/JITPropertyAccess.cpp:557-638</code> — Baseline のコールサイト</li>
+    <li><code>dfg/DFGSpeculativeJIT64.cpp:161-194</code>、<code>dfg/DFGSlowPathGenerator.h:283-336</code> — DFG のコールサイト</li>
+    <li><code>bytecode/InlineCacheCompiler.cpp:1345-1436</code>（prologue／epilogue／共通エミッタ）、<code>5261-5311</code>（Load thunk）、<code>7147-8098</code>（<code>compileHandler</code> と共有の 3 段階）</li>
+    <li><code>bytecode/SharedJITStubSet.h</code>、<code>jit/JITThunks.h:62-192</code> — 共有の器と thunk 一覧</li>
+    <li><code>bytecode/PropertyInlineCache.cpp:828-930</code> — 昇格・prepend・リセット</li>
+  </ul>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s9">
+<h2><span class="sec-no">§9</span><span class="sec-title">Repatching IC（FTL）</span></h2>
+<div class="prose">
+
+<p class="lead">Repatching IC は、Smalltalk 以来の「機械語を書き換える」古典的なインラインキャッシュの直系であり、長らく JSC の全 JIT 階層で使われてきた方式である。現在は FTL 専用となった。この方式では IC の状態が「関数本体に埋め込まれた固定長スラブの中身」として表現され、状態遷移＝機械語の書き換えである。</p>
+</div>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 880 330" role="img" aria-label="Repatching IC のスラブの 3 状態。状態 1 ではスラブがスローパスへのジャンプ、状態 2 では InlineAccess が焼き込んだ structureID 比較とロード、状態 3 では PolymorphicAccess stub へのジャンプ。状態 2 から 3 へは別の Structure の観測で移り、状態 3 では新ケースはバッファされてから stub 全体が再生成される。inline 形を持たない種類は状態 1 から直接 3 へ移る。watchpoint や GC によるリセットはどの状態からも状態 1 に戻す">
+  <defs>
+    <marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+    <marker id="a9w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
+  </defs>
+  <!-- reset arrows (top) -->
+  <text x="450" y="22" text-anchor="middle" class="t-xs t-w jp">watchpoint 発火 ／ GC で参照先が死亡 → リセット（スラブを jmp slowPathStart に書き戻す）</text>
+  <path d="M425 80 L425 40 L135 40 L135 78" class="lnw" marker-end="url(#a9w)"/>
+  <path d="M715 80 L715 40 L425 40" class="lnw"/>
+  <!-- state 1 -->
+  <rect x="20" y="80" width="230" height="120" class="bx"/>
+  <text x="135" y="102" text-anchor="middle" class="t-s t-b jp">状態 1：初期／リセット後</text>
+  <line x1="20" y1="110" x2="250" y2="110" class="ln"/>
+  <text x="32" y="130" class="t-xs">startLocation:</text>
+  <text x="44" y="146" class="t-xs">jmp  slowPathStart</text>
+  <text x="44" y="162" class="t-xs t-m jp">nop × N（26 / 40 バイト）</text>
+  <text x="32" y="186" class="t-xs">doneLocation:</text>
+  <!-- 1 -> 2 -->
+  <path d="M250 140 L308 140" class="ln" marker-end="url(#a9)"/>
+  <text x="280" y="130" text-anchor="middle" class="t-xs jp">初ヒット</text>
+  <!-- state 2 -->
+  <rect x="310" y="80" width="230" height="120" class="bxa"/>
+  <text x="425" y="102" text-anchor="middle" class="t-s t-b t-a jp">状態 2：単相 inline access</text>
+  <line x1="310" y1="110" x2="540" y2="110" class="lna"/>
+  <text x="322" y="130" class="t-xs">cmp32 [base+0], #S₁</text>
+  <text x="322" y="146" class="t-xs">jne   slowPathStart</text>
+  <text x="322" y="162" class="t-xs">load  [base+16+8·o]</text>
+  <text x="322" y="186" class="t-xs t-m">InlineAccess が焼き込む</text>
+  <!-- 2 -> 3 -->
+  <path d="M540 140 L598 140" class="ln" marker-end="url(#a9)"/>
+  <text x="570" y="130" text-anchor="middle" class="t-xs jp">別の形</text>
+  <!-- state 3 -->
+  <rect x="600" y="80" width="260" height="120" class="bxa"/>
+  <text x="730" y="102" text-anchor="middle" class="t-s t-b t-a jp">状態 3：stub へジャンプ</text>
+  <line x1="600" y1="110" x2="860" y2="110" class="lna"/>
+  <text x="612" y="130" class="t-xs">jmp   stub　（残りは未使用）</text>
+  <text x="612" y="152" class="t-xs jp">stub = 全ケースを 1 本にコンパイル</text>
+  <text x="612" y="168" class="t-xs jp">成功 → doneLocation</text>
+  <text x="612" y="184" class="t-xs jp">全ケース失敗 → slowPathStart</text>
+  <!-- self loop on state 3 -->
+  <path d="M800 200 C 800 240, 700 240, 700 202" class="ln" marker-end="url(#a9)"/>
+  <text x="765" y="258" text-anchor="middle" class="t-xs jp">新しい形：一覧に溜め、bufferingCountdown が</text>
+  <text x="765" y="272" text-anchor="middle" class="t-xs jp">0 になったら stub を再生成（8 ケースまで）</text>
+  <!-- 1 -> 3 bypass -->
+  <path d="M135 200 L135 300 L618 300 L618 202" class="lnd" marker-end="url(#a9)"/>
+  <text x="380" y="292" text-anchor="middle" class="t-xs t-m jp">by-val／instanceof など inline 形を持たない種類は状態 2 を経ずに 1 → 3</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 9.1</span>Repatching IC のスラブの状態遷移。<span class="src"><code>bytecode/PropertyInlineCache.h:582-651</code></span> の設計コメントに対応する。状態 2 の structureID とオフセットは機械語の即値として焼き込まれ、状態 3 の stub も観測したケース集合専用に生成される。</figcaption>
+</figure>
+
+<div class="prose">
+<h3><span class="h3-no">9.1</span>コンパイル時：スラブの確保</h3>
+<p>FTL は <code>GetById</code> ノードを B3 の <em>patchpoint</em>（B3 に「ここに後で自前の機械語を置く」と宣言する命令）として下降させ、その生成子の中で <code>JITGetByIdGenerator::generateFastPath()</code> を呼ぶ。<span class="src"><code>ftl/FTLLowerDFGToB3.cpp:20543-20636</code>, <code>jit/JITInlineCacheGenerator.cpp:118-130</code></span> 出力されるのは「スローパスへのジャンプ＋nop 詰め物」で、長さは <code>InlineAccess::sizeForPropertyAccess()</code>（x86_64 で 26 バイト、ARM64 で 40 バイト。<code>length</code> アクセス用はやや長い）に固定される。<span class="src"><code>bytecode/InlineAccess.h:48-88</code></span> この長さは「structureID 比較 ＋ butterfly ロード ＋ 値ロード」が収まる大きさとして実測で決められており、<code>InlineAccess::dumpCacheSizesAndCrash()</code> という測定用関数が同居している。</p>
+<p>リンク時に <code>finalize()</code> がスラブの先頭（<code>startLocation</code>）、直後（<code>doneLocation</code>）、スローパスの先頭（<code>slowPathStartLocation</code>）、スローパス内の call 命令（<code>m_slowPathCallLocation</code>）の 4 番地を IC に記録する。<span class="src"><code>jit/JITInlineCacheGenerator.cpp:84-93</code></span> 以後の書き換えはすべてこの 4 番地を基準に行われる。Handler IC と違い、レジスタは B3 が任意に割り当てたものをそのまま使い、その時点で生きているレジスタ集合が <code>m_usedRegisters</code> に記録される。IC のアドレスはスローパスの引数として即値で埋め込まれる。</p>
+
+<h3><span class="h3-no">9.2</span>状態 1 → 2：<code>InlineAccess</code></h3>
+<p>最初のスローパスで（§5.4 の <code>countdown</code> のため正確には 2 回目で）自己アクセスがキャッシュ可能と分かると、<code>tryCacheGetBy</code> は <code>InlineAccess::generateSelfPropertyAccess()</code> を呼ぶ。<span class="src"><code>bytecode/InlineAccess.cpp:173-203</code></span> これは小さなアセンブラで比較とロードを組み立て、<code>linkCodeInline()</code> がそれをスラブに<em>その場で</em>リンクする。<span class="src"><code>:148-171</code></span> 生成物がスラブに収まらなければ偽を返し、通常のケース生成に落ちる。成功すると IC は <code>CacheType::GetByIdSelf</code> になり、<code>m_inlineAccessBaseStructureID</code> に Structure が（GC のために弱参照として）記録される。put の <code>Replace</code>、<code>in</code>、配列・文字列の <code>length</code> にも同様の inline 形がある。</p>
+
+<h3><span class="h3-no">9.3</span>状態 2 → 3：<code>PolymorphicAccess</code> とバッファリング</h3>
+<p>2 つ目の形が来ると、<code>addAccessCase</code> の Repatching 側 <span class="src"><code>bytecode/PropertyInlineCache.cpp:199-275</code></span> が動く。まず <code>AccessCase::fromPropertyInlineCache()</code> が、スラブに焼き込まれていた単相ケースを <code>AccessCase</code> に「巻き戻し」、新しいケースと一緒に <code>PolymorphicAccess</code>（実体は <code>Vector&lt;Ref&lt;AccessCase&gt;&gt;</code>）に入れる。<span class="src"><code>bytecode/AccessCase.cpp</code> の <code>fromPropertyInlineCache</code>, <code>bytecode/InlineCacheCompiler.cpp:8165-8248</code></span> ここで IC は <code>CacheType::Stub</code> になるが、<strong>まだコードは生成しない</strong>。<code>bufferingCountdown</code>（初期 6）が 0 になるまで、以降のスローパスで見つかった新しい形も一覧に追加されるだけである（<code>Buffered</code>）。この間、スラブは状態 2 のままなので、最初の形はまだ速いままで、それ以外の形だけがスローパスに落ちる。</p>
+<p><code>bufferingCountdown</code> が尽きると <code>InlineCacheCompiler::compile()</code> が一覧全体から stub を 1 本生成し、<code>rewireStubAsJumpInAccess()</code> がスラブ先頭を stub へのジャンプで上書きする（<code>replaceWithJump</code>）。<span class="src"><code>bytecode/PropertyInlineCache.cpp:907-913</code></span> その後 <code>bufferingCountdown</code> は <code>repatchBufferingCountdown</code>（6）に戻され、次の再生成までまた 6 回分の観測が溜められる。ケースを 1 つ見つけるたびに再生成すると、多相サイトの立ち上がり時に stub を最大 8 回作り直すことになるため、これをまとめるのがバッファリングの目的である。</p>
+
+<h3><span class="h3-no">9.4</span><code>compile()</code>：Cascade と Binary Switch</h3>
+<p><code>compile()</code> <span class="src"><code>bytecode/InlineCacheCompiler.cpp:4873-5258</code></span> はまず一覧を整理する。<code>couldStillSucceed()</code> が偽のケース（既に仮定が崩れたもの）と、後から追加されたケースに <code>canReplace()</code> されるケースを落とし、残りが 8 個以上なら megamorphic ケース 1 個に畳めないか試みる（§10）。次に分岐戦略を選ぶ。</p>
+<ul>
+  <li><strong>Cascade</strong>（ケースが 1 個、または structureID 以外のガードを含むとき）— 一覧を<em>新しいものから順に</em>並べ、各ケースについて <code>generateWithGuard()</code> でガード＋ペイロードを出力し、ガードが外れたら次のケースへ落ちる、という直列の連鎖を作る。</li>
+  <li><strong>Binary Switch</strong>（2 個以上あり、全ケースが structureID だけでガードされるとき）— base の structureID を 1 回ロードし、<code>BinarySwitch</code> でケースの structureID を二分探索する決定木を出力し、葉でペイロードを出力する。<span class="src"><code>:5133-5146</code></span> 8 ケースでも比較 3〜4 回で目的のケースに到達する。これが Handler IC に対する Repatching IC の最大のスループット上の利点である。</li>
+</ul>
+<p>各ケースの成功経路は <code>doneLocation</code> へ、全ケースが外れた経路は <code>slowPathStartLocation</code> へジャンプする。<span class="src"><code>:5217-5225</code></span> ペイロードがスクラッチレジスタを必要とする場合は <code>m_usedRegisters</code> を見て、生きているレジスタを避けるか、避けられなければ stub の入口で退避する。呼び出しを伴うケースがあれば、生きているレジスタ全部の退避と、専用の例外ハンドラ（<code>CodeBlock</code> の例外表に追加され、stub の破棄時に取り除かれる）も生成される。<span class="src"><code>:5175-5215</code></span></p>
+<p>Handler IC との対比で言えば、Handler IC はこの <code>compile()</code> の「1 ケース版」である <code>compileOneAccessCaseHandler()</code> を毎回呼び、連鎖（cascade）をリンクリストとして<em>データで</em>表現している。両者は <code>generateWithGuard()</code> 以下のペイロード生成コードを完全に共有しており、違いは入口と出口だけである。</p>
+
+<h3><span class="h3-no">9.5</span>リセットとスローパスの差し替え</h3>
+<p>watchpoint や GC によるリセット（<code>reset()</code> → <code>resetGetBy()</code> → <code>resetStubAsJumpInAccess()</code>）は、スラブ先頭を <code>slowPathStartLocation</code> へのジャンプで上書きし、<code>m_stub</code> を捨て、スローパスの call を <code>Optimize</code> 版に戻す。<span class="src"><code>bytecode/Repatch.cpp:2125-2130</code>, <code>bytecode/PropertyInlineCache.cpp:915-930</code></span> 状態 1 からやり直しである。<code>GiveUp</code>／<code>Megamorphic</code> へのスローパスの差し替えは call 命令のターゲット書き換えだが、FTL のスローパス呼び出しは thunk を経由していることがあるため、それを考慮した <code>ftlThunkAwareRepatchCall()</code> が使われる。<span class="src"><code>bytecode/Repatch.cpp:306-322</code></span></p>
+<p>実行中の stub が書き換え・破棄と競合する問題は、Handler IC と同じく <code>GCAwareJITStubRoutine</code> が解決する（§11.4）。スラブ自体については、書き換えられるのは常に先頭のジャンプ 1 命令であり、書き換えが起きるのはスローパス（＝スラブの外）を実行中のときだけなので、「スラブの途中を実行中に中身が変わる」ことはない。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/PropertyInlineCache.h:582-651</code> — Repatching IC の設計コメント（本節の一次資料）</li>
+    <li><code>bytecode/InlineAccess.{h,cpp}</code> — スラブのサイズと inline 形の生成</li>
+    <li><code>jit/JITInlineCacheGenerator.cpp:84-130</code> — スラブの出力と <code>finalize</code></li>
+    <li><code>ftl/FTLLowerDFGToB3.cpp:4448-4493, 20543-20636</code>、<code>ftl/FTLState.cpp:172-178</code> — FTL 側</li>
+    <li><code>bytecode/InlineCacheCompiler.h:112-151</code>（<code>PolymorphicAccess</code>）、<code>bytecode/InlineCacheCompiler.cpp:4873-5258</code>（<code>compile</code>）、<code>8165-8248</code>（<code>addCases</code>）</li>
+    <li><code>jit/BinarySwitch.h</code> — 二分探索分岐の生成器（switch 文の JIT とも共用）</li>
+  </ul>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s10">
+<h2><span class="sec-no">§10</span><span class="sec-title">多相性の段階と Megamorphic</span></h2>
+<div class="prose">
+
+<p class="lead">1 つのアクセスサイトが観測する形の数に応じて、IC は monomorphic（1 種類）→ polymorphic（数種類）→ megamorphic（多数）と姿を変える。JSC における各段階の境界と、最終段階で使われる VM 全体のハッシュ表 <code>MegamorphicCache</code> を扱う。</p>
+
+<h3><span class="h3-no">10.1</span>3 段階の境界</h3>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 10.1</span>多相性の段階と JSC での実現</caption>
+<thead><tr><th>段階</th><th>形の数</th><th>Handler IC</th><th>Repatching IC</th><th>ガード 1 回あたりのコスト</th></tr></thead>
+<tbody>
+<tr><td>monomorphic</td><td>1</td><td>inline 検査（§8.3）</td><td>状態 2 の inline access</td><td>比較 1 回</td></tr>
+<tr><td>polymorphic</td><td>2〜8</td><td>handler の連鎖を線形に辿る</td><td>binary switch（または cascade）</td><td>間接分岐 + 比較 × 最大 8 ／ 比較 × log₂ n</td></tr>
+<tr><td>megamorphic</td><td>9 以上（畳み込める場合）</td><td>megamorphic handler 1 個がリストを置き換える</td><td>stub が megamorphic ケース 1 個になる</td><td>ハッシュ計算 + 表引き + 比較 3 回</td></tr>
+<tr><td>（打ち止め）</td><td>9 以上（畳み込めない場合）</td><td colspan="2">8 ケースを保持したまま <code>GaveUp</code>。9 種類目以降は毎回スローパス</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<p>境界の 8 は <code>Options::maxAccessVariantListSize()</code> である。megamorphic への畳み込みは <code>tryFoldToMegamorphic()</code> <span class="src"><code>bytecode/InlineCacheCompiler.cpp:4689-4870</code></span> が判断し、次の条件をすべて満たすときに限られる。</p>
+<ul>
+  <li>全ケースが単純な種類であること。get なら <code>Load</code>／<code>Miss</code> のみ（例外として<em>全部が</em> JS getter なら <code>LoadMegamorphicGetter</code> という getter 専用の表を使う形に畳める）。put なら <code>Replace</code>／<code>Transition</code> のみで、かつ各 Structure のチェーンに setter・読み取り専用・<code>put</code> のオーバーライドが無いこと（<code>canUseMegamorphicPutFastPath</code>）。<code>in</code> なら <code>InHit</code>／<code>InMiss</code> のみ。</li>
+  <li>プロパティ名が <code>length</code>／<code>name</code>／<code>prototype</code>／<code>__proto__</code> でなく、配列添字にも見えないこと（<code>canUseMegamorphicGetById</code> <span class="src"><code>bytecode/InlineCacheCompiler.h:153-171</code></span>）。<code>length</code> は配列と文字列のアクセスがあまりに多く、共有の表を汚染するので除外されている。</li>
+  <li>poly proto を使うケースの割合が <code>thresholdForUndesiredMegamorphicAccessVariantListSize</code>（0.5）未満であること。megamorphic 表はプロトタイプの同一性を StructureID で判定するので、poly proto のオブジェクトはヒットしにくいためである。</li>
+  <li><code>instanceof</code> だけは特別で、8 ケースを超えると「一般の <code>instanceof</code> ループを stub 内で実行する」<code>InstanceOfMegamorphic</code> ケースになり、表は使わない。</li>
+</ul>
+
+<h3><span class="h3-no">10.2</span><code>MegamorphicCache</code> の構造</h3>
+</div>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 880 400" role="img" aria-label="MegamorphicCache のロード表の引き方。base の StructureID とプロパティ名の uid からハッシュを計算して 2048 エントリの一次表を引き、エントリの structureID・uid・epoch の 3 つが一致すればヒット。structureID か uid が不一致なら別のハッシュで 512 エントリの二次表を引き、それも外れればスローパスが表に登録する。epoch だけが古い場合は直ちにスローパスへ行く。ヒット時は holder が null なら undefined、番兵なら base 自身、それ以外はその holder のオブジェクトから offset をロードする">
+  <defs>
+    <marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+    <marker id="a10w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
+    <marker id="a10a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arra"/></marker>
+  </defs>
+  <!-- inputs -->
+  <rect x="20" y="30" width="200" height="76" class="bx2"/>
+  <text x="120" y="52" text-anchor="middle" class="t-s t-b jp">入力</text>
+  <text x="32" y="74" class="t-xs">sid = [base + 0]  (StructureID)</text>
+  <text x="32" y="92" class="t-xs jp">uid = プロパティ名の atom</text>
+  <!-- hash -->
+  <path d="M220 68 L248 68" class="ln" marker-end="url(#a10)"/>
+  <rect x="250" y="30" width="230" height="76" class="bx"/>
+  <text x="365" y="52" text-anchor="middle" class="t-s t-b jp">一次ハッシュ</text>
+  <text x="262" y="74" class="t-xs">(sid&gt;&gt;4 ^ sid&gt;&gt;15) + uid-&gt;hash()</text>
+  <text x="262" y="92" class="t-xs">&amp; 2047</text>
+  <!-- primary table -->
+  <path d="M480 68 L508 68" class="ln" marker-end="url(#a10)"/>
+  <rect x="510" y="20" width="350" height="110" class="bx"/>
+  <text x="685" y="42" text-anchor="middle" class="t-s t-b jp">一次表 LoadEntry[2048]（VM に 1 個）</text>
+  <rect x="522" y="52" width="326" height="68" class="bxa"/>
+  <text x="532" y="70" class="t-xs">structureID · uid · epoch(16bit)</text>
+  <text x="532" y="86" class="t-xs">offset(16bit) · holder</text>
+  <text x="532" y="108" class="t-xs t-a jp">sid・uid・現在の epoch の 3 つが一致 → ヒット</text>
+  <!-- secondary -->
+  <path d="M685 130 L685 168" class="lnw" marker-end="url(#a10w)"/>
+  <text x="695" y="154" class="t-xs t-w jp">sid か uid が不一致</text>
+  <rect x="510" y="170" width="350" height="70" class="bx"/>
+  <text x="685" y="192" text-anchor="middle" class="t-s t-b jp">二次表 LoadEntry[512]</text>
+  <text x="522" y="212" class="t-xs">key = sid + uid;  (key + key&gt;&gt;13) &amp; 511</text>
+  <text x="522" y="228" class="t-xs jp">一次表から追い出された項目の退避先</text>
+  <!-- secondary miss -> slow path -->
+  <path d="M685 240 L685 290 L432 290" class="lnw" marker-end="url(#a10w)"/>
+  <text x="560" y="282" text-anchor="middle" class="t-xs t-w jp">こちらも外れ</text>
+  <!-- epoch stale -> slow path -->
+  <path d="M510 118 L365 118 L365 262" class="lnw" marker-end="url(#a10w)"/>
+  <text x="358" y="160" text-anchor="end" class="t-xs t-w jp">sid・uid は一致するが</text>
+  <text x="358" y="174" text-anchor="end" class="t-xs t-w jp">epoch が古い → 即スローパス</text>
+  <rect x="250" y="264" width="180" height="52" class="bxw"/>
+  <text x="340" y="286" text-anchor="middle" class="t-s t-b t-w jp">スローパス</text>
+  <text x="340" y="304" text-anchor="middle" class="t-xs jp">答えを求め、表に登録する</text>
+  <!-- hit outcome -->
+  <path d="M860 86 L872 86 L872 356 L602 356" class="lna" marker-end="url(#a10a)"/>
+  <rect x="20" y="330" width="580" height="54" class="bxa"/>
+  <text x="32" y="350" class="t-xs t-a t-b jp">ヒット時は holder の値で 3 分岐</text>
+  <text x="32" y="370" class="t-xs jp">null → undefined（不在もキャッシュ）　番兵 1 → base 自身の offset をロード　それ以外 → holder の offset をロード</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 10.1</span><code>MegamorphicCache</code> のロード表の引き方。<span class="src"><code>runtime/MegamorphicCache.h:39-100, 182-216</code>, <code>jit/AssemblyHelpers.cpp:424-533</code></span> この手順全体が megamorphic ケースの機械語としてインライン展開される。ストア用（2048/512）、<code>in</code> 用（512/128）、getter 用（256/64）の表も同じ構造で並んでいる。</figcaption>
+</figure>
+
+<div class="prose">
+<p>この表のキーは <strong>(StructureID, プロパティ名)</strong> であり、アクセスサイトは含まれない。すなわち、megamorphic 化した全サイトが 1 つの表を共有する。「サイトごとには形が多すぎて覚えられないが、VM 全体で見れば (形, 名前) の組み合わせは有限で繰り返し現れる」という、サイト単位の IC とは直交する局所性を利用している。エントリの <code>m_holder</code> が null のエントリは「不在」を、番兵値 <code>JSCell::seenMultipleCalleeObjects()</code>（＝1）は「base 自身のプロパティ」を表し、それ以外はプロトタイプチェーン上の保持元オブジェクトそのものを指す。<span class="src"><code>runtime/MegamorphicCache.h:70-100</code></span></p>
+
+<h3><span class="h3-no">10.3</span>epoch による一括無効化</h3>
+<p>サイト単位の IC が条件集合と watchpoint で精密に無効化されるのに対し、megamorphic 表は<strong>16bit の epoch 番号</strong>で大雑把に無効化される。各エントリは登録時の epoch を持ち、表の現在の epoch と一致しないエントリはヒットしない。したがって <code>bumpEpoch()</code> を 1 回呼ぶだけで表全体が事実上空になる。<span class="src"><code>runtime/MegamorphicCache.h:299-304</code></span> bump されるのは次のときである。</p>
+<ul>
+  <li><strong>プロトタイプになりうるオブジェクト</strong>（Structure に <code>mayBePrototype</code> フラグが立っているもの）に対して、プロパティの追加・削除・属性変更・プロトタイプ変更が起きたとき。<code>VM::invalidateStructureChainIntegrity()</code> がこれを bump に変換する。<span class="src"><code>runtime/VM.h:939-945</code>, <code>runtime/JSObjectInlines.h</code> の各所</span> base 自身の変更は StructureID が変わる（キーが変わる）ので bump は不要であり、チェーンの<em>先</em>の変更だけを捕捉すればよい、というのが設計の要点である。</li>
+  <li><strong>GC のたび</strong>（<code>age()</code>）。<span class="src"><code>runtime/MegamorphicCache.cpp:38-77</code>, <code>heap/Heap.cpp:2366</code></span> StructureID はアドレス由来なので、死んだ Structure のアドレスが再利用されると古いエントリが誤ってヒットしうる。GC ごとに epoch を進める（full GC では表を完全に消去する）ことでこれを防いでいる。エントリが <code>UniquedStringImpl</code> を強参照している問題も、full GC での消去が解決する。</li>
+</ul>
+<p>この方式には、dictionary の base（§2.4）は Structure を変えずに中身が変わりうるので載せられない、という制約がある。<code>getByIdMegamorphic()</code> <span class="src"><code>jit/JITOperations.cpp:352-445</code></span> はスローパスで表を埋める際に、base が dictionary であるか、チェーン上に <code>[[Get]]</code> をオーバーライドする型があるか等を検査し、載せられない事象が繰り返されると <code>considerRepatchingCacheMegamorphic()</code> 経由で IC を <code>GaveUp</code> に落とす。</p>
+
+<h3><span class="h3-no">10.4</span>DFG／FTL での megamorphic</h3>
+<p>Baseline の IC が megamorphic 化していたことを DFG が <code>GetByStatus</code> 経由で知ると（<code>isMegamorphic()</code>）、DFG は IC を置かずに <code>GetByIdMegamorphic</code> という専用ノードを生成し、図 10.1 の手順を直接コード中に展開する。<span class="src"><code>dfg/DFGByteCodeParser.cpp:6995-7000</code>, <code>dfg/DFGSpeculativeJIT64.cpp:8367-8389</code></span> <code>PutByIdMegamorphic</code>、<code>InByIdMegamorphic</code>、by-val 版も同様である。プロファイルによって「このサイトは形を覚える価値が無い」と分かっているなら、IC の器を用意するだけ無駄だからである。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>runtime/MegamorphicCache.{h,cpp}</code> — 表の定義、ハッシュ、<code>age</code></li>
+    <li><code>bytecode/InlineCacheCompiler.cpp:4598-4608</code>（<code>canUseMegamorphicPutFastPath</code>）、<code>4689-4870</code>（<code>tryFoldToMegamorphic</code>）、<code>2877-3121</code>（megamorphic ケースのコード生成）</li>
+    <li><code>jit/AssemblyHelpers.cpp:424-700</code> — 表引きのエミッタ（load／store／has）</li>
+    <li><code>jit/JITOperations.cpp:352-445</code> — <code>getByIdMegamorphic</code>（表を埋める側）</li>
+    <li><code>runtime/VM.h:939-945</code> — <code>invalidateStructureChainIntegrity</code></li>
+    <li>オプション：<code>maxAccessVariantListSize</code>（<code>runtime/OptionsList.h:264</code>）、<code>thresholdForUndesiredMegamorphicAccessVariantListSize</code>（<code>:265</code>）</li>
+  </ul>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s11">
+<h2><span class="sec-no">§11</span><span class="sec-title">無効化と GC</span></h2>
+<div class="prose">
+
+<p class="lead">IC は「過去に観測した事実」を覚えているだけなので、事実が変われば捨てなければならない。変わり方には 2 種類ある。プログラムがオブジェクトを書き換えて<em>仮定が崩れる</em>場合と、GC によって<em>参照先が消える</em>場合である。前者は watchpoint、後者は弱参照と GC 終了時の点検で扱う。どちらも最終的に <code>PropertyInlineCache::reset()</code> に合流する。</p>
+
+<h3 id="s11-1"><span class="h3-no">11.1</span>条件を「監視する」か「検査する」か</h3>
+<p>§6.4 で作った条件集合は、コード生成時（Handler IC なら <code>compileOneAccessCaseHandler</code>、Repatching IC なら <code>compile</code>）に <code>collectConditions()</code> によって 2 群に振り分けられる。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:3140-3164</code></span></p>
+<ul>
+  <li><strong>監視できる条件</strong>（<code>isWatchableAssumingImpurePropertyWatchpoint()</code> が真）— 対象オブジェクトの Structure がまだ「遷移木の葉」であり（§2.6）、その遷移 watchpoint set が有効なもの。これらは機械語には現れず、代わりに watchpoint が登録される。ガードのコストはゼロである。</li>
+  <li><strong>検査するしかない条件</strong>— 対象の Structure から既に他へ遷移したオブジェクトが存在するなど、watchpoint がすぐ発火してしまう場合。stub の中に「そのオブジェクト（定数）の structureID が期待値か」という比較が明示的に出力される。<span class="src"><code>:3166-3182</code></span> Handler IC では、この群が 1 つでもあると事前コンパイル済み thunk が使えず、個別生成に落ちる（§8.4）。</li>
+</ul>
+<p>典型的なプログラムでは、プロトタイプオブジェクトは起動時にメソッドを生やし終えたあと安定するので、その最終 Structure は葉であり、ほとんどの条件は監視群に入る。結果として、プロトタイプ上のメソッド読み出しの IC は「base の structureID 比較 1 回 ＋ 保持元からのロード」だけの機械語になる。</p>
+
+<h3><span class="h3-no">11.2</span>watchpoint の 2 段構造</h3>
+</div>
+
+<figure class="fig">
+<div class="svg-wrap">
+<svg viewBox="0 0 860 300" role="img" aria-label="無効化の伝播経路。プロトタイプ P の Structure が遷移すると、その遷移 watchpoint set に登録された StructureTransitionPropertyInlineCacheClearingWatchpoint が発火する。条件がまだ成立していれば新しい Structure に登録し直して終わる。成立していなければ、それを所有する共有 stub の WatchpointSet を発火させ、その stub を使っている各 IC の PropertyInlineCacheClearingWatchpoint が発火して、それぞれの PropertyInlineCache::reset を呼ぶ">
+  <defs>
+    <marker id="a11" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
+    <marker id="a11w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
+    <marker id="a11a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arra"/></marker>
+  </defs>
+  <!-- event -->
+  <rect x="20" y="30" width="200" height="64" class="bxw"/>
+  <text x="120" y="52" text-anchor="middle" class="t-s t-b t-w jp">事象：P にプロパティ追加</text>
+  <text x="120" y="72" text-anchor="middle" class="t-xs jp">Structure(P): S_P → S_P′ に遷移</text>
+  <text x="120" y="86" text-anchor="middle" class="t-xs jp">S_P の遷移 watchpoint set が fireAll</text>
+  <path d="M220 62 L258 62" class="lnw" marker-end="url(#a11w)"/>
+  <!-- stage 1 -->
+  <rect x="260" y="20" width="270" height="84" class="bx"/>
+  <text x="395" y="40" text-anchor="middle" class="t-s t-b">StructureTransition…ClearingWatchpoint</text>
+  <text x="272" y="60" class="t-xs jp">所有者：共有 stub（条件 1 個につき 1 個）</text>
+  <text x="272" y="76" class="t-xs jp">条件「P に x は無い」を S_P′ で再評価</text>
+  <text x="272" y="94" class="t-xs jp">§4.4 と同じ adaptive 方式</text>
+  <!-- adaptive re-arm -->
+  <path d="M395 104 L395 140" class="lna" marker-end="url(#a11a)"/>
+  <rect x="260" y="142" width="270" height="44" class="bxa"/>
+  <text x="395" y="160" text-anchor="middle" class="t-xs t-a t-b jp">まだ成立 → S_P′ の set に登録し直して終了</text>
+  <text x="395" y="176" text-anchor="middle" class="t-xs t-a jp">（IC は生き残る。無関係な追加はここで吸収される）</text>
+  <!-- invalidate path -->
+  <path d="M530 62 L568 62" class="lnw" marker-end="url(#a11w)"/>
+  <text x="549" y="48" text-anchor="middle" class="t-xs t-w jp">不成立</text>
+  <rect x="570" y="20" width="270" height="84" class="bx"/>
+  <text x="705" y="40" text-anchor="middle" class="t-s t-b">PolymorphicAccessJITStubRoutine</text>
+  <text x="582" y="60" class="t-xs jp">= 共有 stub。自前の WatchpointSet を持ち、</text>
+  <text x="582" y="76" class="t-xs jp">それを fireAll する。所有者 IC が何個いても</text>
+  <text x="582" y="94" class="t-xs jp">stub 側の watchpoint は条件ごとに 1 個で済む</text>
+  <!-- fan out to ICs -->
+  <path d="M640 104 L640 214" class="lnw" marker-end="url(#a11w)"/>
+  <path d="M705 104 L705 214" class="lnw" marker-end="url(#a11w)"/>
+  <path d="M770 104 L770 214" class="lnw" marker-end="url(#a11w)"/>
+  <rect x="570" y="216" width="270" height="70" class="bx"/>
+  <text x="705" y="236" text-anchor="middle" class="t-s t-b">PropertyInlineCacheClearingWatchpoint × n</text>
+  <text x="582" y="256" class="t-xs jp">この stub を使っている IC ごとに 1 個</text>
+  <text x="582" y="274" class="t-xs jp">→ それぞれの PropertyInlineCache::reset()</text>
+  <text x="20" y="236" class="t-xs jp">Equivalence 条件は AdaptiveValue…Watchpoint が</text>
+  <text x="20" y="252" class="t-xs jp">担当し、遷移 set と置換 set の両方を監視する。</text>
+  <text x="20" y="276" class="t-xs jp">LLInt（§4）は stub が無いので 1 段構造。</text>
+</svg>
+</div>
+<figcaption><span class="fig-no">図 11.1</span>プロトタイプの変更が IC のリセットに至るまでの 2 段構造。1 段目（条件 → 共有 stub）と 2 段目（共有 stub → 各 IC）に分かれているのは、Handler IC の機械語が複数の IC・複数の <code>CodeBlock</code> で共有される（§8.4）ためである。<span class="src"><code>bytecode/PropertyInlineCacheClearingWatchpoint.{h,cpp}</code>, <code>bytecode/InlineCacheCompiler.cpp:4625-4686, 7203-7215</code>, <code>jit/GCAwareJITStubRoutine.h:96-165</code></span></figcaption>
+</figure>
+
+<div class="prose">
+<p>1 段目の watchpoint が発火時に条件を再評価して登録し直す挙動（adaptive）は §4.4 で見たものと同じである。<span class="src"><code>bytecode/PropertyInlineCacheClearingWatchpoint.cpp:61-79</code></span> <code>WatchpointSet::fireAll</code> の実装は、各 watchpoint をリストから外してから呼び出すので、呼び出された watchpoint が別の set（新しい Structure のもの）に自分を登録し直せる。<span class="src"><code>bytecode/Watchpoint.cpp:154-188</code></span> これが adaptive watchpoint を成立させている低レベルの契約であり、コメントに詳しく説明されている。</p>
+<p>2 段目の <code>PropertyInlineCacheClearingWatchpoint</code> は、stub に 1 つでも watchpoint が付いている場合にだけ作られ、<code>InlineCacheHandler</code> が所有する。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:7203-7215</code></span> <code>CodeBlock</code> が死ぬときには <code>aboutToDie()</code> でこれを先に破棄し、死んだ <code>CodeBlock</code> に向かって発火することが無いようにしている。<span class="src"><code>bytecode/InlineCacheHandler.cpp:239-247</code></span></p>
+<p>条件集合以外にも、stub には次の watchpoint set が追加で結び付けられることがある（<code>collectAdditionalWatchpoints</code> <span class="src"><code>bytecode/InlineCacheCompiler.cpp:4625-4653</code></span>）。impure property（DOM の名前付きプロパティのように C++ 側が黙って生やしうるもの）の出現を通知する VM 単位の set、<code>PropertySlot</code> が明示的に指定した set（WebCore の window オブジェクトが使う）、そして poly proto への転換を通知する共有 set である。</p>
+
+<h3><span class="h3-no">11.3</span>置換 watchpoint：get IC と put IC の相互作用</h3>
+<p>Structure は、プロパティごとに「その値が<em>置き換えられた</em>」ことを通知する置換 watchpoint set を持てる（<code>StructureRareData::m_replacementWatchpointSets</code>）。<span class="src"><code>runtime/Structure.cpp:1129-1163</code></span> IC の観点で重要なのは、get IC と put IC がこれを<strong>逆方向から</strong>扱っている点である。</p>
+<ul>
+  <li><strong>get 側</strong>：<code>Load</code> ケースを生成するとき、<code>startWatchingPropertyForReplacements()</code> でその set を作成し監視状態にする。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:3232, 7276</code>, <code>bytecode/Repatch.cpp:591</code></span> IC 自身は値をキャッシュしていないのでこの通知を必要としないが、後で DFG が「このプロトタイプの <code>x</code> は常にこの関数である」と定数畳み込みしたくなったとき、監視が既に始まっていれば直ちに利用できる。</li>
+  <li><strong>put 側</strong>：<code>Replace</code> ケースを生成するとき、<code>didCachePropertyReplacement()</code> でその set を<em>発火させてしまう</em>。<span class="src"><code>bytecode/Repatch.cpp</code> の <code>tryCachePutBy</code>, <code>runtime/StructureInlines.h:203-207</code></span> 以後この IC はスローパスを通らずに値を書き換えるので、「値は変わっていない」という仮定はもう守れない、と先に宣言しておくわけである。発火済みの set は <code>Equivalence</code> 条件が「監視不能」と判定する根拠になり（§11.1）、DFG はそのプロパティの畳み込みを諦める。</li>
+</ul>
+<p>つまり、ある Structure のあるプロパティに対して書き込みサイトが 1 箇所でも IC 化された時点で、その Structure を持つオブジェクトのそのプロパティに関する定数畳み込みは、どこで行われようと自動的に無効になる（置換 set は Structure ごと・オフセットごとに 1 つである）。IC が単なるキャッシュにとどまらず、最適化コンパイラへの<em>情報源</em>としても振る舞っている例であり、§12 の主題につながる。</p>
+
+<h3 id="s11-4"><span class="h3-no">11.4</span>GC との関係</h3>
+<p>IC は Structure・プロトタイプ・保持元・getter 関数など多数のセルを参照するが、これらを<strong>強参照にはしない</strong>。IC がオブジェクトを延命させると、既に不要になったクラスの Structure がコードの寿命の間ずっと残ってしまうからである。IC が強参照するのは <code>CacheableIdentifier</code> が保持するプロパティ名セル（by-val 用。§11.5）だけで、<span class="src"><code>bytecode/PropertyInlineCache.cpp:400-430</code></span> それ以外はすべて弱参照である。GC は次の 3 段階で IC を扱う。</p>
+<ol class="steps">
+  <li><strong>マーク中：遷移の伝播</strong>（<code>propagateTransitions</code>）。<code>Transition</code> ケースは「旧 Structure が生きているなら新 Structure も生かす」という条件付きのマークを行う。<span class="src"><code>bytecode/AccessCase.cpp:1418-1442</code>, <code>bytecode/CodeBlock.cpp:1335-1435</code></span> 旧 Structure のオブジェクトがまだ存在するなら、その遷移先はまた使われる可能性が高いからである。逆に旧 Structure が死んでいれば、新 Structure を IC のために延命する理由は無い。この判定は他のセルのマーク状況に依存するので、マークが収束するまで繰り返し実行される（output constraint）。また、通常の Structure についても <code>markIfCheap()</code>——プロトタイプと realm が既にマークされている場合に限りマークする——が行われる。<span class="src"><code>runtime/Structure.cpp:1461-1480</code></span></li>
+  <li><strong>GC 終了時：点検とリセット</strong>（<code>reconcileWeakReferencesAtGCEnd</code>）。各 IC について、inline access の Structure、各 handler の <code>AccessCase</code> が依存する全セル（<code>isStillLive()</code>）、個別生成 stub に焼き込まれた弱参照 Structure（<code>m_weakStructures</code>）を点検し、1 つでも死んでいれば IC 全体を <code>reset()</code> して <code>resetByGC</code> を立てる。<span class="src"><code>bytecode/PropertyInlineCache.cpp:434-478</code>, <code>bytecode/InlineCacheHandler.cpp:249-262</code></span> ケース単位ではなく IC 単位でリセットするのは実装の単純さのためで、死んだ形はもう来ないのだから、生き残るべきケースは次のスローパスですぐに再生成される。</li>
+  <li><strong>stub の機械語の解放</strong>（<code>GCAwareJITStubRoutine</code>）。stub の機械語は、IC からの参照が消えた瞬間に解放してはならない。その stub が getter を呼び出している最中（＝スタック上に戻り番地がある）かもしれないからである。そこで <code>GCAwareJITStubRoutine</code> は参照カウントが 0 になっても <code>m_isJettisoned</code> を立てるだけにとどめ、<span class="src"><code>jit/GCAwareJITStubRoutine.cpp:55-71</code></span> 次の GC が保守的スタックスキャンで「どの stub のアドレスもスタック上に無い」ことを確認してから実際に解放する。<span class="src"><code>heap/JITStubRoutineSet.cpp:133-171</code></span> 逆に、実行中と判明した stub については、その stub が呼び出し後に使うセル（<code>cellsToMark</code>）をマークする。これが §8.6 で述べた「リセットが実行中に起きても安全」の根拠である。</li>
+</ol>
+
+<h3 id="s11-5"><span class="h3-no">11.5</span>補足：<code>CacheableIdentifier</code> と by-val IC</h3>
+<p><code>o[k]</code> のような by-val アクセスも、<code>k</code> が実行時に文字列や Symbol であれば by-id と同じ仕組みでキャッシュされる。このときガードには「structureID が一致」に加えて「キーが同じ名前である」という検査が要る。JSC ではプロパティ名として使われる文字列は atom 化（内容ごとに一意な <code>UniquedStringImpl</code> に正規化）されているので、この検査は<strong>impl ポインタの比較 1 回</strong>で済む。<span class="src"><code>bytecode/InlineCacheCompiler.cpp:1856-1866</code>, <code>1413-1430</code></span> ただし、そのためには比較対象の impl が解放・再利用されないことを保証する必要があり、これが <code>CacheableIdentifier</code> の役目である。by-val の IC はキーのセルを <code>CacheableIdentifier</code> として保持し、GC 時に <code>visitAggregate</code> で<em>強く</em>マークする。<span class="src"><code>runtime/CacheableIdentifier.h:93-99</code>, <code>runtime/CacheableIdentifierInlines.h:167-171</code></span> セルが生きていれば impl も生きているので、焼き込んだポインタは有効であり続ける。by-id の場合は名前が <code>CodeBlock</code> の識別子表に含まれているので、この保持は不要である。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/InlineCacheCompiler.cpp:3140-3182</code>（監視／検査の振り分け）、<code>4625-4686</code>（watchpoint の設置）、<code>7203-7240</code>（2 段目の生成）</li>
+    <li><code>bytecode/PropertyInlineCacheClearingWatchpoint.{h,cpp}</code>、<code>bytecode/AdaptiveInferredPropertyValueWatchpointBase.{h,cpp}</code>、<code>bytecode/Watchpoint.{h,cpp}</code></li>
+    <li><code>bytecode/PropertyCondition.cpp:113-468</code> — 条件の成立判定と監視可能性の判定</li>
+    <li><code>runtime/Structure.cpp:1129-1163, 1378-1400, 1461-1480</code> — 置換 set、遷移 set の発火、<code>markIfCheap</code></li>
+    <li><code>bytecode/CodeBlock.cpp:1335-1435, 1749-1803</code> — <code>CodeBlock</code> 単位の伝播と点検。<code>heap/Heap.cpp:785-840</code> — 点検の呼び出し元</li>
+    <li><code>jit/GCAwareJITStubRoutine.{h,cpp}</code>、<code>heap/JITStubRoutineSet.{h,cpp}</code> — 機械語の遅延解放</li>
+    <li><code>runtime/CacheableIdentifier.h</code>、<code>runtime/CacheableIdentifierInlines.h</code></li>
+  </ul>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s12">
+<h2><span class="sec-no">§12</span><span class="sec-title">IC はプロファイラでもある</span></h2>
+<div class="prose">
+
+<p class="lead">JSC において IC の役割は「Baseline のコードを速くする」だけではない。Baseline で育った IC は、そのサイトで<em>どんな形が・何種類・どう</em>アクセスされたかを記録した<strong>プロファイル</strong>でもあり、DFG／FTL はこれを読んで、IC すら不要な直接コードを生成する。IC が「観測した事実をデータとして持つ」（§7）設計になっている最大の理由がこれである。</p>
+
+<h3><span class="h3-no">12.1</span><code>summary()</code>：IC の自己申告</h3>
+<p>各 IC は自分の状態を 6 値の <code>PropertyInlineCacheSummary</code> に要約できる。<span class="src"><code>bytecode/PropertyInlineCacheSummary.h:30-37</code>, <code>bytecode/PropertyInlineCache.cpp:529-563</code></span></p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 12.1</span><code>PropertyInlineCacheSummary</code></caption>
+<thead><tr><th>値</th><th>条件</th><th>DFG から見た意味</th></tr></thead>
+<tbody>
+<tr><td><code>NoInformation</code></td><td><code>everConsidered</code> が偽（一度もキャッシュを検討していない）</td><td>このサイトは実行されていない。実行されたら OSR exit してよい</td></tr>
+<tr><td><code>Simple</code></td><td>全ケースが呼び出しを含まず、<code>tookSlowPath</code> も <code>sawNonCell</code> も偽</td><td>ケース一覧をそのまま構造検査＋ロードに展開できる</td></tr>
+<tr><td><code>MakesCalls</code></td><td>呼び出しを含むケースがある（getter 等）</td><td>展開はできるが、呼び出しを伴う（getter のインライン展開候補）</td></tr>
+<tr><td><code>Megamorphic</code></td><td>唯一のケースが megamorphic ケース</td><td><code>GetByIdMegamorphic</code> ノードにする（§10.4）</td></tr>
+<tr><td><code>TakesSlowPath</code></td><td><code>tookSlowPath</code>（GaveUp 経路を通った）または <code>sawNonCell</code></td><td>キャッシュ外の形が来ている。展開せず一般の <code>GetById</code> ノード（＝DFG 自身の IC）にする</td></tr>
+<tr><td><code>TakesSlowPathAndMakesCalls</code></td><td>上記かつ呼び出しあり</td><td>同上、ただし <code>GetByIdFlush</code>（呼び出しに備えてレジスタを退避）</td></tr>
+</tbody>
+</table>
+</div>
+<p>§5.1 で挙げた観測フラグはすべてこの要約のために存在する。たとえば <code>operationGetByIdGaveUp</code> の唯一の仕事が <code>tookSlowPath = true</code> を立てることであったのは（§6.1）、「この IC の一覧は完全ではない」と DFG に伝えるためである。もしこのフラグが無ければ、DFG は 8 ケースを覚えた IC を見て「この 8 種類しか来ない」と誤って結論し、9 種類目で OSR exit を繰り返すことになる。</p>
+
+<h3><span class="h3-no">12.2</span><code>GetByStatus</code>：ケース一覧から変種の集合へ</h3>
+<p>DFG のバイトコードパーサは、<code>get_by_id</code> を処理するたびに <code>GetByStatus::computeFor()</code> を呼ぶ。<span class="src"><code>bytecode/GetByStatus.cpp:454-493</code></span> これは次の順序で情報源を当たる。</p>
+<ol class="steps">
+  <li><strong>既存の最適化コード</strong>（<code>ICStatusContextStack</code>）— この関数が以前 DFG コンパイルされ、その DFG コードにも IC がある場合、そちらのほうが新しい情報を持っているので先に読む（<code>usePolyvariantDevirtualization</code>）。DFG の IC が実際に必要とされたのは、この「再コンパイル時のプロファイル」としての用途が大きい。</li>
+  <li><strong>Baseline の IC</strong>— <code>CodeBlock::getICStatusMap()</code> で <code>CodeOrigin</code> → IC の対応表を作り、該当する <code>PropertyInlineCache</code> を <code>ConcurrentJSLocker</code>（<code>CodeBlock::m_lock</code>）の下で読む。<span class="src"><code>bytecode/CodeBlock.cpp:1863-1903</code>, <code>bytecode/GetByStatus.cpp:255-452</code></span> §6 で <code>Repatch.cpp</code> が同じロックを取っていたのは、この並行読み取りと排他するためである。<code>listedAccessCases()</code> で得た各 <code>AccessCase</code> は、<code>GetByVariant</code>（Structure の集合、オフセット、条件集合、getter なら呼び出し先の <code>CallLinkStatus</code>、intrinsic なら対象関数）に変換される。同じオフセット・同じ条件のケースは 1 つの変種にまとめられる。</li>
+  <li><strong>LLInt のメタデータ</strong>（<code>computeFromLLInt</code>）— Baseline の IC に何も無ければ、§4 の <code>Default</code> モードのメタデータから単相の変種を 1 つ作る。<span class="src"><code>bytecode/GetByStatus.cpp:57-196</code></span></li>
+</ol>
+<p>最後に <strong>OSR exit の履歴</strong>で補正する（<code>bless()</code>）。このサイトで過去に <code>BadCache</code> 系の exit が起きていれば、IC がどう言っていようと状態を <code>TakesSlowPath</code> 側に格下げする。<code>ObservedTakesSlowPath</code> という状態名の「Observed」は、IC の <code>tookSlowPath</code> フラグに由来する。<span class="src"><code>bytecode/GetByStatus.h:55-77</code></span></p>
+
+<h3><span class="h3-no">12.3</span>DFG が生成するもの</h3>
+<p><code>handleGetById()</code> <span class="src"><code>dfg/DFGByteCodeParser.cpp:6964-7188</code></span> は <code>GetByStatus</code> の状態に応じて次のように分岐する。</p>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 12.2</span><code>GetByStatus</code> と DFG が生成するノード</caption>
+<thead><tr><th>状態</th><th>生成されるもの</th><th>備考</th></tr></thead>
+<tbody>
+<tr><td><code>Simple</code>、変種 1 個、データプロパティ</td><td><code>CheckStructure</code> → （<code>GetButterfly</code>）→ <code>GetByOffset</code></td><td>IC は完全に消え、素の構造検査とロードになる。条件集合が監視可能なら <code>CheckStructure</code> すら省け、値が定数と分かれば定数に畳まれる（<code>load()</code> <span class="src"><code>:6838-6935</code></span>）</td></tr>
+<tr><td><code>Simple</code>、変種 1 個、getter</td><td><code>CheckStructure</code> → <code>GetGetterSetterByOffset</code> → <code>GetGetter</code> → 呼び出しのインライン展開</td><td>IC の中の call IC（§8.5）が記録した呼び出し先を使って getter 本体を展開する</td></tr>
+<tr><td><code>Simple</code>、変種 2〜8 個</td><td>FTL 向けコンパイルなら <code>MultiGetByOffset</code>、DFG 向けなら <code>GetById</code></td><td>多相の展開は FTL だけが行う（<code>usePolymorphicAccessInlining</code>、上限 <code>maxPolymorphicAccessInliningListSize</code> = 8）</td></tr>
+<tr><td><code>CustomAccessor</code></td><td><code>CallCustomAccessorGetter</code>、DOM 属性なら DOMJIT による展開</td><td></td></tr>
+<tr><td><code>Megamorphic</code></td><td><code>GetByIdMegamorphic</code></td><td>§10.4</td></tr>
+<tr><td><code>ModuleNamespace</code> ／ <code>ProxyObject</code></td><td>専用の展開</td><td></td></tr>
+<tr><td>上記以外（<code>TakesSlowPath</code> 等）、または <code>useAccessInlining</code> が偽</td><td><code>GetById</code>（呼び出しありなら <code>GetByIdFlush</code>）</td><td>DFG 自身の Handler IC（§8）を置く。<code>preferredCacheType()</code> で inline 検査の形を選ぶ</td></tr>
+</tbody>
+</table>
+</div>
+<p>展開を選んだ場合、DFG は <code>FilterGetByStatus</code> ノードを挿入して、使った <code>GetByStatus</code> を <code>RecordedStatuses</code> に記録する。<span class="src"><code>bytecode/RecordedStatuses.h</code></span> これは 2 つの目的を持つ。1 つは、生成したコードが依存している Structure 集合を GC や後続のコンパイル（手順 1 の <code>ICStatusContext</code>）に見せること。もう 1 つは、展開されたコードで構造検査に失敗して OSR exit したときに、次回のコンパイルがその事実を知れるようにすることである。<code>put_by_id</code> についても <code>PutByStatus</code> → <code>PutByOffset</code>／<code>PutStructure</code>（遷移）／<code>MultiPutByOffset</code> という同型の流れがあり、<span class="src"><code>dfg/DFGByteCodeParser.cpp:7434-</code></span> IC に情報が全く無いサイトについては「そもそもここには来ない」と判断して <code>ForceOSRExit</code> を置くことさえある。</p>
+
+<h3><span class="h3-no">12.4</span>この設計が意味すること</h3>
+<p>以上を踏まえると、JSC の階層構造における IC の位置づけは次のように整理できる。</p>
+<ul>
+  <li><strong>LLInt の IC</strong>は、インタプリタ自身の高速化と、Baseline の inline 検査の形を決めるヒント（§8.3）を提供する。</li>
+  <li><strong>Baseline の IC</strong>は、Baseline コードの高速化であると同時に、DFG にとっての<em>主要なプロファイル</em>である。Handler IC が「安く育つ」ことを重視している（§3.1）のは、この段階の主目的が観測の収集だからでもある。</li>
+  <li><strong>DFG の IC</strong>は、展開できなかったサイトの受け皿であり、かつ FTL への再コンパイルのためのプロファイルである。</li>
+  <li><strong>FTL の IC</strong>は純粋に実行速度のための最終手段であり、だからこそ生成コストの高い Repatching 方式が許される。</li>
+</ul>
+<p>「観測した事実を宣言的なデータ（<code>AccessCase</code>）として持ち、それを機械語にもプロファイルにも翻訳できるようにする」という一点が、この全体を成立させている。</p>
+
+<div class="box srcmap">
+  <span class="box-label">ソース</span>
+  <ul>
+    <li><code>bytecode/PropertyInlineCacheSummary.h</code>、<code>bytecode/PropertyInlineCache.cpp:529-570</code> — 要約</li>
+    <li><code>bytecode/GetByStatus.{h,cpp}</code>、<code>bytecode/GetByVariant.h</code>、<code>bytecode/PutByStatus.cpp</code>、<code>bytecode/InByStatus.cpp</code>、<code>bytecode/ComplexGetStatus.cpp</code>（ケース → 変種の変換）</li>
+    <li><code>bytecode/ICStatusMap.h</code>、<code>bytecode/ICStatusUtils.h</code>、<code>bytecode/RecordedStatuses.h</code>、<code>bytecode/CodeBlock.cpp:1158-1184, 1863-1903</code></li>
+    <li><code>dfg/DFGByteCodeParser.cpp:6534-6550</code>（<code>handleGetByOffset</code>）、<code>6838-6935</code>（<code>load</code>）、<code>6964-7188</code>（<code>handleGetById</code>）、<code>7434-</code>（<code>handlePutById</code>）、<code>11162-11177</code>（<code>ICStatusContext</code>）</li>
+    <li>オプション：<code>useAccessInlining</code>、<code>usePolyvariantDevirtualization</code>、<code>usePolymorphicAccessInlining</code>、<code>maxPolymorphicAccessInliningListSize</code>（<code>runtime/OptionsList.h:263-268</code>）</li>
+  </ul>
+</div>
+</div>
+</section>
+<!-- ============================================================ -->
+<section class="sec" id="s13">
+<h2><span class="sec-no">§13</span><span class="sec-title">観察する：オプションと演習</span></h2>
+<div class="prose">
+
+<p class="lead">読むだけでなく動かして確かめるための道具立てと、理解を確認する演習問題をまとめる。<code>jsc</code> シェルのオプションは <code>--名前=値</code> の形で渡すか、環境変数 <code>JSC_名前=値</code> で与える。</p>
+
+<h3><span class="h3-no">13.1</span>IC を観察するためのオプション</h3>
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 13.1</span>IC 関連の主なオプション（既定値は <code>runtime/OptionsList.h</code> のもの）</caption>
+<thead><tr><th>オプション</th><th>既定</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>useICStats</code></td><td>false</td><td>IC イベント（<code>OperationGetByIdOptimize</code>、<code>GetByAddAccessCase</code>、<code>GetByReplaceWithJump</code> 等）の集計を 1 秒ごと・終了時に出力する（handler 連鎖の実行統計まで取るには、加えてコンパイル時定数 <code>ICStatsInternal::traceHandlerChains</code> を有効にしたビルドが要る）。<code>exposeProfilersOnGlobalObject=true</code> と併用し、計測したい区間を <code>__signpostStart()</code>／<code>__signpostStop()</code> で囲む必要がある（区間外は記録されない。<span class="src"><code>jit/ICStats.cpp</code> の <code>shouldRecord</code></span>）</td></tr>
+<tr><td><code>dumpDisassembly</code></td><td>false</td><td>生成された全機械語を出力する。IC の stub は "Access stub handler for …" や "InlineAccessType: …" という名前で現れ、ケース一覧がコメントとして付く</td></tr>
+<tr><td><code>forceICFailure</code></td><td>false</td><td>すべてのキャッシュ試行を <code>GiveUpOnCache</code> にする。IC が無いときの速度と、DFG が <code>TakesSlowPath</code> をどう扱うかの観察に</td></tr>
+<tr><td><code>useLLIntICs</code></td><td>true</td><td>§4 のメタデータキャッシュの有効／無効</td></tr>
+<tr><td><code>maxAccessVariantListSize</code></td><td>8</td><td>polymorphic の上限。1 にすると単相以外は即 megamorphic／打ち止めになる</td></tr>
+<tr><td><code>repatchBufferingCountdown</code> ／ <code>initialRepatchBufferingCountdown</code></td><td>6 ／ 6</td><td>§9.3 のバッファリング。0 にすると毎回再生成</td></tr>
+<tr><td><code>repatchCountForCoolDown</code> ／ <code>initialCoolDownCount</code></td><td>8 ／ 20</td><td>§5.4 のクールダウン</td></tr>
+<tr><td><code>useAccessInlining</code></td><td>true</td><td>false にすると DFG は IC を展開せず、常に自前の IC を置く（§12.3）</td></tr>
+<tr><td><code>usePolymorphicAccessInlining</code></td><td>true</td><td>FTL の <code>MultiGetByOffset</code> 展開</td></tr>
+<tr><td><code>forcePolyProto</code></td><td>false</td><td>すべてのコンストラクタ生成物を poly proto にする（§2.5 の経路を強制的に通す）</td></tr>
+<tr><td><code>useDFGJIT</code> ／ <code>useFTLJIT</code> ／ <code>useBaselineJIT</code></td><td>true</td><td>階層を止めて、特定の階層の IC だけを観察する</td></tr>
+<tr><td><code>useDollarVM</code></td><td>false</td><td><code>$vm.dumpCell(o)</code>（Structure とレイアウトの表示）、<code>$vm.inlineCapacity(o)</code>、<code>$vm.getStructureTransitionList(o)</code>、<code>$vm.toCacheableDictionary(o)</code>／<code>toUncacheableDictionary(o)</code>、<code>$vm.flattenDictionaryObject(o)</code>、<code>$vm.createGlobalProxy(o)</code> など、§2 の各状態を人為的に作る道具</td></tr>
+</tbody>
+</table>
+</div>
+<p>ソース中には、リリースビルドでも切り替えられるオプションとは別に、コンパイル時定数の詳細ログがある。<code>InlineCacheCompilerInternal::verbose</code>（ケース一覧と生成結果）、<code>PropertyInlineCacheInternal::verbose</code>（<code>addAccessCase</code> の各段階）、<code>ICStatsInternal::traceHandlerChains</code>（handler 連鎖の実行トレース）を <code>true</code> にしてビルドすると、本章で追った流れがそのままログに現れる。<span class="src"><code>bytecode/InlineCacheCompiler.cpp</code>, <code>bytecode/PropertyInlineCache.cpp:40</code>, <code>jit/ICStats.h:38-83</code></span></p>
+
+<h3><span class="h3-no">13.2</span>観察例</h3>
+<p>次のプログラムは、1 つのアクセスサイト <code>p.x</code> に対して形の数を変えながら実行する。<code>jsc</code> シェルの <code>describe(o)</code> は Structure のアドレスを表示するので、同じ形かどうかを確認できる。</p>
+<pre><code><span class="c">// jsc --useICStats=true --exposeProfilersOnGlobalObject=true --useDFGJIT=false ic.js</span>
+<span class="k">const</span> SHAPES = 4;                              <span class="c">// 1, 4, 12 に変えて比較する</span>
+
+<span class="k">function</span> read(p) { <span class="k">return</span> p.x; }             <span class="c">// ← 観察対象のサイト</span>
+noInline(read);
+
+<span class="k">function</span> make(n) {                             <span class="c">// p0 .. p(n-1) を持つ n 番目の形を作る</span>
+    <span class="k">const</span> o = { x: n };
+    <span class="k">for</span> (<span class="k">let</span> i = 0; i &lt; n; ++i) o[<span class="k">"p"</span> + i] = i;    <span class="c">// 追加するたびに Structure が遷移する</span>
+    <span class="k">return</span> o;
+}
+<span class="k">const</span> shapes = [];
+<span class="k">for</span> (<span class="k">let</span> n = 1; n &lt;= SHAPES; ++n) shapes.push(make(n));
+
+__signpostStart();
+<span class="k">for</span> (<span class="k">let</span> i = 0; i &lt; 1e5; ++i) read(shapes[i % SHAPES]);
+__signpostStop();</code></pre>
+<p><code>SHAPES</code> を 1 にすれば単相——<code>OperationGetByIdOptimize</code> がおおむね 2 回（§5.4 の <code>countdown</code> のぶん）、<code>GetByAddAccessCase</code> と <code>GetByReplaceWithJump</code> が 1 回ずつで、以後イベントが止まる（Baseline では生成された handler が inline 検査に昇格している。FTL まで動かせば代わりに <code>GetBySelfPatch</code> が現れる）。4 にすれば <code>GetByAddAccessCase</code> が 4 回、12 にすれば 8 回目のケース追加の後に megamorphic 化して <code>Optimize</code> 系イベントが止まる様子が、それぞれ統計に現れるはずである。<code>--useDFGJIT=false</code> を外すと、DFG が §12 の展開を行ってサイトから IC が消えるため、統計の伸びが途中で止まる様子も観察できる。</p>
+<p>なお、読むプロパティを <code>p.x</code> から <code>p.p0</code> に変えると、<code>--dumpDisassembly=true</code> の出力で butterfly をロードしてから値を読む形（図 2.1 の out-of-line 側）が現れる。オブジェクトリテラルの inline 容量はバイトコードコンパイラがリテラル中に静的に見えるプロパティ数（ここでは <code>x</code> の 1 個）から決めるため、<span class="src"><code>bytecompiler/BytecodeGenerator.cpp:6020-6029</code></span> 後からループで足した <code>p0</code> 以降はすべて out-of-line に置かれるからである。<code>$vm.dumpCell(shapes[0])</code>（<code>--useDollarVM=true</code>）で実際の配置を確認できる。</p>
+
+<h3><span class="h3-no">13.3</span>演習</h3>
+<ol class="exercise">
+  <li>§4 の <code>GetByIdModeMetadata</code> で、<code>ProtoLoad</code> の列挙値が 0 でなければならない理由を、図 4.1 のバイト配置を用いて説明せよ。また、<code>Default</code> モードのメタデータをリンク直後の状態（structureID = 0）にしておくと必ずミスする理由を述べよ。</li>
+  <li>inline 容量 6 の <code>JSFinalObject</code> がプロパティ 3 個を持つ状態で 4 個目のプロパティを追加するとき、（a）LLInt、（b）Handler IC のいずれで遷移がキャッシュされるか。プロパティが 6 個ある状態で 7 個目を追加する場合はどうか。§2.3 と §7.3 の 4 形態を用いて答えよ。</li>
+  <li><code>o.x</code> が <code>o</code> の 2 段上のプロトタイプ <code>Q</code> で見つかるとする（<code>o → P → Q</code>）。<code>tryCacheGetBy</code> が生成する条件集合の中身を列挙し、それぞれが「監視」と「検査」のどちらになりうるかを、P と Q の Structure の状態ごとに述べよ（§6.4, §11.1）。</li>
+  <li>Handler IC で、あるサイトに Structure S₁, S₂, S₃ の順で形が現れた後、S₁ が最も頻繁に来るようになったとする。ガードの実行順序はどうなるか。Repatching IC（binary switch）の場合と比較せよ（§8.2, §9.4）。</li>
+  <li><code>countdown</code> の初期値が 1 であることから、Baseline のあるサイトが最初に実行されてから IC が最初のケースを覚えるまでに、そのサイトは何回スローパスを通るか（§5.4）。この設計の利点を、1 回しか実行されないコード（初期化コード）の観点から説明せよ。</li>
+  <li><code>Object.prototype</code> に新しいメソッドを追加すると、その時点で存在する get IC のうち、どの種類のものが無効化され、どの種類のものが生き残るか。adaptive watchpoint（§4.4, §11.2）を踏まえて答えよ。</li>
+  <li><code>MegamorphicCache</code> が dictionary な base を扱えない理由と、サイト単位の IC が cacheable dictionary の自己アクセスなら扱える理由を対比して説明せよ（§2.4, §10.3）。</li>
+  <li>put IC の <code>Replace</code> ケースを生成するときに置換 watchpoint set を発火させるのに対し、get IC の <code>Load</code> ケースは監視を開始するだけである。もし <code>Replace</code> ケース生成時に発火させなかった場合、DFG がどのような誤ったコードを生成しうるか、具体例を挙げよ（§11.3）。</li>
+  <li>GC が Structure を弱参照としてしか扱わないにもかかわらず、<code>Transition</code> ケースの新 Structure については条件付きでマークする（§11.4）。この非対称の理由を述べ、条件付きマークを行わなかった場合に起きる性能上の問題を説明せよ。</li>
+  <li>設計問題：Handler IC を FTL にも適用する場合（<code>useHandlerICInFTL</code>）、現在の実装のどの前提が問題になるか。§5.1 のレジスタ規約と §9.1 の B3 によるレジスタ割当を手がかりに考察せよ。</li>
+</ol>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="s14">
+<h2><span class="sec-no">§14</span><span class="sec-title">まとめ・用語集・ソースマップ</span></h2>
+<div class="prose">
+
+<h3><span class="h3-no">14.1</span>本章の要点</h3>
+<ol>
+  <li>IC は「ガード・ペイロード・スローパス・無効化」の 4 部品からなる。JSC ではガードが <code>StructureID</code> の 32bit 比較に、ペイロードが <code>(Structure, PropertyOffset[, holder])</code> の組に還元される。これはオブジェクト表現（§2）がそう設計されているからである。</li>
+  <li>階層ごとに記憶域の形が違う。LLInt はメタデータ（§4）、Baseline／DFG は <code>InlineCacheHandler</code> の連結リスト（§8）、FTL は書き換え可能な機械語スラブ（§9）。しかし「何をキャッシュするか」の判断（§6）と「1 ケースの記述」（<code>AccessCase</code>、§7）は JIT 階層で共通である。</li>
+  <li>Handler IC はケース追加を「データ構造へのノード追加」にし、機械語を VM 全体で共有することで生成コストを最小化した。Repatching IC は専用コードと binary switch で実行速度を最大化する。生成コストと実行速度のどちらを優先するかが、階層ごとの方式選択の基準である（§3.1）。</li>
+  <li>他オブジェクトに関する仮定は条件集合として宣言的に持ち、コード生成時に「監視」か「検査」かを決める。監視は adaptive watchpoint により、無関係な変更では壊れない（§11）。</li>
+  <li>形の数が 8 を超えると、サイト単位の IC から VM 全体の <code>MegamorphicCache</code> へ切り替わる。こちらは epoch による大雑把な一括無効化で運用される（§10）。</li>
+  <li>IC は参照先を弱参照で持ち、GC 終了時に点検してリセットする。stub の機械語はスタック上に無いことを GC が確認してから解放する（§11.4）。</li>
+  <li>下位階層の IC は上位階層のプロファイルである。<code>AccessCase</code> は <code>GetByStatus</code> を経て DFG／FTL の構造検査とロード（あるいは getter のインライン展開）に変換され、最終的に IC 自体が消える（§12）。</li>
+</ol>
+
+<h3><span class="h3-no">14.2</span>用語集</h3>
+<dl class="gloss">
+  <dt>アクセスサイト</dt><dd>ソースコード上のプロパティアクセス 1 箇所。バイトコード命令 1 つに対応し、IC は原則としてサイトごとに 1 個</dd>
+  <dt>Structure</dt><dd>オブジェクトの形（プロパティ配置・プロトタイプ・型情報）を表す共有セル。隠れクラス</dd>
+  <dt><code>StructureID</code></dt><dd>Structure のアドレス下位 32bit。全セルの先頭 4 バイトに置かれ、IC のガードの比較対象</dd>
+  <dt><code>PropertyOffset</code></dt><dd>プロパティの格納位置。64 未満は inline、以上は out-of-line（butterfly 内）</dd>
+  <dt>butterfly</dt><dd>オブジェクトの外部格納領域。ポインタの上側に添字要素、下側に out-of-line プロパティが伸びる</dd>
+  <dt>transition（遷移）</dt><dd>プロパティ追加等でオブジェクトが別の Structure に移ること。実体は structureID の書き換え</dd>
+  <dt>dictionary</dt><dd>遷移せずその場で書き換わるモードの Structure。cacheable と uncacheable の 2 段階</dd>
+  <dt>poly proto</dt><dd>プロトタイプを Structure でなく各オブジェクトの inline slot 0 に持つ方式</dd>
+  <dt>watchpoint</dt><dd>ある事象（Structure の遷移、値の置換など）が起きたときに通知を受ける仕組み。adaptive なものは条件を再評価して登録し直す</dd>
+  <dt><code>PropertyInlineCache</code></dt><dd>JIT 階層の IC 1 個を表すオブジェクト。旧名 <code>StructureStubInfo</code></dd>
+  <dt><code>AccessType</code></dt><dd>サイトの命令の種類（<code>GetById</code> 等 30 種）。<code>AccessCase::AccessType</code>（ケースの種類、約 140 種）とは別物なので注意</dd>
+  <dt><code>CacheType</code></dt><dd>IC の大まかな状態（<code>Unset</code>／単相の各形／<code>Stub</code>）</dd>
+  <dt><code>AccessCase</code></dt><dd>1 つの形に対する答えの宣言的記述。ケース</dd>
+  <dt><code>ObjectPropertyConditionSet</code></dt><dd>ケースが依存する他オブジェクトに関する仮定（Presence／Absence 等）の集合</dd>
+  <dt><code>PolymorphicAccess</code></dt><dd>Repatching IC におけるケースの一覧</dd>
+  <dt><code>InlineCacheHandler</code></dt><dd>Handler IC におけるケース 1 個ぶんのノード。データと機械語へのポインタを持つ</dd>
+  <dt>thunk</dt><dd>VM に 1 本だけ生成され共有される機械語片。Handler IC の handler の大半はこれ</dd>
+  <dt>stub</dt><dd>IC のために個別に生成された機械語片。<code>PolymorphicAccessJITStubRoutine</code> として管理される</dd>
+  <dt>スラブ</dt><dd>Repatching IC が書き換える、関数本体内の固定長の機械語領域</dd>
+  <dt>monomorphic ／ polymorphic ／ megamorphic</dt><dd>サイトが観測した形が 1 種類 ／ 2〜8 種類 ／ それ以上</dd>
+  <dt><code>MegamorphicCache</code></dt><dd>(StructureID, 名前) をキーとする VM 全体のハッシュ表。epoch で一括無効化</dd>
+  <dt><code>Optimize</code> ／ <code>Megamorphic</code> ／ <code>GaveUp</code></dt><dd>スローパス operation の 3 段階</dd>
+  <dt><code>GetByStatus</code></dt><dd>IC の内容を DFG 向けに要約したもの。変種（<code>GetByVariant</code>）の集合</dd>
+  <dt>OSR exit</dt><dd>最適化コードが仮定の失敗を検出して下位階層に戻ること。IC の展開が失敗した履歴は次回の <code>GetByStatus</code> に反映される</dd>
+</dl>
+
+<h3><span class="h3-no">14.3</span>ソースマップ</h3>
+</div>
+
+<div class="tbl">
+<table>
+<caption><span class="tbl-no">表 14.1</span>本章で扱ったファイルの一覧（<code>Source/JavaScriptCore/</code> 相対、リビジョン <code>f8225fcd97</code>）</caption>
+<thead><tr><th>ファイル</th><th>内容</th><th>節</th></tr></thead>
+<tbody>
+<tr><td><code>runtime/Structure.h</code>, <code>StructureID.h</code>, <code>PropertyOffset.h</code>, <code>JSObject.h</code>, <code>JSCell.h</code></td><td>オブジェクト表現</td><td>§2</td></tr>
+<tr><td><code>runtime/PropertySlot.h</code>, <code>PutPropertySlot.h</code></td><td>cacheability の宣言</td><td>§6.2</td></tr>
+<tr><td><code>runtime/CacheableIdentifier.h</code></td><td>プロパティ名の保持</td><td>§11.5</td></tr>
+<tr><td><code>runtime/MegamorphicCache.{h,cpp}</code></td><td>VM 全体の表</td><td>§10</td></tr>
+<tr><td><code>runtime/OptionsList.h</code></td><td>オプション</td><td>§5.4, §13</td></tr>
+<tr><td><code>bytecode/GetByIdMetadata.h</code>, <code>llint/LowLevelInterpreter64.asm</code>, <code>llint/LLIntSlowPaths.cpp</code>, <code>bytecode/LLIntPrototypeLoadAdaptiveStructureWatchpoint.*</code></td><td>LLInt の IC</td><td>§4</td></tr>
+<tr><td><code>bytecode/PropertyInlineCache.{h,cpp}</code></td><td>IC オブジェクト。両方式の設計コメント</td><td>§5, §8, §9</td></tr>
+<tr><td><code>bytecode/PropertyInlineCacheSummary.h</code></td><td>要約</td><td>§12.1</td></tr>
+<tr><td><code>jit/JITOperations.cpp</code></td><td>スローパス operation</td><td>§6.1, §10.3</td></tr>
+<tr><td><code>bytecode/Repatch.{h,cpp}</code></td><td>キャッシュ可能性の判定、リセット、スローパスの差し替え</td><td>§6</td></tr>
+<tr><td><code>bytecode/PropertyCondition.*</code>, <code>ObjectPropertyCondition.*</code>, <code>ObjectPropertyConditionSet.*</code>, <code>PolyProtoAccessChain.*</code></td><td>仮定の表現</td><td>§6.4, §11.1</td></tr>
+<tr><td><code>bytecode/AccessCase.{h,cpp}</code> と派生クラス</td><td>ケースの記述</td><td>§7</td></tr>
+<tr><td><code>bytecode/InlineCacheCompiler.{h,cpp}</code></td><td>ケース → 機械語。<code>compileHandler</code>／<code>compile</code>／megamorphic 畳み込み</td><td>§8, §9, §10</td></tr>
+<tr><td><code>bytecode/InlineCacheHandler.{h,cpp}</code>, <code>bytecode/SharedJITStubSet.h</code>, <code>jit/JITThunks.h</code></td><td>Handler IC のノードと共有</td><td>§8</td></tr>
+<tr><td><code>bytecode/InlineAccess.{h,cpp}</code></td><td>Repatching IC のスラブ書き換え</td><td>§9</td></tr>
+<tr><td><code>jit/JITInlineCacheGenerator.{h,cpp}</code>, <code>jit/JITPropertyAccess.cpp</code>, <code>jit/BaselineJITCode.h</code>, <code>jit/BaselineJITRegisters.h</code></td><td>Baseline のコールサイトと記憶域</td><td>§5.5, §8.1</td></tr>
+<tr><td><code>dfg/DFGSpeculativeJIT64.cpp</code>, <code>dfg/DFGJITCode.h</code>, <code>dfg/DFGSlowPathGenerator.h</code></td><td>DFG のコールサイトと記憶域</td><td>§8.1</td></tr>
+<tr><td><code>ftl/FTLLowerDFGToB3.cpp</code>, <code>ftl/FTLState.cpp</code></td><td>FTL の patchpoint</td><td>§9.1</td></tr>
+<tr><td><code>bytecode/PropertyInlineCacheClearingWatchpoint.*</code>, <code>bytecode/Watchpoint.*</code>, <code>bytecode/AdaptiveInferredPropertyValueWatchpointBase.*</code></td><td>無効化</td><td>§11</td></tr>
+<tr><td><code>jit/GCAwareJITStubRoutine.*</code>, <code>heap/JITStubRoutineSet.*</code>, <code>bytecode/CodeBlock.cpp</code></td><td>GC 連携</td><td>§11.4</td></tr>
+<tr><td><code>bytecode/GetByStatus.*</code>, <code>PutByStatus.*</code>, <code>ICStatusMap.h</code>, <code>RecordedStatuses.h</code>, <code>dfg/DFGByteCodeParser.cpp</code></td><td>プロファイルとしての利用</td><td>§12</td></tr>
+<tr><td><code>jit/ICStats.{h,cpp}</code>, <code>tools/JSDollarVM.cpp</code></td><td>観察の道具</td><td>§13</td></tr>
+</tbody>
+</table>
+</div>
+
+<footer class="tail">
+  <p>本章は WebKit リビジョン <code>f8225fcd97</code>（2026-08-13）の <code>Source/JavaScriptCore</code> を読んで構成した。IC 周辺は改名や方式変更が頻繁に行われる領域であり、行番号はもとより、クラス名やオプション名も将来のリビジョンでは異なりうる。ソースを参照する際は、まず <code>bytecode/PropertyInlineCache.h</code> 冒頭の設計コメントから現状を確認することを勧める。</p>
+</footer>
+</section>
+
+</div><!-- /.page -->
+</body>
+</html>
