@@ -23,7 +23,10 @@
   --code-ink: #24303C;
   --kw: #6D3E9E;
   --shadow: 0 1px 0 rgba(27,36,48,0.06);
-  color-scheme: light dark;
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic Medium", "Yu Gothic", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif CJK JP", "Noto Serif JP", "Yu Mincho", YuMincho, "Songti SC", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "Osaka-Mono", "MS Gothic", monospace;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -44,6 +47,7 @@
     --code-ink: #D5DDE5;
     --kw: #C39BE8;
     --shadow: none;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
@@ -64,6 +68,7 @@
   --code-ink: #D5DDE5;
   --kw: #C39BE8;
   --shadow: none;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -72,17 +77,13 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic Medium", "Yu Gothic", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.95;
   font-feature-settings: "palt" 0;
 }
-.serif, h1, .chapter-no, .fig-no, .sec-no, .def-no, .tbl-no {
-  font-family: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif CJK JP", "Noto Serif JP", "Yu Mincho", YuMincho, "Songti SC", Georgia, "Times New Roman", serif;
-}
-code, pre {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "Osaka-Mono", "MS Gothic", monospace;
-}
+h1, .chapter-no, .fig-no, .sec-no, .tbl-no { font-family: var(--font-serif); }
+code, pre { font-family: var(--font-mono); }
 a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 a:hover { color: var(--accent); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -157,7 +158,6 @@ h3 .h3-no { color: var(--muted); font-weight: 500; margin-right: 0.6em; font-siz
 p { margin: 0 0 1.1rem; }
 ul, ol { padding-left: 1.5rem; margin: 0 0 1.1rem; }
 li { margin: 0.15rem 0; }
-li > ul, li > ol { margin-bottom: 0.3rem; }
 strong { font-weight: 700; }
 em { font-style: normal; font-weight: 600; text-emphasis: filled sesame; -webkit-text-emphasis: filled sesame; }
 .lead { font-size: 1.02rem; color: var(--ink-2); }
@@ -175,7 +175,8 @@ code {
   font-size: 0.78em;
   color: var(--muted);
 }
-.src code { background: transparent; padding: 0; color: var(--muted); font-size: 1em; }
+.src code, pre code, .box.srcmap code { background: transparent; padding: 0; }
+.src code { color: var(--muted); font-size: 1em; }
 pre {
   background: var(--code-bg);
   color: var(--code-ink);
@@ -188,7 +189,7 @@ pre {
   margin: 0 0 1.25rem;
   tab-size: 4;
 }
-pre code { background: transparent; padding: 0; font-size: 1em; color: inherit; overflow-wrap: normal; }
+pre code { font-size: 1em; color: inherit; overflow-wrap: normal; }
 pre .c { color: var(--muted); }
 pre .k { color: var(--kw); }
 pre .hi { color: var(--accent-ink); font-weight: 600; }
@@ -212,17 +213,15 @@ pre .w { color: var(--warn); font-weight: 600; }
   font-weight: 700;
   margin-bottom: 0.25rem;
 }
-.box p:last-child, .box ul:last-child, .box ol:last-child { margin-bottom: 0.4rem; }
+.box p:last-child, .box ul:last-child { margin-bottom: 0.4rem; }
 .box.def { border-left: 3px solid var(--accent); }
 .box.def .box-label { color: var(--accent-ink); }
-.box.def .def-no { font-weight: 600; margin-right: 0.5em; }
 .box.note { border-left: 3px solid var(--warn); }
 .box.note .box-label { color: var(--warn); }
 .box.column { background: var(--surface-2); border-style: dashed; }
 .box.srcmap { font-size: 0.85rem; }
 .box.srcmap ul { padding-left: 1.1rem; margin: 0; }
 .box.srcmap li { margin: 0; }
-.box.srcmap code { background: transparent; padding: 0; }
 
 /* ---------- tables ---------- */
 .tbl { overflow-x: auto; margin: 0 0 1.5rem; }
@@ -242,27 +241,27 @@ figure.fig {
   padding: 1rem 1rem 0.6rem;
   box-shadow: var(--shadow);
 }
-figure.fig svg { display: block; width: 100%; height: auto; max-width: 100%; color: var(--ink); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-figure.fig svg .jp { font-family: "Hiragino Sans", "Noto Sans CJK JP", "Yu Gothic", Meiryo, sans-serif; }
+figure.fig svg { display: block; width: 100%; height: auto; font-family: var(--font-mono); }
+figure.fig svg .jp { font-family: var(--font-sans); }
 figure.fig figcaption { font-size: 0.82rem; color: var(--ink-2); line-height: 1.7; margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed var(--rule); }
 figure.fig figcaption .fig-no { font-weight: 700; margin-right: 0.6em; color: var(--ink); }
 .svg-wrap { overflow-x: auto; }
 .svg-wrap svg { min-width: 30rem; }
-svg .bx { fill: var(--surface); stroke: currentColor; stroke-width: 1.1; }
-svg .bx2 { fill: var(--surface-2); stroke: currentColor; stroke-width: 1.1; }
+svg .bx, svg .bx2, svg .bxa, svg .bxw { stroke: currentColor; stroke-width: 1.1; }
+svg .bx { fill: var(--surface); }
+svg .bx2 { fill: var(--surface-2); }
 svg .bxa { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.3; }
 svg .bxw { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.3; }
-svg .ln { stroke: currentColor; stroke-width: 1.1; fill: none; }
-svg .lna { stroke: var(--accent); stroke-width: 1.6; fill: none; }
-svg .lnw { stroke: var(--warn); stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
-svg .lnd { stroke: currentColor; stroke-width: 1; fill: none; stroke-dasharray: 3 3; opacity: 0.7; }
+svg .ln, svg .lna, svg .lnw, svg .lnd { fill: none; stroke: currentColor; stroke-width: 1.1; }
+svg .lna { stroke: var(--accent); stroke-width: 1.6; }
+svg .lnw { stroke: var(--warn); stroke-width: 1.4; stroke-dasharray: 5 3; }
+svg .lnd { stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
 svg text { fill: currentColor; font-size: 12px; }
 svg .t-s { font-size: 10.5px; }
 svg .t-xs { font-size: 9.5px; fill: var(--muted); }
 svg .t-b { font-weight: 700; }
 svg .t-a { fill: var(--accent-ink); }
 svg .t-w { fill: var(--warn); }
-svg .t-m { fill: var(--muted); }
 svg .arr { fill: currentColor; }
 svg .arra { fill: var(--accent); }
 svg .arrw { fill: var(--warn); }
@@ -281,7 +280,7 @@ dl.gloss dd { margin: 0; }
 .steps > li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0.35rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent-ink); font-size: 0.78rem; line-height: 1.5rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; padding-top: 1rem; font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-@media print { body { background: #fff; color: #000; } .page { max-width: none; } figure.fig, .box { break-inside: avoid; } }
+@media print { .page { max-width: none; } figure.fig, .box { break-inside: avoid; } }
 </style>
 </head>
 <body>
@@ -289,7 +288,7 @@ footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; paddin
 
 <header class="mast">
   <div class="chapter-no">JavaScriptCore 内部構造 ／ 章</div>
-  <h1>インラインキャッシュ<br>—— <span class="serif">PropertyInlineCache</span> の設計と実装</h1>
+  <h1>インラインキャッシュ<br>—— PropertyInlineCache の設計と実装</h1>
   <p class="sub">JavaScriptCore（JSC）が <code>o.x</code> のようなプロパティアクセスを高速化するために用いる<strong>インラインキャッシュ（Inline Cache, IC）</strong>を、LLInt のメタデータキャッシュから、Baseline／DFG の Handler IC、FTL の Repatching IC、そして VM 全体で共有される Megamorphic キャッシュまで、実際のソースコードに沿って一段ずつ読み解く。</p>
   <dl class="colophon">
     <dt>対象リビジョン</dt><dd>WebKit <code>f8225fcd97</code>（2026-08-13 時点の trunk）</dd>
@@ -321,7 +320,7 @@ footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; paddin
 
 <!-- ============================================================ -->
 <section class="sec" id="s1">
-<h2><span class="sec-no">§1</span><span class="sec-title">問題：<code>o.x</code> はなぜ遅いか</span></h2>
+<h2><span class="sec-no">§1</span><span>問題：<code>o.x</code> はなぜ遅いか</span></h2>
 <div class="prose">
 
 <p class="lead">インラインキャッシュは「<strong>同じ場所で実行されるプロパティアクセスは、たいてい同じ形のオブジェクトを相手にする</strong>」という経験則を、実行時に発見して機械語やデータ構造へ焼き付ける仕組みである。まず、それが無いと何が起きるかを確認する。</p>
@@ -340,8 +339,8 @@ footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; paddin
 <p>一方で、ソースコード上の特定の 1 箇所（<em>アクセスサイト</em>）に注目すると、そこを通るオブジェクトの「形」は驚くほど偏っている。<code>function area(r) { return r.w * r.h; }</code> の <code>r.w</code> には、ほとんどの場合同じコンストラクタで作られた、同じレイアウトのオブジェクトが来る。この性質は Smalltalk-80 の実装（Deutsch &amp; Schiffman, 1984）でメソッド呼び出しの高速化に使われたのが最初で、Self（Hölzle ら, 1991）が「複数の形を同時に覚える」多相インラインキャッシュ（PIC）へ拡張した。JSC の IC はこの系譜の直系であり、用語（monomorphic / polymorphic / megamorphic）もそのまま受け継いでいる。</p>
 
 <div class="box def">
-  <span class="box-label">定義</span>
-  <p><span class="def-no">定義 1.1</span><strong>インラインキャッシュ</strong>とは、あるアクセスサイトについて「<em>直前までに観測したオブジェクトの形</em>」と「<em>その形に対する答え</em>（値の格納位置など）」の組を、そのサイト専用の記憶域に保持しておき、次回以降は<strong>形の一致確認</strong>だけで一般の道を省略する仕組みである。「インライン」の語源は、記憶域が呼び出し元の機械語の中に埋め込まれていたことによる。JSC では機械語に埋め込む形態（§9）と、機械語の外のデータ構造に置く形態（§4, §8）の両方が使われるが、どちらも IC と呼ぶ。</p>
+  <span class="box-label">定義 1.1</span>
+  <p><strong>インラインキャッシュ</strong>とは、あるアクセスサイトについて「<em>直前までに観測したオブジェクトの形</em>」と「<em>その形に対する答え</em>（値の格納位置など）」の組を、そのサイト専用の記憶域に保持しておき、次回以降は<strong>形の一致確認</strong>だけで一般の道を省略する仕組みである。「インライン」の語源は、記憶域が呼び出し元の機械語の中に埋め込まれていたことによる。JSC では機械語に埋め込む形態（§9）と、機械語の外のデータ構造に置く形態（§4, §8）の両方が使われるが、どちらも IC と呼ぶ。</p>
 </div>
 
 <p>したがって IC には、どの実装にも共通する 3 つの部品がある。</p>
@@ -360,7 +359,7 @@ footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; paddin
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s2">
-<h2><span class="sec-no">§2</span><span class="sec-title">土台：Structure と PropertyOffset</span></h2>
+<h2><span class="sec-no">§2</span><span>土台：Structure と PropertyOffset</span></h2>
 <div class="prose">
 
 <p class="lead">IC のガードが「32bit 比較 1 回」で済み、ペイロードが「固定オフセットのロード 1 回」で済むのは、JSC のオブジェクト表現がそのように設計されているからである。本節では IC が依存するランタイム構造だけを、IC の視点から必要最小限に整理する。</p>
@@ -370,8 +369,8 @@ footer.tail { border-top: 1px solid var(--rule-strong); margin-top: 3rem; paddin
 <p>プロパティを追加すると、オブジェクトは「元の Structure に <code>x</code> を足したもの」を表す別の Structure へ<em>遷移</em>（transition）する。遷移先は元の Structure の遷移表（<code>m_transitionTable</code>）に記憶されるので、2 個目以降のオブジェクトは同じ経路をたどって同じ Structure に到達する。<span class="src"><code>runtime/Structure.cpp:562-626</code></span></p>
 
 <div class="box def">
-  <span class="box-label">定義</span>
-  <p><span class="def-no">定義 2.1</span>IC における「オブジェクトの<strong>形</strong>」とは、そのオブジェクトが現在指している Structure のことである。Structure が同じなら、（a）どのプロパティがどのオフセットにあるか、（b）プロトタイプが何か（<a href="#s2-5">2.5</a> の poly proto を除く）、（c）getter/setter や読み取り専用属性の有無、（d）C++ 側で <code>[[Get]]</code> をオーバーライドしているかどうか、がすべて同じであることが保証される。IC はこの保証の上に成り立つ。</p>
+  <span class="box-label">定義 2.1</span>
+  <p>IC における「オブジェクトの<strong>形</strong>」とは、そのオブジェクトが現在指している Structure のことである。Structure が同じなら、（a）どのプロパティがどのオフセットにあるか、（b）プロトタイプが何か（<a href="#s2-5">2.5</a> の poly proto を除く）、（c）getter/setter や読み取り専用属性の有無、（d）C++ 側で <code>[[Get]]</code> をオーバーライドしているかどうか、がすべて同じであることが保証される。IC はこの保証の上に成り立つ。</p>
 </div>
 
 <h3><span class="h3-no">2.2</span>StructureID：ガードを 32bit 比較にする仕掛け</h3>
@@ -385,6 +384,7 @@ jne   miss</code></pre>
 <h3><span class="h3-no">2.3</span>PropertyOffset と 2 種類の格納場所</h3>
 <p>プロパティの値は 2 箇所のどちらかに置かれる。オブジェクトセル本体の末尾に確保された <strong>inline storage</strong> と、セルの 8 バイト目にあるポインタ（<em>butterfly</em>）が指す外部領域の <strong>out-of-line storage</strong> である。<code>PropertyOffset</code>（実体は <code>int</code>）はこの両方を 1 本の番号で表す。</p>
 
+</div>
 <figure class="fig">
 <div class="svg-wrap">
 <svg viewBox="0 0 760 300" role="img" aria-label="JSObject のセル本体（StructureID・型情報・butterfly ポインタ・inline slot 0〜5）と、butterfly が指す外部領域（下向きに伸びる out-of-line slot と IndexingHeader、上向きに伸びる添字要素）の関係、および PropertyOffset の番号付け">
@@ -396,31 +396,29 @@ jne   miss</code></pre>
   <rect x="20" y="34" width="150" height="30" class="bxa"/>
   <text x="95" y="53" text-anchor="middle" class="t-s t-b t-a">StructureID (4B)</text>
   <rect x="170" y="34" width="150" height="30" class="bx"/>
-  <text x="245" y="53" text-anchor="middle" class="t-s">型 / indexingType (4B)</text>
+  <text x="245" y="53" text-anchor="middle" class="t-s jp">型 / indexingType (4B)</text>
   <text x="330" y="53" class="t-xs">offset 0</text>
   <rect x="20" y="64" width="300" height="30" class="bx2"/>
-  <text x="170" y="83" text-anchor="middle" class="t-s">butterfly ポインタ (8B)</text>
+  <text x="170" y="83" text-anchor="middle" class="t-s jp">butterfly ポインタ (8B)</text>
   <text x="330" y="83" class="t-xs">offset 8</text>
-  <g>
     <rect x="20" y="94" width="300" height="26" class="bx"/><text x="170" y="111" text-anchor="middle" class="t-s">inline slot — PropertyOffset 0</text><text x="330" y="111" class="t-xs">offset 16</text>
     <rect x="20" y="120" width="300" height="26" class="bx"/><text x="170" y="137" text-anchor="middle" class="t-s">inline slot — PropertyOffset 1</text><text x="330" y="137" class="t-xs">offset 24</text>
     <rect x="20" y="146" width="300" height="26" class="bx"/><text x="170" y="163" text-anchor="middle" class="t-s">inline slot — PropertyOffset 2</text>
     <rect x="20" y="172" width="300" height="26" class="bx"/><text x="170" y="189" text-anchor="middle" class="t-s">…</text>
     <rect x="20" y="198" width="300" height="26" class="bx"/><text x="170" y="215" text-anchor="middle" class="t-s">inline slot — PropertyOffset 5</text><text x="330" y="215" class="t-xs">offset 56</text>
-  </g>
   <text x="20" y="250" class="t-xs jp">inline offset は 0 ≤ o &lt; 64（firstOutOfLineOffset）。</text>
   <text x="20" y="266" class="t-xs jp">アドレス = cell + 16 + o × 8</text>
   <!-- arrow butterfly -->
   <path d="M320 79 C 400 79, 400 150, 470 150" class="ln" marker-end="url(#a1)"/>
   <!-- butterfly region -->
   <text x="470" y="22" class="t-b jp">butterfly が指す外部領域</text>
-  <rect x="480" y="34" width="250" height="26" class="bx"/><text x="605" y="51" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 66</text><text x="612" y="51" class="t-xs"></text>
+  <rect x="480" y="34" width="250" height="26" class="bx"/><text x="605" y="51" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 66</text>
   <rect x="480" y="60" width="250" height="26" class="bx"/><text x="605" y="77" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 65</text>
   <rect x="480" y="86" width="250" height="26" class="bx"/><text x="605" y="103" text-anchor="middle" class="t-s">out-of-line — PropertyOffset 64</text>
-  <rect x="480" y="112" width="250" height="26" class="bx2"/><text x="605" y="129" text-anchor="middle" class="t-s">IndexingHeader（length 等, 8B）</text>
+  <rect x="480" y="112" width="250" height="26" class="bx2"/><text x="605" y="129" text-anchor="middle" class="t-s jp">IndexingHeader（length 等, 8B）</text>
   <line x1="470" y1="150" x2="740" y2="150" class="lna"/>
-  <rect x="480" y="150" width="250" height="26" class="bx"/><text x="605" y="167" text-anchor="middle" class="t-s">添字要素 [0]</text>
-  <rect x="480" y="176" width="250" height="26" class="bx"/><text x="605" y="193" text-anchor="middle" class="t-s">添字要素 [1]</text>
+  <rect x="480" y="150" width="250" height="26" class="bx"/><text x="605" y="167" text-anchor="middle" class="t-s jp">添字要素 [0]</text>
+  <rect x="480" y="176" width="250" height="26" class="bx"/><text x="605" y="193" text-anchor="middle" class="t-s jp">添字要素 [1]</text>
   <rect x="480" y="202" width="250" height="26" class="bx"/><text x="605" y="219" text-anchor="middle" class="t-s">…</text>
   <text x="480" y="250" class="t-xs jp">太線 = butterfly ポインタの指す位置。out-of-line offset（o ≥ 64）は</text>
   <text x="480" y="266" class="t-xs jp">ヘッダの下へ逆向きに伸びる。o = 64 の番地は butterfly − 16</text>
@@ -429,6 +427,7 @@ jne   miss</code></pre>
 </div>
 <figcaption><span class="fig-no">図 2.1</span>オブジェクトの格納レイアウトと <code>PropertyOffset</code> の番号付け。<code>o &lt; 64</code> なら inline、<code>o ≥ 64</code> なら out-of-line。JIT はコンパイル時に定数比較でどちらかを決めるだけでよく（<code>offsetRelativeToBase</code> <span class="src"><code>runtime/JSObject.h:1309-1314</code></span>）、実行時にオフセットが決まる Megamorphic や Handler IC の共有 thunk では <code>AssemblyHelpers::loadProperty</code> が同じ判定を実行時に行う。<span class="src"><code>jit/AssemblyHelpers.cpp:374-397</code></span></figcaption>
 </figure>
+<div class="prose">
 
 <p>ここで重要なのは、<strong>Structure が決まればオフセットも inline/out-of-line の別も決まる</strong>ということである（inline 容量は Structure の <code>m_inlineCapacity</code> に含まれ、番号付けにも織り込まれている <span class="src"><code>runtime/PropertyOffset.h:136-144</code></span>）。ゆえに IC のペイロードは「Structure S のとき、オフセット o をロードせよ」という 1 組の定数だけで完全に記述できる。</p>
 <p>プロパティ追加で out-of-line 容量が足りなくなると butterfly の再確保が必要になる。容量は 0 → 4 → 8 → 16 … と段階的にしか増えないので<span class="src"><code>runtime/Structure.h:499-517</code></span>、遷移をキャッシュする put IC は「旧 Structure と新 Structure の容量が同じか」で再確保の要否を静的に判定できる（§7, §8）。</p>
@@ -467,7 +466,7 @@ jne   miss</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s3">
-<h2><span class="sec-no">§3</span><span class="sec-title">全体地図：階層ごとの IC の形</span></h2>
+<h2><span class="sec-no">§3</span><span>全体地図：階層ごとの IC の形</span></h2>
 <div class="prose">
 
 <p class="lead">JSC には実行階層（tier）が 4 つあり、IC の「記憶域をどこに置くか」は階層ごとに異なる。一方で「何をキャッシュするか」を決める C++ 側の判断ロジックは JIT 階層の間で完全に共有されている。この分担を先に頭に入れておくと、以降の節が読みやすい。</p>
@@ -490,7 +489,7 @@ jne   miss</code></pre>
   <text x="75" y="70" text-anchor="middle" class="t-b">LLInt</text>
   <text x="75" y="88" text-anchor="middle" class="t-xs jp">インタプリタ</text>
   <rect x="150" y="40" width="380" height="70" class="bx"/>
-  <text x="162" y="60" class="t-s t-b">bytecode metadata（GetByIdModeMetadata, 16 バイト）</text>
+  <text x="162" y="60" class="t-s t-b jp">bytecode metadata（GetByIdModeMetadata, 16 バイト）</text>
   <text x="162" y="78" class="t-s jp">単相のみ：structureID + offset (+ holder)</text>
   <text x="162" y="96" class="t-xs jp">§4　CodeBlock ごと・命令ごとに 1 個</text>
   <path d="M530 75 L560 75" class="ln" marker-end="url(#a3)"/>
@@ -546,7 +545,7 @@ jne   miss</code></pre>
   <path d="M290 380 L290 405" class="lnw" marker-end="url(#a3w)"/>
   <path d="M700 380 L700 405" class="lnw" marker-end="url(#a3w)"/>
   <rect x="150" y="407" width="690" height="48" class="bxw"/>
-  <text x="162" y="427" class="t-s t-b t-w">MegamorphicCache（VM に 1 個, runtime/MegamorphicCache.h）　§10</text>
+  <text x="162" y="427" class="t-s t-b t-w jp">MegamorphicCache（VM に 1 個, runtime/MegamorphicCache.h）　§10</text>
   <text x="162" y="445" class="t-s jp">ケース数が上限（既定 8）を超えたサイトは、(StructureID, 名前) → 答え のグローバルなハッシュ表に切り替わる</text>
 </svg>
 </div>
@@ -592,7 +591,7 @@ jne   miss</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s4">
-<h2><span class="sec-no">§4</span><span class="sec-title">LLInt のメタデータキャッシュ</span></h2>
+<h2><span class="sec-no">§4</span><span>LLInt のメタデータキャッシュ</span></h2>
 <div class="prose">
 
 <p class="lead">最も単純な IC はインタプリタにある。JIT 側の重厚な基盤（§5 以降）は一切使わず、命令ごとのメタデータに structureID とオフセットを書き込むだけである。しかし「ガード・ペイロード・スローパス・無効化」の 4 部品はすべて揃っており、IC の骨格を学ぶ教材として最適である。</p>
@@ -600,18 +599,17 @@ jne   miss</code></pre>
 <h3><span class="h3-no">4.1</span>記憶域：<code>GetByIdModeMetadata</code></h3>
 <p>LLInt のバイトコード命令は、リンク済み <code>CodeBlock</code> ごとに<em>メタデータ表</em>（<code>MetadataTable</code>）を持ち、命令はそこに自分専用の可変領域を確保できる。<code>get_by_id</code> のメタデータは 16 バイトの共用体 <code>GetByIdModeMetadata</code> ただ 1 つである。<span class="src"><code>bytecode/BytecodeList.rb:410-419</code>, <code>bytecode/GetByIdMetadata.h</code></span></p>
 
+</div>
 <figure class="fig">
 <div class="svg-wrap">
 <svg viewBox="0 0 800 260" role="img" aria-label="GetByIdModeMetadata 16 バイトのバイト配置。先頭 4 バイトが structureID、次の 4 バイトが cachedOffset、残り 8 バイトが ProtoLoad モードでは cachedSlot ポインタ、それ以外のモードでは 14 バイト目が mode、15 バイト目が hitCountForLLIntCaching として使われることを示す">
   <text x="20" y="22" class="t-b jp">GetByIdModeMetadata（16 バイト）のバイト配置</text>
-  <g class="t-xs">
-    <text x="20" y="48">byte</text>
-    <text x="180" y="48" text-anchor="middle">0 – 3</text>
-    <text x="320" y="48" text-anchor="middle">4 – 7</text>
-    <text x="510" y="48" text-anchor="middle">8 – 13</text>
-    <text x="665" y="48" text-anchor="middle">14</text>
-    <text x="745" y="48" text-anchor="middle">15</text>
-  </g>
+  <text x="20" y="48" class="t-xs">byte</text>
+  <text x="180" y="48" text-anchor="middle" class="t-xs">0 – 3</text>
+  <text x="320" y="48" text-anchor="middle" class="t-xs">4 – 7</text>
+  <text x="510" y="48" text-anchor="middle" class="t-xs">8 – 13</text>
+  <text x="665" y="48" text-anchor="middle" class="t-xs">14</text>
+  <text x="745" y="48" text-anchor="middle" class="t-xs">15</text>
   <!-- Default -->
   <text x="20" y="84" class="t-s t-b">Default</text>
   <rect x="110" y="64" width="140" height="30" class="bxa"/><text x="180" y="83" text-anchor="middle" class="t-s t-a">structureID</text>
@@ -636,6 +634,7 @@ jne   miss</code></pre>
 </div>
 <figcaption><span class="fig-no">図 4.1</span><code>GetByIdModeMetadata</code> の共用体。<code>ProtoLoad</code> の列挙値をわざわざ 0 にしてあるのは、64bit ポインタ <code>cachedSlot</code> を 8 バイト目に書き込むだけで、その上位 2 バイトが自動的に「mode = ProtoLoad, hitCount = 0」を意味するようにするためである。<span class="src"><code>bytecode/GetByIdMetadata.h:34-39, 71-102</code></span> 16 バイトに 4 モードを詰め込むためのトリックである（<code>cachedSlot</code> を常に 64bit 幅にしているのも、この共用体の配置をターゲットによらず一定に保つためだとコメントにある）。</figcaption>
 </figure>
+<div class="prose">
 
 <p>モードは 4 つある。</p>
 <div class="tbl">
@@ -713,7 +712,7 @@ loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロ
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s5">
-<h2><span class="sec-no">§5</span><span class="sec-title">PropertyInlineCache オブジェクト</span></h2>
+<h2><span class="sec-no">§5</span><span>PropertyInlineCache オブジェクト</span></h2>
 <div class="prose">
 
 <p class="lead">JIT 階層では、アクセスサイト 1 つにつき <code>PropertyInlineCache</code> が 1 個対応する。IC の現在状態・観測した事実・生成したコードへの参照・各種カウンタをまとめて持つ、IC 基盤の中心的なデータ構造である。以前は <code>StructureStubInfo</code> と呼ばれていた。</p>
@@ -808,7 +807,7 @@ loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロ
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s6">
-<h2><span class="sec-no">§6</span><span class="sec-title">スローパスからケース生成まで</span></h2>
+<h2><span class="sec-no">§6</span><span>スローパスからケース生成まで</span></h2>
 <div class="prose">
 
 <p class="lead">IC が育つのは、必ずガードが外れてスローパスに落ちた瞬間である。本節では JIT 階層に共通の C++ 側の流れ——スローパス operation → 抑制関門 → <code>Repatch.cpp</code> の判定木 → <code>AccessCase</code> の生成 → <code>addAccessCase</code>——を、<code>get_by_id</code> を例に追う。Handler IC と Repatching IC の違いは、この流れの最後の一歩にしか現れない。</p>
@@ -877,7 +876,7 @@ loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロ
   <text x="565" y="396" text-anchor="middle" class="t-xs jp">リスト先頭に prepend。即座に有効</text>
   <rect x="670" y="324" width="190" height="90" class="bxa"/>
   <text x="765" y="345" text-anchor="middle" class="t-s t-b t-a jp">Repatching IC　§9</text>
-  <text x="765" y="364" text-anchor="middle" class="t-xs">PolymorphicAccess に追加</text>
+  <text x="765" y="364" text-anchor="middle" class="t-xs jp">PolymorphicAccess に追加</text>
   <text x="765" y="380" text-anchor="middle" class="t-xs jp">溜めてから compile() で</text>
   <text x="765" y="396" text-anchor="middle" class="t-xs jp">stub を丸ごと再生成</text>
   <!-- megamorphic outcome from addAccessCase -->
@@ -951,8 +950,8 @@ loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロ
 <h3 id="s6-4"><span class="h3-no">6.4</span>他オブジェクトに関する仮定：<code>ObjectPropertyConditionSet</code></h3>
 <p><code>o.x</code> が <code>o</code> のプロトタイプ <code>P</code> 上で見つかった場合、「Structure(o) == S」というガードだけでは不十分である。S から P が決まる（mono proto）としても、その後 <code>o</code> と <code>P</code> の間の中間プロトタイプに <code>x</code> が足されたり、P の <code>x</code> が削除されたりすれば答えが変わるからである。JSC はこの種の「他オブジェクトに関する仮定」を、<code>ObjectPropertyCondition</code>（対象オブジェクト ＋ 条件）の集合として<em>データとして</em>表現し、AccessCase に添付する。</p>
 <div class="box def">
-  <span class="box-label">定義</span>
-  <p><span class="def-no">定義 6.1</span><code>PropertyCondition</code> の主な種類。<span class="src"><code>bytecode/PropertyCondition.h:37-46</code></span></p>
+  <span class="box-label">定義 6.1</span>
+  <p><code>PropertyCondition</code> の主な種類。<span class="src"><code>bytecode/PropertyCondition.h:37-46</code></span></p>
   <ul>
     <li><strong>Presence(uid, offset, attributes)</strong> — そのオブジェクトに <code>uid</code> がこのオフセット・属性で存在する。</li>
     <li><strong>Absence(uid, prototype)</strong> — そのオブジェクトに <code>uid</code> が無く、かつそのオブジェクトのプロトタイプが <code>prototype</code> である（次の段へ進んでよいことも同時に保証する）。</li>
@@ -983,7 +982,7 @@ loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロ
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s7">
-<h2><span class="sec-no">§7</span><span class="sec-title">AccessCase：1 ケースの記述</span></h2>
+<h2><span class="sec-no">§7</span><span>AccessCase：1 ケースの記述</span></h2>
 <div class="prose">
 
 <p class="lead"><code>AccessCase</code> は「ある 1 つの形に対する答え」を、機械語ではなくデータとして記述したものである。<code>Repatch.cpp</code> が生成し、<code>InlineCacheCompiler</code> が機械語に翻訳し、GC が生死を点検し、DFG が <code>GetByStatus</code> として読む——IC 基盤の各部分をつなぐ共通言語がこのクラスである。</p>
@@ -1059,7 +1058,7 @@ loadPropertyAtVariableOffset(t1, t3, t0)             <span class="c">; ペイロ
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s8">
-<h2><span class="sec-no">§8</span><span class="sec-title">Handler IC（Baseline／DFG）</span></h2>
+<h2><span class="sec-no">§8</span><span>Handler IC（Baseline／DFG）</span></h2>
 <div class="prose">
 
 <p class="lead">Handler IC は、このリビジョンの JSC で Baseline と DFG のすべてのプロパティ IC が採用している方式である。設計の核心は「<strong>コールサイトの機械語は一切書き換えず、IC の状態をすべてデータ構造（<code>InlineCacheHandler</code> の連結リスト）に置く</strong>」ことにある。その帰結として、handler の機械語を VM 全体で共有できるようになり、ケース追加のコストが劇的に下がった。</p>
@@ -1145,7 +1144,7 @@ jmp     .done</code></pre>
   <text x="252" y="393" class="t-s t-b jp">共有 thunk（VM に 1 本ずつ）：getByIdLoadOwnPropertyHandler ／ …LoadPrototypePropertyHandler</text>
   <text x="252" y="413" class="t-xs">prologue;  cmp32 [base+0], [handlerGPR+structureID];  jne miss;</text>
   <text x="252" y="428" class="t-xs">ld [handlerGPR+offset];  loadProperty;  epilogue;  ret</text>
-  <text x="252" y="446" class="t-xs">miss:  handlerGPR = [handlerGPR+m_next];  jmp [handlerGPR+jumpTarget]   ← prologue を飛ばした番地</text>
+  <text x="252" y="446" class="t-xs jp">miss:  handlerGPR = [handlerGPR+m_next];  jmp [handlerGPR+jumpTarget]   ← prologue を飛ばした番地</text>
   <!-- note -->
   <text x="290" y="60" class="t-xs jp">#1 と #2 は種類（own / prototype）が違っても、異なるのはノード内のデータだけで、</text>
   <text x="290" y="76" class="t-xs jp">機械語は種類ごとの共有 thunk を指す。ケース追加 = ノードを 1 個作って m_handler の前につなぐ。</text>
@@ -1208,7 +1207,7 @@ jmp     .done</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s9">
-<h2><span class="sec-no">§9</span><span class="sec-title">Repatching IC（FTL）</span></h2>
+<h2><span class="sec-no">§9</span><span>Repatching IC（FTL）</span></h2>
 <div class="prose">
 
 <p class="lead">Repatching IC は、Smalltalk 以来の「機械語を書き換える」古典的なインラインキャッシュの直系であり、長らく JSC の全 JIT 階層で使われてきた方式である。現在は FTL 専用となった。この方式では IC の状態が「関数本体に埋め込まれた固定長スラブの中身」として表現され、状態遷移＝機械語の書き換えである。</p>
@@ -1231,7 +1230,7 @@ jmp     .done</code></pre>
   <line x1="20" y1="110" x2="250" y2="110" class="ln"/>
   <text x="32" y="130" class="t-xs">startLocation:</text>
   <text x="44" y="146" class="t-xs">jmp  slowPathStart</text>
-  <text x="44" y="162" class="t-xs t-m jp">nop × N（26 / 40 バイト）</text>
+  <text x="44" y="162" class="t-xs jp">nop × N（26 / 40 バイト）</text>
   <text x="32" y="186" class="t-xs">doneLocation:</text>
   <!-- 1 -> 2 -->
   <path d="M250 140 L308 140" class="ln" marker-end="url(#a9)"/>
@@ -1243,7 +1242,7 @@ jmp     .done</code></pre>
   <text x="322" y="130" class="t-xs">cmp32 [base+0], #S₁</text>
   <text x="322" y="146" class="t-xs">jne   slowPathStart</text>
   <text x="322" y="162" class="t-xs">load  [base+16+8·o]</text>
-  <text x="322" y="186" class="t-xs t-m">InlineAccess が焼き込む</text>
+  <text x="322" y="186" class="t-xs jp">InlineAccess が焼き込む</text>
   <!-- 2 -> 3 -->
   <path d="M540 140 L598 140" class="ln" marker-end="url(#a9)"/>
   <text x="570" y="130" text-anchor="middle" class="t-xs jp">別の形</text>
@@ -1251,7 +1250,7 @@ jmp     .done</code></pre>
   <rect x="600" y="80" width="260" height="120" class="bxa"/>
   <text x="730" y="102" text-anchor="middle" class="t-s t-b t-a jp">状態 3：stub へジャンプ</text>
   <line x1="600" y1="110" x2="860" y2="110" class="lna"/>
-  <text x="612" y="130" class="t-xs">jmp   stub　（残りは未使用）</text>
+  <text x="612" y="130" class="t-xs jp">jmp   stub　（残りは未使用）</text>
   <text x="612" y="152" class="t-xs jp">stub = 全ケースを 1 本にコンパイル</text>
   <text x="612" y="168" class="t-xs jp">成功 → doneLocation</text>
   <text x="612" y="184" class="t-xs jp">全ケース失敗 → slowPathStart</text>
@@ -1261,7 +1260,7 @@ jmp     .done</code></pre>
   <text x="765" y="272" text-anchor="middle" class="t-xs jp">0 になったら stub を再生成（8 ケースまで）</text>
   <!-- 1 -> 3 bypass -->
   <path d="M135 200 L135 300 L618 300 L618 202" class="lnd" marker-end="url(#a9)"/>
-  <text x="380" y="292" text-anchor="middle" class="t-xs t-m jp">by-val／instanceof など inline 形を持たない種類は状態 2 を経ずに 1 → 3</text>
+  <text x="380" y="292" text-anchor="middle" class="t-xs jp">by-val／instanceof など inline 形を持たない種類は状態 2 を経ずに 1 → 3</text>
 </svg>
 </div>
 <figcaption><span class="fig-no">図 9.1</span>Repatching IC のスラブの状態遷移。<span class="src"><code>bytecode/PropertyInlineCache.h:582-651</code></span> の設計コメントに対応する。状態 2 の structureID とオフセットは機械語の即値として焼き込まれ、状態 3 の stub も観測したケース集合専用に生成される。</figcaption>
@@ -1307,7 +1306,7 @@ jmp     .done</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s10">
-<h2><span class="sec-no">§10</span><span class="sec-title">多相性の段階と Megamorphic</span></h2>
+<h2><span class="sec-no">§10</span><span>多相性の段階と Megamorphic</span></h2>
 <div class="prose">
 
 <p class="lead">1 つのアクセスサイトが観測する形の数に応じて、IC は monomorphic（1 種類）→ polymorphic（数種類）→ megamorphic（多数）と姿を変える。JSC における各段階の境界と、最終段階で使われる VM 全体のハッシュ表 <code>MegamorphicCache</code> を扱う。</p>
@@ -1419,7 +1418,7 @@ jmp     .done</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s11">
-<h2><span class="sec-no">§11</span><span class="sec-title">無効化と GC</span></h2>
+<h2><span class="sec-no">§11</span><span>無効化と GC</span></h2>
 <div class="prose">
 
 <p class="lead">IC は「過去に観測した事実」を覚えているだけなので、事実が変われば捨てなければならない。変わり方には 2 種類ある。プログラムがオブジェクトを書き換えて<em>仮定が崩れる</em>場合と、GC によって<em>参照先が消える</em>場合である。前者は watchpoint、後者は弱参照と GC 終了時の点検で扱う。どちらも最終的に <code>PropertyInlineCache::reset()</code> に合流する。</p>
@@ -1439,7 +1438,6 @@ jmp     .done</code></pre>
 <div class="svg-wrap">
 <svg viewBox="0 0 860 300" role="img" aria-label="無効化の伝播経路。プロトタイプ P の Structure が遷移すると、その遷移 watchpoint set に登録された StructureTransitionPropertyInlineCacheClearingWatchpoint が発火する。条件がまだ成立していれば新しい Structure に登録し直して終わる。成立していなければ、それを所有する共有 stub の WatchpointSet を発火させ、その stub を使っている各 IC の PropertyInlineCacheClearingWatchpoint が発火して、それぞれの PropertyInlineCache::reset を呼ぶ">
   <defs>
-    <marker id="a11" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arr"/></marker>
     <marker id="a11w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrw"/></marker>
     <marker id="a11a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arra"/></marker>
   </defs>
@@ -1524,7 +1522,7 @@ jmp     .done</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s12">
-<h2><span class="sec-no">§12</span><span class="sec-title">IC はプロファイラでもある</span></h2>
+<h2><span class="sec-no">§12</span><span>IC はプロファイラでもある</span></h2>
 <div class="prose">
 
 <p class="lead">JSC において IC の役割は「Baseline のコードを速くする」だけではない。Baseline で育った IC は、そのサイトで<em>どんな形が・何種類・どう</em>アクセスされたかを記録した<strong>プロファイル</strong>でもあり、DFG／FTL はこれを読んで、IC すら不要な直接コードを生成する。IC が「観測した事実をデータとして持つ」（§7）設計になっている最大の理由がこれである。</p>
@@ -1599,7 +1597,7 @@ jmp     .done</code></pre>
 </section>
 <!-- ============================================================ -->
 <section class="sec" id="s13">
-<h2><span class="sec-no">§13</span><span class="sec-title">観察する：オプションと演習</span></h2>
+<h2><span class="sec-no">§13</span><span>観察する：オプションと演習</span></h2>
 <div class="prose">
 
 <p class="lead">読むだけでなく動かして確かめるための道具立てと、理解を確認する演習問題をまとめる。<code>jsc</code> シェルのオプションは <code>--名前=値</code> の形で渡すか、環境変数 <code>JSC_名前=値</code> で与える。</p>
@@ -1668,7 +1666,7 @@ __signpostStop();</code></pre>
 
 <!-- ============================================================ -->
 <section class="sec" id="s14">
-<h2><span class="sec-no">§14</span><span class="sec-title">まとめ・用語集・ソースマップ</span></h2>
+<h2><span class="sec-no">§14</span><span>まとめ・用語集・ソースマップ</span></h2>
 <div class="prose">
 
 <h3><span class="h3-no">14.1</span>本章の要点</h3>
@@ -1744,10 +1742,11 @@ __signpostStop();</code></pre>
 </table>
 </div>
 
+</section>
+
 <footer class="tail">
   <p>本章は WebKit リビジョン <code>f8225fcd97</code>（2026-08-13）の <code>Source/JavaScriptCore</code> を読んで構成した。IC 周辺は改名や方式変更が頻繁に行われる領域であり、行番号はもとより、クラス名やオプション名も将来のリビジョンでは異なりうる。ソースを参照する際は、まず <code>bytecode/PropertyInlineCache.h</code> 冒頭の設計コメントから現状を確認することを勧める。</p>
 </footer>
-</section>
 
 </div><!-- /.page -->
 </body>
