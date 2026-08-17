@@ -1,0 +1,51 @@
+OpTailCallVarargs                meta= 80 instrSize(wide32)= 28
+OpCallVarargs                    meta= 80 instrSize(wide32)= 32
+OpIteratorNext                   meta=136 instrSize(wide32)= 40
+OpConstructVarargs               meta= 80 instrSize(wide32)= 32
+OpSuperConstructVarargs          meta= 88 instrSize(wide32)= 32
+OpIteratorOpen                   meta=120 instrSize(wide32)= 36
+OpAsyncIteratorOpen              meta=104 instrSize(wide32)= 36
+OpInstanceof                     meta= 32 instrSize(wide32)= 28
+OpSetPrivateBrand                meta= 16 instrSize(wide32)= 12
+OpCheckPrivateBrand              meta= 16 instrSize(wide32)= 12
+OpPutById                        meta= 24 instrSize(wide32)= 20
+OpConstruct                      meta= 80 instrSize(wide32)= 24
+OpSuperConstruct                 meta= 88 instrSize(wide32)= 24
+OpTailCall                       meta= 96 instrSize(wide32)= 20
+OpCallDirectEval                 meta= 80 instrSize(wide32)= 36
+OpCreateGenerator                meta=  8 instrSize(wide32)= 12
+OpCreateAsyncGenerator           meta=  8 instrSize(wide32)= 12
+OpCreatePromise                  meta=  8 instrSize(wide32)= 12
+OpCatch                          meta=  8 instrSize(wide32)= 12
+OpNewArrayWithSize               meta=  8 instrSize(wide32)= 12
+OpNewArrayBuffer                 meta=  8 instrSize(wide32)= 16
+OpGetById                        meta= 16 instrSize(wide32)= 20
+OpGetLength                      meta= 32 instrSize(wide32)= 16
+OpProfileType                    meta=  8 instrSize(wide32)= 24
+OpProfileControlFlow             meta=  8 instrSize(wide32)=  8
+OpNewArrayWithSpecies            meta= 24 instrSize(wide32)= 20
+OpCall                           meta= 96 instrSize(wide32)= 24
+OpCallIgnoreResult               meta= 96 instrSize(wide32)= 16
+OpAsyncIteratorNext              meta= 88 instrSize(wide32)= 32
+OpResolveScope                   meta= 16 instrSize(wide32)= 24
+OpGetFromScope                   meta= 24 instrSize(wide32)= 32
+OpPutToScope                     meta= 24 instrSize(wide32)= 28
+OpCreateThis                     meta=  8 instrSize(wide32)= 16
+OpNewObject                      meta= 16 instrSize(wide32)= 12
+OpNewArray                       meta=  8 instrSize(wide32)= 20
+OpPutPrivateName                 meta= 24 instrSize(wide32)= 20
+OpGetPrivateName                 meta= 16 instrSize(wide32)= 20
+OpGetByValWithThis               meta= 16 instrSize(wide32)= 24
+OpGetByVal                       meta= 16 instrSize(wide32)= 20
+OpPutByVal                       meta= 16 instrSize(wide32)= 20
+OpPutByValDirect                 meta= 16 instrSize(wide32)= 20
+OpInByVal                        meta= 16 instrSize(wide32)= 16
+OpEnumeratorNext                 meta= 20 instrSize(wide32)= 24
+OpEnumeratorInByVal              meta= 20 instrSize(wide32)= 28
+OpEnumeratorHasOwnProperty       meta= 20 instrSize(wide32)= 28
+OpEnumeratorPutByVal             meta= 20 instrSize(wide32)= 32
+OpToThis                         meta=  8 instrSize(wide32)= 16
+OpEnumeratorGetByVal             meta= 20 instrSize(wide32)= 32
+OpGetByIdDirect                  meta=  8 instrSize(wide32)= 20
+OpJneqPtr                        meta=  1 instrSize(wide32)= 40
+ValueProfile=16 ArrayProfile=16

@@ -1,0 +1,159 @@
+Starting JetStream2
+Running typescript:
+    Startup: 3.408
+    Worst Case: 5.935
+    Average: 8.460
+    Score: 5.552
+    Current Footprint: 389062656
+    Peak Footprint: 405389312
+    Wall time: 0:09.794
+
+
+First: 3.408
+Worst: 5.935
+Average: 8.460
+
+Total Score:  5.552 
+
+JIT size statistics:
+==============================================
+DFG_fast_DirectCall totalBytes: 221732 count: 1652 avg: 134.220339
+DFG_slow_FencedStoreBarrier totalBytes: 178125 count: 2054 avg: 86.721032
+DFG_fast_GetByIdMegamorphic totalBytes: 145596 count: 499 avg: 291.775551
+DFG_fast_CheckStructure totalBytes: 132090 count: 6285 avg: 21.016706
+DFG_fast_Branch totalBytes: 101169 count: 3022 avg: 33.477498
+DFG_fast_GetById totalBytes: 74817 count: 1002 avg: 74.667665
+DFG_fast_SetLocal totalBytes: 67902 count: 8353 avg: 8.129055
+DFG_fast_GetLocal totalBytes: 62190 count: 14203 avg: 4.378652
+DFG_fast_FencedStoreBarrier totalBytes: 54476 count: 2054 avg: 26.521908
+DFG_fast_GetByOffset totalBytes: 43978 count: 9546 avg: 4.606956
+DFG_slow_GetById totalBytes: 42483 count: 2004 avg: 21.199102
+DFG_fast_CompareEq totalBytes: 42230 count: 1872 avg: 22.558761
+DFG_slow_CheckTierUpAtReturn totalBytes: 42165 count: 1043 avg: 40.426654
+DFG_fast_Call totalBytes: 38248 count: 332 avg: 115.204819
+DFG_fast_DirectConstruct totalBytes: 37416 count: 282 avg: 132.680851
+DFG_slow_GetByIdMegamorphic totalBytes: 36638 count: 499 avg: 73.422846
+DFG_fast_NewObject totalBytes: 35467 count: 284 avg: 124.883803
+DFG_fast_Return totalBytes: 31505 count: 1043 avg: 30.206136
+DFG_fast_PutByOffset totalBytes: 23402 count: 3271 avg: 7.154387
+DFG_fast_GetByVal totalBytes: 20662 count: 543 avg: 38.051565
+DFG_slow_NewObject totalBytes: 19390 count: 284 avg: 68.274648
+DFG_slow_ResolveRope totalBytes: 18800 count: 258 avg: 72.868217
+DFG_fast_NewArray totalBytes: 18762 count: 77 avg: 243.662338
+DFG_fast_PutByIdMegamorphic totalBytes: 17852 count: 64 avg: 278.937500
+DFG_fast_CheckIsConstant totalBytes: 16232 count: 588 avg: 27.605442
+DFG_fast_StringCharCodeAt totalBytes: 16059 count: 324 avg: 49.564815
+DFG_fast_PutById totalBytes: 13588 count: 172 avg: 79.000000
+DFG_fast_ArithAdd totalBytes: 13539 count: 984 avg: 13.759146
+DFG_fast_GetButterfly totalBytes: 12554 count: 2833 avg: 4.431345
+DFG_fast_Check totalBytes: 12290 count: 1007 avg: 12.204568
+DFG_fast_CheckTierUpAtReturn totalBytes: 11473 count: 1043 avg: 11.000000
+DFG_slow_CheckTierUpAndOSREnter totalBytes: 11418 count: 173 avg: 66.000000
+DFG_fast_ReallocatePropertyStorage totalBytes: 10564 count: 49 avg: 215.591837
+DFG_slow_CheckTierUpInLoop totalBytes: 10558 count: 202 avg: 52.267327
+DFG_fast_MakeRope totalBytes: 10512 count: 43 avg: 244.465116
+DFG_fast_PutByValMegamorphic totalBytes: 10443 count: 35 avg: 298.371429
+DFG_slow_PutByIdMegamorphic totalBytes: 10200 count: 128 avg: 79.687500
+DFG_fast_CompareLess totalBytes: 8220 count: 688 avg: 11.947674
+DFG_fast_GetArrayLength totalBytes: 7881 count: 673 avg: 11.710253
+DFG_slow_PutById totalBytes: 7312 count: 344 avg: 21.255814
+DFG_fast_ArithBitAnd totalBytes: 6975 count: 569 avg: 12.258348
+DFG_slow_NewArray totalBytes: 6886 count: 77 avg: 89.428571
+DFG_slow_PutByValMegamorphic totalBytes: 6656 count: 70 avg: 95.085714
+DFG_fast_CheckStructureOrEmpty totalBytes: 6267 count: 295 avg: 21.244068
+DFG_fast_PutStructure totalBytes: 5997 count: 983 avg: 6.100712
+DFG_fast_ForceOSRExit totalBytes: 5585 count: 1117 avg: 5.000000
+DFG_fast_Jump totalBytes: 5515 count: 2677 avg: 2.060142
+DFG_fast_NewFunction totalBytes: 5430 count: 45 avg: 120.666667
+DFG_fast_CheckTierUpAndOSREnter totalBytes: 5363 count: 173 avg: 31.000000
+DFG_slow_PutByVal totalBytes: 5008 count: 90 avg: 55.644444
+DFG_fast_CreateActivation totalBytes: 4859 count: 33 avg: 147.242424
+DFG_fast_PutByVal totalBytes: 4574 count: 109 avg: 41.963303
+DFG_slow_MakeRope totalBytes: 4382 count: 86 avg: 50.953488
+DFG_slow_NewFunction totalBytes: 4208 count: 44 avg: 95.636364
+DFG_fast_ResolveRope totalBytes: 4025 count: 258 avg: 15.600775
+DFG_slow_ReallocatePropertyStorage totalBytes: 3847 count: 49 avg: 78.510204
+DFG_fast_CompareStrictEq totalBytes: 3818 count: 392 avg: 9.739796
+DFG_slow_StoreBarrier totalBytes: 3505 count: 57 avg: 61.491228
+DFG_slow_StringSubstring totalBytes: 3492 count: 39 avg: 89.538462
+DFG_slow_CreateActivation totalBytes: 3375 count: 33 avg: 102.272727
+DFG_fast_AllocatePropertyStorage totalBytes: 3328 count: 28 avg: 118.857143
+DFG_slow_ArrayifyToStructure totalBytes: 3255 count: 37 avg: 87.972973
+DFG_fast_LogicalNot totalBytes: 3228 count: 600 avg: 5.380000
+DFG_fast_ArithBitOr totalBytes: 3218 count: 319 avg: 10.087774
+DFG_fast_GetByIdFlush totalBytes: 2721 count: 39 avg: 69.769231
+DFG_fast_StringSubstring totalBytes: 2481 count: 13 avg: 190.846154
+DFG_fast_ArithBitLShift totalBytes: 2436 count: 212 avg: 11.490566
+DFG_fast_GetClosureVar totalBytes: 2424 count: 514 avg: 4.715953
+DFG_slow_ArrayPush totalBytes: 2308 count: 26 avg: 88.769231
+DFG_fast_CheckTierUpInLoop totalBytes: 2222 count: 202 avg: 11.000000
+DFG_slow_AllocatePropertyStorage totalBytes: 2154 count: 28 avg: 76.928571
+DFG_fast_GetByValMegamorphic totalBytes: 2148 count: 7 avg: 306.857143
+DFG_fast_Construct totalBytes: 2128 count: 17 avg: 125.176471
+DFG_slow_GetByVal totalBytes: 2104 count: 42 avg: 50.095238
+DFG_slow_ArrayPop totalBytes: 1811 count: 36 avg: 50.305556
+DFG_slow_GetByIdFlush totalBytes: 1659 count: 78 avg: 21.269231
+DFG_fast_CheckArray totalBytes: 1208 count: 62 avg: 19.483871
+DFG_fast_EnumeratorGetByVal totalBytes: 1104 count: 8 avg: 138.000000
+DFG_fast_ArrayifyToStructure totalBytes: 792 count: 37 avg: 21.405405
+DFG_fast_CompareGreaterEq totalBytes: 769 count: 56 avg: 13.732143
+DFG_fast_ArrayPop totalBytes: 751 count: 18 avg: 41.722222
+DFG_fast_CompareGreater totalBytes: 716 count: 69 avg: 10.376812
+DFG_fast_ArrayPush totalBytes: 674 count: 26 avg: 25.923077
+DFG_slow_EnumeratorGetByVal totalBytes: 648 count: 16 avg: 40.500000
+DFG_fast_GetPropertyEnumerator totalBytes: 641 count: 5 avg: 128.200000
+DFG_fast_PutClosureVar totalBytes: 612 count: 86 avg: 7.116279
+DFG_fast_StoreBarrier totalBytes: 576 count: 57 avg: 10.105263
+DFG_fast_EnumeratorNextUpdatePropertyName totalBytes: 567 count: 5 avg: 113.400000
+DFG_fast_GetExecutable totalBytes: 565 count: 27 avg: 20.925926
+DFG_slow_GetByValMegamorphic totalBytes: 553 count: 7 avg: 79.000000
+DFG_fast_NukeStructureAndSetButterfly totalBytes: 543 count: 77 avg: 7.051948
+DFG_fast_ArithSub totalBytes: 542 count: 27 avg: 20.074074
+DFG_fast_ArithBitXor totalBytes: 531 count: 199 avg: 2.668342
+DFG_fast_NewRegExp totalBytes: 508 count: 4 avg: 127.000000
+DFG_fast_RegExpExec totalBytes: 352 count: 4 avg: 88.000000
+DFG_slow_NewRegExp totalBytes: 324 count: 4 avg: 81.000000
+DFG_fast_TypeOfIsUndefined totalBytes: 288 count: 8 avg: 36.000000
+DFG_fast_ArrayConcatArray totalBytes: 275 count: 5 avg: 55.000000
+DFG_fast_StringIndexOf totalBytes: 244 count: 4 avg: 61.000000
+DFG_fast_CompareEqPtr totalBytes: 240 count: 10 avg: 24.000000
+DFG_slow_ToThis totalBytes: 234 count: 3 avg: 78.000000
+DFG_fast_EnumeratorNextUpdateIndexAndMode totalBytes: 225 count: 5 avg: 45.000000
+DFG_slow_Arrayify totalBytes: 220 count: 2 avg: 110.000000
+DFG_fast_StrCat totalBytes: 207 count: 3 avg: 69.000000
+DFG_fast_CompareLessEq totalBytes: 206 count: 15 avg: 13.733333
+DFG_slow_CompareEq totalBytes: 199 count: 3 avg: 66.333333
+DFG_fast_ArithNegate totalBytes: 187 count: 11 avg: 17.000000
+DFG_fast_ToThis totalBytes: 165 count: 3 avg: 55.000000
+DFG_fast_ToString totalBytes: 155 count: 1 avg: 155.000000
+DFG_fast_ArrayShift totalBytes: 133 count: 1 avg: 133.000000
+DFG_fast_GetScope totalBytes: 100 count: 25 avg: 4.000000
+DFG_slow_ArrayShift totalBytes: 86 count: 2 avg: 43.000000
+DFG_fast_NewRegExpUntyped totalBytes: 83 count: 1 avg: 83.000000
+DFG_fast_GetCallee totalBytes: 80 count: 20 avg: 4.000000
+DFG_slow_ToString totalBytes: 69 count: 1 avg: 69.000000
+DFG_fast_ArrayConcatAppendOne totalBytes: 62 count: 1 avg: 62.000000
+DFG_fast_ValueRep totalBytes: 56 count: 7 avg: 8.000000
+DFG_fast_ParseInt totalBytes: 46 count: 1 avg: 46.000000
+DFG_fast_GetGlobalVar totalBytes: 43 count: 4 avg: 10.750000
+DFG_fast_DoubleRep totalBytes: 41 count: 2 avg: 20.500000
+DFG_fast_PutByValDirectResolved totalBytes: 34 count: 4 avg: 8.500000
+DFG_fast_Arrayify totalBytes: 32 count: 2 avg: 16.000000
+DFG_fast_BooleanToNumber totalBytes: 30 count: 1 avg: 30.000000
+DFG_fast_ArithBitRShift totalBytes: 2 count: 1 avg: 2.000000
+DFG_fast_FilterPutByStatus totalBytes: 0 count: 3271 avg: 0.000000
+DFG_fast_InvalidationPoint totalBytes: 0 count: 6664 avg: 0.000000
+DFG_fast_ExitOK totalBytes: 0 count: 6186 avg: 0.000000
+DFG_fast_PhantomLocal totalBytes: 0 count: 3917 avg: 0.000000
+DFG_fast_JSConstant totalBytes: 0 count: 24453 avg: 0.000000
+DFG_fast_Phantom totalBytes: 0 count: 4440 avg: 0.000000
+DFG_fast_DoubleConstant totalBytes: 0 count: 24 avg: 0.000000
+DFG_fast_AssertNotEmpty totalBytes: 0 count: 1054 avg: 0.000000
+DFG_fast_LoopHint totalBytes: 0 count: 377 avg: 0.000000
+DFG_fast_MovHint totalBytes: 0 count: 74836 avg: 0.000000
+DFG_fast_Flush totalBytes: 0 count: 6515 avg: 0.000000
+DFG_fast_SetArgumentDefinitely totalBytes: 0 count: 1935 avg: 0.000000
+DFG_fast_ExtractFromTuple totalBytes: 0 count: 5 avg: 0.000000
+DFG_fast_FilterGetByStatus totalBytes: 0 count: 20082 avg: 0.000000
+DFG_fast_FilterCallLinkStatus totalBytes: 0 count: 5236 avg: 0.000000
+

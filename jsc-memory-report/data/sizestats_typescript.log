@@ -1,0 +1,143 @@
+Starting JetStream2
+Running typescript:
+    Startup: 3.759
+    Worst Case: 4.941
+    Average: 8.141
+    Score: 5.328
+    Current Footprint: 475230208
+    Peak Footprint: 485851136
+    Wall time: 0:09.967
+
+
+First: 3.759
+Worst: 4.941
+Average: 8.141
+
+Total Score:  5.328 
+
+JIT size statistics:
+==============================================
+Baseline_fast_op_get_by_id totalBytes: 1343794 count: 14417 avg: 93.208989
+Baseline_slow_op_get_by_id totalBytes: 317174 count: 14417 avg: 22.000000
+Baseline_fast_op_put_by_id totalBytes: 295261 count: 1907 avg: 154.830100
+Baseline_fast_op_call totalBytes: 217242 count: 1653 avg: 131.422868
+Baseline_fast_op_call_ignore_result totalBytes: 190578 count: 1618 avg: 117.786156
+Baseline_fast_op_jfalse totalBytes: 142239 count: 1424 avg: 99.886938
+Baseline_fast_op_get_from_scope totalBytes: 112472 count: 3419 avg: 32.896168
+Baseline_fast_op_mov totalBytes: 76529 count: 7463 avg: 10.254455
+Baseline_prologue totalBytes: 69512 count: 607 avg: 114.517298
+Baseline_fast_op_jtrue totalBytes: 53829 count: 538 avg: 100.053903
+Baseline_fast_op_enter totalBytes: 48671 count: 607 avg: 80.182867
+Baseline_fast_op_construct totalBytes: 45170 count: 419 avg: 107.804296
+Baseline_slow_op_put_by_id totalBytes: 41954 count: 1907 avg: 22.000000
+Baseline_fast_op_resolve_scope totalBytes: 36146 count: 3031 avg: 11.925437
+Baseline_slow_op_jneq totalBytes: 27335 count: 497 avg: 55.000000
+Baseline_fast_op_get_length totalBytes: 24884 count: 271 avg: 91.822878
+Baseline_fast_op_jstricteq totalBytes: 24812 count: 242 avg: 102.528926
+Baseline_fast_op_get_by_val totalBytes: 23063 count: 344 avg: 67.043605
+Baseline_fast_op_jneq totalBytes: 16823 count: 497 avg: 33.849095
+Baseline_fast_op_to_this totalBytes: 15564 count: 400 avg: 38.910000
+Baseline_slow_op_jeq totalBytes: 15510 count: 282 avg: 55.000000
+Baseline_slow_op_jnless totalBytes: 14603 count: 133 avg: 109.796992
+Baseline_slow_op_loop_hint totalBytes: 14385 count: 137 avg: 105.000000
+Baseline_fast_op_create_this totalBytes: 13869 count: 68 avg: 203.955882
+Baseline_slow_op_jstricteq totalBytes: 13090 count: 238 avg: 55.000000
+Baseline_fast_op_bitor totalBytes: 12858 count: 331 avg: 38.845921
+Baseline_fast_op_ret totalBytes: 11508 count: 971 avg: 11.851699
+Baseline_slow_op_jless totalBytes: 10993 count: 100 avg: 109.930000
+Baseline_fast_op_jneq_null totalBytes: 9847 count: 122 avg: 80.713115
+Baseline_fast_op_jeq totalBytes: 9576 count: 282 avg: 33.957447
+Baseline_fast_op_put_by_val totalBytes: 8740 count: 68 avg: 128.529412
+Baseline_fast_op_put_to_scope totalBytes: 8698 count: 70 avg: 124.257143
+Baseline_slow_op_enter totalBytes: 6070 count: 607 avg: 10.000000
+Baseline_slow_op_to_this totalBytes: 6000 count: 400 avg: 15.000000
+Baseline_slow_op_get_length totalBytes: 5962 count: 271 avg: 22.000000
+Baseline_slow_op_add totalBytes: 5152 count: 88 avg: 58.545455
+Baseline_fast_op_jmp totalBytes: 4970 count: 994 avg: 5.000000
+Baseline_slow_op_bitor totalBytes: 4965 count: 331 avg: 15.000000
+Baseline_slow_op_sub totalBytes: 4913 count: 92 avg: 53.402174
+Baseline_fast_op_jnless totalBytes: 4655 count: 133 avg: 35.000000
+Baseline_slow_op_jngreater totalBytes: 4146 count: 41 avg: 101.121951
+Baseline_slow_op_eq totalBytes: 3570 count: 65 avg: 54.923077
+Baseline_fast_op_sub totalBytes: 3556 count: 92 avg: 38.652174
+Baseline_fast_op_jless totalBytes: 3478 count: 100 avg: 34.780000
+Baseline_slow_op_get_by_val totalBytes: 3440 count: 344 avg: 10.000000
+Baseline_fast_op_inc totalBytes: 3400 count: 118 avg: 28.813559
+Baseline_fast_op_jneq_ptr totalBytes: 3006 count: 73 avg: 41.178082
+Baseline_fast_op_to_primitive totalBytes: 2993 count: 117 avg: 25.581197
+Baseline_slow_op_get_from_scope totalBytes: 2992 count: 83 avg: 36.048193
+Baseline_fast_op_add totalBytes: 2891 count: 101 avg: 28.623762
+Baseline_fast_op_bitand totalBytes: 2856 count: 83 avg: 34.409639
+Baseline_fast_op_check_traps totalBytes: 2740 count: 137 avg: 20.000000
+Baseline_fast_op_eq totalBytes: 2689 count: 65 avg: 41.369231
+Baseline_fast_op_new_object totalBytes: 2670 count: 18 avg: 148.333333
+Baseline_slow_op_jngreatereq totalBytes: 2553 count: 24 avg: 106.375000
+Baseline_fast_op_jeq_null totalBytes: 2504 count: 31 avg: 80.774194
+Baseline_slow_op_resolve_scope totalBytes: 2238 count: 83 avg: 26.963855
+Baseline_fast_op_new_array totalBytes: 2208 count: 43 avg: 51.348837
+Baseline_slow_op_check_traps totalBytes: 2192 count: 137 avg: 16.000000
+Baseline_slow_op_inc totalBytes: 1770 count: 118 avg: 15.000000
+Baseline_slow_op_to_primitive totalBytes: 1755 count: 117 avg: 15.000000
+Baseline_fast_op_loop_hint totalBytes: 1507 count: 137 avg: 11.000000
+Baseline_fast_op_neq_null totalBytes: 1465 count: 16 avg: 91.562500
+Baseline_fast_op_jnstricteq totalBytes: 1458 count: 14 avg: 104.142857
+Baseline_fast_op_not totalBytes: 1272 count: 36 avg: 35.333333
+Baseline_slow_op_bitand totalBytes: 1245 count: 83 avg: 15.000000
+Baseline_slow_op_put_to_scope totalBytes: 1050 count: 70 avg: 15.000000
+Baseline_slow_op_greatereq totalBytes: 1023 count: 9 avg: 113.666667
+Baseline_slow_op_create_this totalBytes: 1020 count: 68 avg: 15.000000
+Baseline_fast_op_new_func_exp totalBytes: 996 count: 27 avg: 36.888889
+Baseline_fast_op_jngreater totalBytes: 943 count: 41 avg: 23.000000
+Baseline_slow_op_lesseq totalBytes: 907 count: 8 avg: 113.375000
+Baseline_fast_op_create_lexical_environment totalBytes: 828 count: 18 avg: 46.000000
+Baseline_slow_op_jnstricteq totalBytes: 770 count: 14 avg: 55.000000
+Baseline_slow_op_new_object totalBytes: 762 count: 18 avg: 42.333333
+Baseline_fast_op_jngreatereq totalBytes: 721 count: 24 avg: 30.041667
+Baseline_slow_op_neq totalBytes: 690 count: 12 avg: 57.500000
+Baseline_slow_op_put_by_val totalBytes: 680 count: 68 avg: 10.000000
+Baseline_fast_op_strcat totalBytes: 670 count: 67 avg: 10.000000
+Baseline_slow_op_jnlesseq totalBytes: 660 count: 6 avg: 110.000000
+Baseline_fast_op_enumerator_get_by_val totalBytes: 579 count: 3 avg: 193.000000
+Baseline_slow_op_greater totalBytes: 555 count: 5 avg: 111.000000
+Baseline_fast_op_eq_null totalBytes: 549 count: 6 avg: 91.500000
+Baseline_slow_op_not totalBytes: 540 count: 36 avg: 15.000000
+Baseline_fast_op_typeof_is_undefined totalBytes: 513 count: 6 avg: 85.500000
+Baseline_fast_op_neq totalBytes: 507 count: 12 avg: 42.250000
+Baseline_slow_op_jgreatereq totalBytes: 410 count: 4 avg: 102.500000
+Baseline_fast_op_greatereq totalBytes: 336 count: 9 avg: 37.333333
+Baseline_fast_op_dec totalBytes: 304 count: 10 avg: 30.400000
+Baseline_fast_op_lesseq totalBytes: 292 count: 8 avg: 36.500000
+Baseline_fast_op_enumerator_next totalBytes: 288 count: 2 avg: 144.000000
+Baseline_fast_op_call_varargs totalBytes: 260 count: 1 avg: 260.000000
+Baseline_fast_op_to_numeric totalBytes: 234 count: 3 avg: 78.000000
+Baseline_slow_op_jlesseq totalBytes: 220 count: 2 avg: 110.000000
+Baseline_fast_op_get_property_enumerator totalBytes: 218 count: 2 avg: 109.000000
+Baseline_fast_op_jnlesseq totalBytes: 216 count: 6 avg: 36.000000
+Baseline_fast_op_catch totalBytes: 213 count: 1 avg: 213.000000
+Baseline_fast_op_bitnot totalBytes: 172 count: 7 avg: 24.571429
+Baseline_fast_op_greater totalBytes: 169 count: 5 avg: 33.800000
+Baseline_slow_op_dec totalBytes: 150 count: 10 avg: 15.000000
+Baseline_fast_op_lshift totalBytes: 132 count: 5 avg: 26.400000
+Baseline_fast_op_throw totalBytes: 123 count: 8 avg: 15.375000
+Baseline_fast_op_jeq_ptr totalBytes: 112 count: 4 avg: 28.000000
+Baseline_fast_op_new_func totalBytes: 108 count: 3 avg: 36.000000
+Baseline_slow_op_negate totalBytes: 107 count: 2 avg: 53.500000
+Baseline_slow_op_bitnot totalBytes: 105 count: 7 avg: 15.000000
+Baseline_slow_op_jgreater totalBytes: 100 count: 1 avg: 100.000000
+Baseline_fast_op_jgreatereq totalBytes: 100 count: 4 avg: 25.000000
+Baseline_fast_op_to_number totalBytes: 84 count: 2 avg: 42.000000
+Baseline_fast_op_negate totalBytes: 80 count: 2 avg: 40.000000
+Baseline_slow_op_lshift totalBytes: 75 count: 5 avg: 15.000000
+Baseline_fast_op_bitxor totalBytes: 73 count: 2 avg: 36.500000
+Baseline_fast_op_jlesseq totalBytes: 71 count: 2 avg: 35.500000
+Baseline_fast_op_rshift totalBytes: 71 count: 1 avg: 71.000000
+Baseline_fast_op_new_reg_exp totalBytes: 47 count: 1 avg: 47.000000
+Baseline_slow_op_to_numeric totalBytes: 45 count: 3 avg: 15.000000
+Baseline_fast_op_is_cell_with_type totalBytes: 32 count: 1 avg: 32.000000
+Baseline_slow_op_to_number totalBytes: 30 count: 2 avg: 15.000000
+Baseline_slow_op_enumerator_get_by_val totalBytes: 30 count: 3 avg: 10.000000
+Baseline_slow_op_bitxor totalBytes: 30 count: 2 avg: 15.000000
+Baseline_fast_op_create_direct_arguments totalBytes: 28 count: 1 avg: 28.000000
+Baseline_fast_op_jgreater totalBytes: 25 count: 1 avg: 25.000000
+Baseline_slow_op_rshift totalBytes: 15 count: 1 avg: 15.000000
+

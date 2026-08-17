@@ -1,0 +1,1152 @@
+{
+ "Air": {
+  "retained": {
+   "DFG": {
+    "count": 139,
+    "bytecodeCost": 97581,
+    "codeSize": 319824,
+    "codeOrigins": 1382,
+    "inlineCallFrames": 220,
+    "watchpoints": 1574,
+    "adaptiveStructWP": 128,
+    "adaptiveInferredWP": 261,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 717,
+    "handlerPICBag": 0,
+    "repatchPICBag": 0,
+    "callLinkBag": 15,
+    "directCallBag": 297,
+    "identifiers": 0,
+    "exits": 3045,
+    "events": 34524,
+    "minified": 3862,
+    "unlinkedPIC": 54,
+    "unlinkedCalls": 0,
+    "osrEntries": 199,
+    "specRecoveries": 58
+   },
+   "FTL": {
+    "count": 72,
+    "bytecodeCost": 49488,
+    "codeSize": 72000,
+    "codeOrigins": 529,
+    "inlineCallFrames": 131,
+    "watchpoints": 1025,
+    "adaptiveStructWP": 96,
+    "adaptiveInferredWP": 108,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 283,
+    "handlerPICBag": 0,
+    "repatchPICBag": 21,
+    "callLinkBag": 6,
+    "directCallBag": 130,
+    "identifiers": 0,
+    "exits": 1193,
+    "descriptors": 1186,
+    "sumExitValues": 47685,
+    "sumValueReps": 4314,
+    "materializations": 197,
+    "lazySlowPaths": 85,
+    "dfgNodes": 3426
+   }
+  },
+  "meta": {
+   "total": 2046704,
+   "copies": 0,
+   "tables": 225,
+   "is32": 5,
+   "ncopies": 0,
+   "per": {
+    "op_call_ignore_result": [
+     5895,
+     565920
+    ],
+    "op_call": [
+     3831,
+     367776
+    ],
+    "op_get_from_scope": [
+     12571,
+     301704
+    ],
+    "op_get_by_id": [
+     18376,
+     294016
+    ],
+    "op_resolve_scope": [
+     12774,
+     204384
+    ],
+    "op_put_by_id": [
+     4988,
+     119712
+    ],
+    "op_construct": [
+     1354,
+     108320
+    ],
+    "op_new_object": [
+     1402,
+     22432
+    ],
+    "op_put_to_scope": [
+     403,
+     9672
+    ],
+    "op_iterator_next": [
+     56,
+     7616
+    ],
+    "op_iterator_open": [
+     53,
+     6360
+    ],
+    "op_tail_call": [
+     35,
+     3360
+    ],
+    "op_get_length": [
+     75,
+     2400
+    ],
+    "op_new_array": [
+     198,
+     1584
+    ],
+    "op_catch": [
+     114,
+     912
+    ],
+    "op_to_this": [
+     89,
+     712
+    ],
+    "op_get_by_val": [
+     26,
+     416
+    ],
+    "op_new_array_buffer": [
+     47,
+     376
+    ],
+    "op_super_construct": [
+     2,
+     176
+    ],
+    "op_construct_varargs": [
+     2,
+     160
+    ],
+    "op_create_this": [
+     14,
+     112
+    ],
+    "op_put_by_val": [
+     7,
+     112
+    ],
+    "op_instanceof": [
+     3,
+     96
+    ],
+    "op_super_construct_varargs": [
+     1,
+     88
+    ],
+    "op_put_by_val_direct": [
+     5,
+     80
+    ],
+    "op_call_varargs": [
+     1,
+     80
+    ],
+    "op_get_by_val_with_this": [
+     2,
+     32
+    ],
+    "op_new_array_with_species": [
+     1,
+     24
+    ],
+    "op_in_by_val": [
+     1,
+     16
+    ],
+    "op_new_array_with_size": [
+     1,
+     8
+    ],
+    "op_create_promise": [
+     1,
+     8
+    ]
+   }
+  }
+ },
+ "Babylon": {
+  "retained": {
+   "DFG": {
+    "count": 168,
+    "bytecodeCost": 43486,
+    "codeSize": 404944,
+    "codeOrigins": 1899,
+    "inlineCallFrames": 371,
+    "watchpoints": 1699,
+    "adaptiveStructWP": 587,
+    "adaptiveInferredWP": 594,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 1008,
+    "handlerPICBag": 0,
+    "repatchPICBag": 0,
+    "callLinkBag": 22,
+    "directCallBag": 447,
+    "identifiers": 0,
+    "exits": 4232,
+    "events": 37654,
+    "minified": 3399,
+    "unlinkedPIC": 216,
+    "unlinkedCalls": 0,
+    "osrEntries": 201,
+    "specRecoveries": 95
+   },
+   "FTL": {
+    "count": 73,
+    "bytecodeCost": 23732,
+    "codeSize": 73000,
+    "codeOrigins": 1585,
+    "inlineCallFrames": 622,
+    "watchpoints": 1561,
+    "adaptiveStructWP": 668,
+    "adaptiveInferredWP": 474,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 705,
+    "handlerPICBag": 0,
+    "repatchPICBag": 92,
+    "callLinkBag": 29,
+    "directCallBag": 241,
+    "identifiers": 0,
+    "exits": 3943,
+    "descriptors": 3878,
+    "sumExitValues": 249914,
+    "sumValueReps": 21604,
+    "materializations": 0,
+    "lazySlowPaths": 184,
+    "dfgNodes": 9460
+   }
+  },
+  "meta": {
+   "total": 332941,
+   "copies": 0,
+   "tables": 245,
+   "is32": 0,
+   "ncopies": 0,
+   "per": {
+    "op_call": [
+     821,
+     78816
+    ],
+    "op_get_by_id": [
+     3135,
+     50160
+    ],
+    "op_call_ignore_result": [
+     464,
+     44544
+    ],
+    "op_put_by_id": [
+     1405,
+     33720
+    ],
+    "op_get_from_scope": [
+     989,
+     23736
+    ],
+    "op_tail_call": [
+     193,
+     18528
+    ],
+    "op_resolve_scope": [
+     987,
+     15792
+    ],
+    "op_construct": [
+     128,
+     10240
+    ],
+    "op_iterator_next": [
+     51,
+     6936
+    ],
+    "op_put_to_scope": [
+     254,
+     6096
+    ],
+    "op_iterator_open": [
+     45,
+     5400
+    ],
+    "op_new_object": [
+     184,
+     2944
+    ],
+    "op_get_length": [
+     64,
+     2048
+    ],
+    "op_to_this": [
+     172,
+     1376
+    ],
+    "op_catch": [
+     94,
+     752
+    ],
+    "op_new_array": [
+     75,
+     600
+    ],
+    "op_get_by_val": [
+     34,
+     544
+    ],
+    "op_new_array_buffer": [
+     51,
+     408
+    ],
+    "op_super_construct": [
+     3,
+     264
+    ],
+    "op_create_this": [
+     12,
+     96
+    ],
+    "op_put_by_val": [
+     6,
+     96
+    ],
+    "op_instanceof": [
+     3,
+     96
+    ],
+    "op_super_construct_varargs": [
+     1,
+     88
+    ],
+    "op_enumerator_get_by_val": [
+     3,
+     60
+    ],
+    "op_enumerator_next": [
+     2,
+     40
+    ],
+    "op_enumerator_put_by_val": [
+     2,
+     40
+    ],
+    "op_put_by_val_direct": [
+     2,
+     32
+    ],
+    "op_in_by_val": [
+     2,
+     32
+    ],
+    "op_new_array_with_species": [
+     1,
+     24
+    ],
+    "op_enumerator_in_by_val": [
+     1,
+     20
+    ],
+    "op_create_promise": [
+     1,
+     8
+    ],
+    "op_jneq_ptr": [
+     5,
+     5
+    ]
+   }
+  }
+ },
+ "acorn-wtb": {
+  "retained": {
+   "DFG": {
+    "count": 541,
+    "bytecodeCost": 109212,
+    "codeSize": 1088656,
+    "codeOrigins": 4817,
+    "inlineCallFrames": 677,
+    "watchpoints": 3895,
+    "adaptiveStructWP": 385,
+    "adaptiveInferredWP": 1418,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 2631,
+    "handlerPICBag": 0,
+    "repatchPICBag": 0,
+    "callLinkBag": 47,
+    "directCallBag": 1314,
+    "identifiers": 0,
+    "exits": 10789,
+    "events": 99042,
+    "minified": 8886,
+    "unlinkedPIC": 163,
+    "unlinkedCalls": 0,
+    "osrEntries": 645,
+    "specRecoveries": 318
+   },
+   "FTL": {
+    "count": 114,
+    "bytecodeCost": 27023,
+    "codeSize": 114000,
+    "codeOrigins": 1406,
+    "inlineCallFrames": 625,
+    "watchpoints": 1358,
+    "adaptiveStructWP": 228,
+    "adaptiveInferredWP": 439,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 660,
+    "handlerPICBag": 0,
+    "repatchPICBag": 13,
+    "callLinkBag": 78,
+    "directCallBag": 200,
+    "identifiers": 0,
+    "exits": 4764,
+    "descriptors": 4702,
+    "sumExitValues": 294295,
+    "sumValueReps": 30643,
+    "materializations": 0,
+    "lazySlowPaths": 159,
+    "dfgNodes": 11470
+   }
+  },
+  "meta": {
+   "total": 3691441,
+   "copies": 696,
+   "tables": 3485,
+   "is32": 1,
+   "ncopies": 2,
+   "per": {
+    "op_call": [
+     10666,
+     1023936
+    ],
+    "op_put_by_id": [
+     20225,
+     485400
+    ],
+    "op_call_ignore_result": [
+     4038,
+     387648
+    ],
+    "op_get_from_scope": [
+     13764,
+     330336
+    ],
+    "op_put_by_val_direct": [
+     15234,
+     243744
+    ],
+    "op_get_by_id": [
+     13872,
+     221952
+    ],
+    "op_put_to_scope": [
+     8187,
+     196488
+    ],
+    "op_resolve_scope": [
+     7564,
+     121024
+    ],
+    "op_new_object": [
+     4262,
+     68192
+    ],
+    "op_construct": [
+     788,
+     63040
+    ],
+    "op_tail_call": [
+     480,
+     46080
+    ],
+    "op_get_length": [
+     518,
+     16576
+    ],
+    "op_new_array_buffer": [
+     2018,
+     16144
+    ],
+    "op_get_by_val": [
+     857,
+     13712
+    ],
+    "op_put_by_val": [
+     422,
+     6752
+    ],
+    "op_iterator_next": [
+     36,
+     4896
+    ],
+    "op_iterator_open": [
+     32,
+     3840
+    ],
+    "op_to_this": [
+     465,
+     3720
+    ],
+    "op_new_array": [
+     459,
+     3672
+    ],
+    "op_enumerator_get_by_val": [
+     144,
+     2880
+    ],
+    "op_enumerator_next": [
+     133,
+     2660
+    ],
+    "op_enumerator_put_by_val": [
+     113,
+     2260
+    ],
+    "op_call_varargs": [
+     25,
+     2000
+    ],
+    "op_instanceof": [
+     57,
+     1824
+    ],
+    "op_catch": [
+     120,
+     960
+    ],
+    "op_create_this": [
+     102,
+     816
+    ],
+    "op_in_by_val": [
+     28,
+     448
+    ],
+    "op_tail_call_varargs": [
+     5,
+     400
+    ],
+    "op_jneq_ptr": [
+     393,
+     393
+    ],
+    "op_new_array_with_size": [
+     20,
+     160
+    ],
+    "op_enumerator_in_by_val": [
+     6,
+     120
+    ],
+    "op_super_construct_varargs": [
+     1,
+     88
+    ],
+    "op_call_direct_eval": [
+     1,
+     80
+    ],
+    "op_new_array_with_species": [
+     2,
+     48
+    ],
+    "op_enumerator_has_own_property": [
+     2,
+     40
+    ],
+    "op_create_promise": [
+     1,
+     8
+    ]
+   }
+  }
+ },
+ "gbemu": {
+  "retained": {
+   "DFG": {
+    "count": 486,
+    "bytecodeCost": 84096,
+    "codeSize": 608288,
+    "codeOrigins": 2435,
+    "inlineCallFrames": 313,
+    "watchpoints": 1334,
+    "adaptiveStructWP": 283,
+    "adaptiveInferredWP": 354,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 1285,
+    "handlerPICBag": 0,
+    "repatchPICBag": 0,
+    "callLinkBag": 145,
+    "directCallBag": 166,
+    "identifiers": 0,
+    "exits": 8165,
+    "events": 51173,
+    "minified": 4530,
+    "unlinkedPIC": 204,
+    "unlinkedCalls": 0,
+    "osrEntries": 574,
+    "specRecoveries": 282
+   },
+   "FTL": {
+    "count": 194,
+    "bytecodeCost": 38906,
+    "codeSize": 194000,
+    "codeOrigins": 726,
+    "inlineCallFrames": 335,
+    "watchpoints": 763,
+    "adaptiveStructWP": 104,
+    "adaptiveInferredWP": 229,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 449,
+    "handlerPICBag": 0,
+    "repatchPICBag": 58,
+    "callLinkBag": 23,
+    "directCallBag": 78,
+    "identifiers": 0,
+    "exits": 4824,
+    "descriptors": 4772,
+    "sumExitValues": 179194,
+    "sumValueReps": 24450,
+    "materializations": 0,
+    "lazySlowPaths": 92,
+    "dfgNodes": 9793
+   }
+  },
+  "meta": {
+   "total": 340538,
+   "copies": 0,
+   "tables": 458,
+   "is32": 0,
+   "ncopies": 0,
+   "per": {
+    "op_get_by_id": [
+     3437,
+     54992
+    ],
+    "op_call": [
+     517,
+     49632
+    ],
+    "op_put_by_id": [
+     2001,
+     48024
+    ],
+    "op_call_ignore_result": [
+     463,
+     44448
+    ],
+    "op_get_from_scope": [
+     989,
+     23736
+    ],
+    "op_resolve_scope": [
+     1105,
+     17680
+    ],
+    "op_put_by_val": [
+     760,
+     12160
+    ],
+    "op_get_by_val": [
+     545,
+     8720
+    ],
+    "op_put_to_scope": [
+     298,
+     7152
+    ],
+    "op_iterator_next": [
+     33,
+     4488
+    ],
+    "op_construct": [
+     55,
+     4400
+    ],
+    "op_iterator_open": [
+     30,
+     3600
+    ],
+    "op_new_object": [
+     91,
+     1456
+    ],
+    "op_to_this": [
+     134,
+     1072
+    ],
+    "op_get_length": [
+     32,
+     1024
+    ],
+    "op_tail_call": [
+     10,
+     960
+    ],
+    "op_catch": [
+     90,
+     720
+    ],
+    "op_new_array": [
+     61,
+     488
+    ],
+    "op_new_array_buffer": [
+     60,
+     480
+    ],
+    "op_instanceof": [
+     3,
+     96
+    ],
+    "op_super_construct_varargs": [
+     1,
+     88
+    ],
+    "op_create_this": [
+     10,
+     80
+    ],
+    "op_new_array_with_species": [
+     1,
+     24
+    ],
+    "op_new_array_with_size": [
+     2,
+     16
+    ],
+    "op_put_by_val_direct": [
+     1,
+     16
+    ],
+    "op_in_by_val": [
+     1,
+     16
+    ],
+    "op_create_promise": [
+     1,
+     8
+    ],
+    "op_jneq_ptr": [
+     2,
+     2
+    ]
+   }
+  }
+ },
+ "pdfjs": {
+  "retained": {
+   "DFG": {
+    "count": 273,
+    "bytecodeCost": 59698,
+    "codeSize": 649456,
+    "codeOrigins": 2994,
+    "inlineCallFrames": 248,
+    "watchpoints": 2229,
+    "adaptiveStructWP": 481,
+    "adaptiveInferredWP": 401,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 1486,
+    "handlerPICBag": 0,
+    "repatchPICBag": 0,
+    "callLinkBag": 47,
+    "directCallBag": 406,
+    "identifiers": 0,
+    "exits": 5674,
+    "events": 50961,
+    "minified": 4383,
+    "unlinkedPIC": 147,
+    "unlinkedCalls": 0,
+    "osrEntries": 427,
+    "specRecoveries": 286
+   },
+   "FTL": {
+    "count": 65,
+    "bytecodeCost": 20979,
+    "codeSize": 65000,
+    "codeOrigins": 1004,
+    "inlineCallFrames": 158,
+    "watchpoints": 677,
+    "adaptiveStructWP": 60,
+    "adaptiveInferredWP": 136,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 566,
+    "handlerPICBag": 0,
+    "repatchPICBag": 52,
+    "callLinkBag": 4,
+    "directCallBag": 116,
+    "identifiers": 0,
+    "exits": 2489,
+    "descriptors": 2366,
+    "sumExitValues": 109840,
+    "sumValueReps": 15363,
+    "materializations": 62,
+    "lazySlowPaths": 158,
+    "dfgNodes": 5620
+   }
+  },
+  "meta": {
+   "total": 1055521,
+   "copies": 0,
+   "tables": 448,
+   "is32": 1,
+   "ncopies": 0,
+   "per": {
+    "op_put_by_id": [
+     21779,
+     522696
+    ],
+    "op_new_object": [
+     6732,
+     107712
+    ],
+    "op_call": [
+     1089,
+     104544
+    ],
+    "op_new_array_buffer": [
+     6927,
+     55416
+    ],
+    "op_call_ignore_result": [
+     529,
+     50784
+    ],
+    "op_get_from_scope": [
+     1803,
+     43272
+    ],
+    "op_get_by_id": [
+     2172,
+     34752
+    ],
+    "op_resolve_scope": [
+     1455,
+     23280
+    ],
+    "op_put_to_scope": [
+     582,
+     13968
+    ],
+    "op_construct": [
+     139,
+     11120
+    ],
+    "op_tail_call": [
+     67,
+     6432
+    ],
+    "op_get_by_val": [
+     364,
+     5824
+    ],
+    "op_get_length": [
+     170,
+     5440
+    ],
+    "op_iterator_next": [
+     33,
+     4488
+    ],
+    "op_iterator_open": [
+     30,
+     3600
+    ],
+    "op_new_array": [
+     285,
+     2280
+    ],
+    "op_to_this": [
+     185,
+     1480
+    ],
+    "op_put_by_val": [
+     66,
+     1056
+    ],
+    "op_put_by_val_direct": [
+     52,
+     832
+    ],
+    "op_catch": [
+     74,
+     592
+    ],
+    "op_call_varargs": [
+     7,
+     560
+    ],
+    "op_instanceof": [
+     10,
+     320
+    ],
+    "op_create_this": [
+     39,
+     312
+    ],
+    "op_in_by_val": [
+     16,
+     256
+    ],
+    "op_enumerator_next": [
+     7,
+     140
+    ],
+    "op_enumerator_get_by_val": [
+     7,
+     140
+    ],
+    "op_super_construct_varargs": [
+     1,
+     88
+    ],
+    "op_call_direct_eval": [
+     1,
+     80
+    ],
+    "op_enumerator_put_by_val": [
+     2,
+     40
+    ],
+    "op_new_array_with_species": [
+     1,
+     24
+    ],
+    "op_jneq_ptr": [
+     17,
+     17
+    ],
+    "op_create_promise": [
+     1,
+     8
+    ]
+   }
+  }
+ },
+ "typescript": {
+  "retained": {
+   "DFG": {
+    "count": 675,
+    "bytecodeCost": 339022,
+    "codeSize": 2388144,
+    "codeOrigins": 10676,
+    "inlineCallFrames": 2741,
+    "watchpoints": 9313,
+    "adaptiveStructWP": 2050,
+    "adaptiveInferredWP": 1879,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 6645,
+    "handlerPICBag": 0,
+    "repatchPICBag": 0,
+    "callLinkBag": 364,
+    "directCallBag": 1932,
+    "identifiers": 0,
+    "exits": 30987,
+    "events": 294874,
+    "minified": 24446,
+    "unlinkedPIC": 1283,
+    "unlinkedCalls": 0,
+    "osrEntries": 846,
+    "specRecoveries": 1073
+   },
+   "FTL": {
+    "count": 309,
+    "bytecodeCost": 151520,
+    "codeSize": 309000,
+    "codeOrigins": 5027,
+    "inlineCallFrames": 2791,
+    "watchpoints": 5572,
+    "adaptiveStructWP": 4187,
+    "adaptiveInferredWP": 1167,
+    "weakRefs": 0,
+    "weakStructs": 0,
+    "transitions": 0,
+    "jumpReplacements": 2800,
+    "handlerPICBag": 0,
+    "repatchPICBag": 254,
+    "callLinkBag": 163,
+    "directCallBag": 666,
+    "identifiers": 0,
+    "exits": 16935,
+    "descriptors": 16613,
+    "sumExitValues": 1135813,
+    "sumValueReps": 89531,
+    "materializations": 248,
+    "lazySlowPaths": 541,
+    "dfgNodes": 37971
+   }
+  },
+  "meta": {
+   "total": 1364155,
+   "copies": 113612,
+   "tables": 960,
+   "is32": 0,
+   "ncopies": 93,
+   "per": {
+    "op_get_by_id": [
+     18913,
+     302608
+    ],
+    "op_call": [
+     2252,
+     216192
+    ],
+    "op_call_ignore_result": [
+     2063,
+     198048
+    ],
+    "op_get_from_scope": [
+     5789,
+     138936
+    ],
+    "op_put_by_id": [
+     4718,
+     113232
+    ],
+    "op_resolve_scope": [
+     4185,
+     66960
+    ],
+    "op_construct": [
+     545,
+     43600
+    ],
+    "op_put_to_scope": [
+     532,
+     12768
+    ],
+    "op_get_length": [
+     307,
+     9824
+    ],
+    "op_put_by_val": [
+     498,
+     7968
+    ],
+    "op_get_by_val": [
+     387,
+     6192
+    ],
+    "op_iterator_next": [
+     33,
+     4488
+    ],
+    "op_to_this": [
+     488,
+     3904
+    ],
+    "op_iterator_open": [
+     30,
+     3600
+    ],
+    "op_new_object": [
+     173,
+     2768
+    ],
+    "op_new_array": [
+     136,
+     1088
+    ],
+    "op_create_this": [
+     100,
+     800
+    ],
+    "op_tail_call": [
+     8,
+     768
+    ],
+    "op_catch": [
+     71,
+     568
+    ],
+    "op_new_array_buffer": [
+     52,
+     416
+    ],
+    "op_enumerator_get_by_val": [
+     5,
+     100
+    ],
+    "op_instanceof": [
+     3,
+     96
+    ],
+    "op_jneq_ptr": [
+     91,
+     91
+    ],
+    "op_super_construct_varargs": [
+     1,
+     88
+    ],
+    "op_call_varargs": [
+     1,
+     80
+    ],
+    "op_enumerator_next": [
+     4,
+     80
+    ],
+    "op_new_array_with_species": [
+     1,
+     24
+    ],
+    "op_new_array_with_size": [
+     2,
+     16
+    ],
+    "op_in_by_val": [
+     1,
+     16
+    ],
+    "op_put_by_val_direct": [
+     1,
+     16
+    ],
+    "op_create_promise": [
+     1,
+     8
+    ]
+   }
+  }
+ }
+}

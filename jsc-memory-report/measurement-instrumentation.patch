@@ -1,0 +1,80 @@
+diff --git a/Source/JavaScriptCore/dfg/DFGMinifiedGraph.h b/Source/JavaScriptCore/dfg/DFGMinifiedGraph.h
+index 6071460cbf..703fc3fd34 100644
+--- a/Source/JavaScriptCore/dfg/DFGMinifiedGraph.h
++++ b/Source/JavaScriptCore/dfg/DFGMinifiedGraph.h
+@@ -57,6 +57,7 @@ public:
+     
+     void validateReferences(const TrackedReferences&);
+     
++    unsigned sizeForStats() const { return m_list.size(); } // TEMP-MEASUREMENT
+ private:
+     Vector<MinifiedNode> m_list;
+ };
+diff --git a/Source/JavaScriptCore/dfg/DFGPlan.cpp b/Source/JavaScriptCore/dfg/DFGPlan.cpp
+index 68e4326375..cffde0a745 100644
+--- a/Source/JavaScriptCore/dfg/DFGPlan.cpp
++++ b/Source/JavaScriptCore/dfg/DFGPlan.cpp
+@@ -86,6 +86,10 @@
+ 
+ #if ENABLE(FTL_JIT)
+ #include "FTLCapabilities.h"
++#include "FTLJITCode.h"
++#include "FTLOSRExit.h"
++#include "InlineCallFrameSet.h"
++#include <wtf/StringPrintStream.h>
+ #include "FTLCompile.h"
+ #include "FTLFail.h"
+ #include "FTLLink.h"
+@@ -529,6 +533,40 @@ void Plan::finalizeInThread(Ref<JSC::JITCode> jitCode)
+     jitCode->shrinkToFit();
+     if (m_recordedStatuses)
+         m_recordedStatuses->shrinkToFit();
++
++    // TEMP-MEASUREMENT: dump retained per-compilation metadata sizes.
++    static const bool dumpRetained = !!getenv("WKMEAS_DUMP_RETAINED");
++    if (dumpRetained) {
++        auto* common = jitCode->dfgCommon();
++        unsigned icf = 0;
++        if (common->inlineCallFrames) {
++            for (auto* frame : *common->inlineCallFrames) { UNUSED_PARAM(frame); icf++; }
++        }
++        unsigned handlerBag = 0, repatchBag = 0, callBag = 0, directBag = 0;
++        for (auto* x : common->m_handlerPropertyInlineCaches) { UNUSED_PARAM(x); handlerBag++; }
++        for (auto* x : common->m_repatchingPropertyInlineCaches) { UNUSED_PARAM(x); repatchBag++; }
++        for (auto* x : common->m_callLinkInfos) { UNUSED_PARAM(x); callBag++; }
++        for (auto* x : common->m_directCallLinkInfos) { UNUSED_PARAM(x); directBag++; }
++        StringPrintStream out;
++        out.print("RETAINED ", jitCode->jitType(), " name=", m_codeBlock->inferredNameWithHash(), " bytecodeCost=", m_codeBlock->bytecodeCost(), " codeSize=", jitCode->size(),
++            " codeOrigins=", common->codeOrigins->size(), " inlineCallFrames=", icf,
++            " watchpoints=", common->m_watchpoints.size(), " adaptiveStructWP=", common->m_adaptiveStructureWatchpoints.size(), " adaptiveInferredWP=", common->m_adaptiveInferredPropertyValueWatchpoints.size(),
++            " weakRefs=", common->m_weakReferences.size(), " weakStructs=", common->m_weakStructureReferences.size(), " transitions=", common->m_transitions.size(), " jumpReplacements=", common->m_jumpReplacements.size(),
++            " handlerPICBag=", handlerBag, " repatchPICBag=", repatchBag, " callLinkBag=", callBag, " directCallBag=", directBag, " identifiers=", common->m_dfgIdentifiers.size());
++        if (jitCode->jitType() == JITType::DFGJIT) {
++            auto* dfg = jitCode->dfg();
++            out.print(" exits=", dfg->m_osrExit.size(), " events=", dfg->variableEventStream.sizeForStats(), " minified=", dfg->minifiedDFG.sizeForStats(),
++                " unlinkedPIC=", dfg->m_unlinkedPropertyInlineCaches.size(), " unlinkedCalls=", dfg->m_unlinkedCallLinkInfos.size(), " osrEntries=", dfg->m_osrEntry.size(), " specRecoveries=", dfg->m_speculationRecovery.size());
++        }
++        if (jitCode->jitType() == JITType::FTLJIT) {
++            auto* ftl = jitCode->ftl();
++            size_t sumValues = 0, sumReps = 0, materializations = 0;
++            for (auto& desc : ftl->osrExitDescriptors) { sumValues += desc.m_values.size(); for (auto* m : desc.m_materializations) { UNUSED_PARAM(m); materializations++; } }
++            for (auto& exit : ftl->m_osrExit) sumReps += exit.m_valueReps.size();
++            out.print(" exits=", ftl->m_osrExit.size(), " descriptors=", ftl->osrExitDescriptors.size(), " sumExitValues=", sumValues, " sumValueReps=", sumReps, " materializations=", materializations, " lazySlowPaths=", ftl->lazySlowPaths.size(), " dfgNodes=", ftl->numberOfCompiledDFGNodes());
++        }
++        dataLogLn(out.toString());
++    }
+ }
+ 
+ bool Plan::isStillValidCodeBlock()
+diff --git a/Source/JavaScriptCore/dfg/DFGVariableEventStream.h b/Source/JavaScriptCore/dfg/DFGVariableEventStream.h
+index dda8014edd..93d72b1064 100644
+--- a/Source/JavaScriptCore/dfg/DFGVariableEventStream.h
++++ b/Source/JavaScriptCore/dfg/DFGVariableEventStream.h
+@@ -50,6 +50,7 @@ public:
+     }
+ 
+     unsigned reconstruct(CodeBlock*, CodeOrigin, MinifiedGraph&, unsigned index, Operands<ValueRecovery>&) const;
++    unsigned sizeForStats() const { return m_stream.size(); } // TEMP-MEASUREMENT
+     unsigned reconstruct(CodeBlock*, CodeOrigin, MinifiedGraph&, unsigned index, Operands<ValueRecovery>&, Vector<UndefinedOperandSpan>*) const;
+ 
+ private:
