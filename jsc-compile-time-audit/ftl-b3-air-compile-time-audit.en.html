@@ -1,0 +1,604 @@
+<title>FTL·B3·Air Compile-Time Audit</title>
+<style>
+  :root {
+    --cds-surface-0: #f9f9f7;
+    --cds-surface-1: #fcfcfb;
+    --cds-text-primary: #0b0b0b;
+    --cds-text-secondary: #52514e;
+    --cds-text-muted: #898781;
+    --cds-border: rgba(11, 11, 11, 0.1);
+    --cds-border-strong: rgba(11, 11, 11, 0.2);
+    --cds-text-accent: #184f95;
+    --cds-tag-time: #7a3e00;
+    --cds-tag-time-bg: rgba(210, 120, 20, 0.12);
+    --cds-tag-mem: #1e5a3a;
+    --cds-tag-mem-bg: rgba(30, 140, 80, 0.12);
+    --cds-tag-both: #4a2f7a;
+    --cds-tag-both-bg: rgba(110, 70, 180, 0.12);
+    --cds-fig-hot: #b5471c;
+    --cds-fig-box: #e9eef7;
+    --cds-fig-box-stroke: #7f95bd;
+    --cds-radius: 8px;
+    --cds-font-voice: "Anthropic Serif", ui-serif, Georgia, "Times New Roman", serif;
+    --cds-font-sans: "Anthropic Sans", ui-sans-serif, -apple-system, sans-serif;
+    --cds-font-mono: "Anthropic Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--cds-font-voice);
+  }
+  :root[data-theme="dark"] {
+    --cds-surface-0: #0d0d0d;
+    --cds-surface-1: #1a1a19;
+    --cds-text-primary: #ffffff;
+    --cds-text-secondary: #c3c2b7;
+    --cds-text-muted: #898781;
+    --cds-border: rgba(255, 255, 255, 0.1);
+    --cds-border-strong: rgba(255, 255, 255, 0.2);
+    --cds-text-accent: #6da7ec;
+    --cds-tag-time: #f0b070;
+    --cds-tag-time-bg: rgba(240, 160, 80, 0.16);
+    --cds-tag-mem: #8fd4ae;
+    --cds-tag-mem-bg: rgba(80, 200, 130, 0.16);
+    --cds-tag-both: #c7aef5;
+    --cds-tag-both-bg: rgba(170, 130, 240, 0.16);
+    --cds-fig-hot: #f08a5d;
+    --cds-fig-box: #1f2733;
+    --cds-fig-box-stroke: #7f95bd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --cds-surface-0: #0d0d0d;
+      --cds-surface-1: #1a1a19;
+      --cds-text-primary: #ffffff;
+      --cds-text-secondary: #c3c2b7;
+      --cds-text-muted: #898781;
+      --cds-border: rgba(255, 255, 255, 0.1);
+      --cds-border-strong: rgba(255, 255, 255, 0.2);
+      --cds-text-accent: #6da7ec;
+      --cds-tag-time: #f0b070;
+      --cds-tag-time-bg: rgba(240, 160, 80, 0.16);
+      --cds-tag-mem: #8fd4ae;
+      --cds-tag-mem-bg: rgba(80, 200, 130, 0.16);
+      --cds-tag-both: #c7aef5;
+      --cds-tag-both-bg: rgba(170, 130, 240, 0.16);
+      --cds-fig-hot: #f08a5d;
+      --cds-fig-box: #1f2733;
+      --cds-fig-box-stroke: #7f95bd;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--cds-surface-0); color: var(--cds-text-primary); font-size: 17px; line-height: 1.65; }
+  .doc { max-width: 720px; margin: 0 auto; padding: 72px 24px 96px; }
+  .masthead { margin-bottom: 48px; border-bottom: 1px solid var(--cds-border); padding-bottom: 32px; }
+  .eyebrow { font-family: var(--cds-font-sans); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cds-text-secondary); margin: 0 0 12px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 12px; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+  .subtitle { font-size: 18px; color: var(--cds-text-secondary); margin: 0; }
+  .takeaways { margin: 0 0 40px; padding: 18px 22px 16px; background: var(--cds-surface-1); border: 1px solid var(--cds-border); border-left: 3px solid var(--cds-text-accent); border-radius: var(--cds-radius); }
+  .takeaways-label { font-family: var(--cds-font-sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cds-text-secondary); margin: 0 0 8px; }
+  .takeaways ul { margin: 0; padding: 0 0 0 18px; }
+  .takeaways li { margin: 5px 0; line-height: 1.5; }
+  .takeaways li::marker { color: var(--cds-text-accent); }
+  nav.toc { margin: 0 0 48px; font-family: var(--cds-font-sans); font-size: 14px; border-left: 2px solid var(--cds-border); padding-left: 20px; }
+  nav.toc .toc-label { text-transform: uppercase; letter-spacing: 0.06em; color: var(--cds-text-secondary); font-size: 11px; margin-bottom: 10px; }
+  nav.toc ol { margin: 0; padding: 0 0 0 22px; }
+  nav.toc li { margin: 7px 0; padding-left: 4px; }
+  nav.toc li::marker { color: var(--cds-text-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  nav.toc a { color: var(--cds-text-primary); text-decoration: none; }
+  nav.toc a:hover { color: var(--cds-text-accent); }
+  section { margin: 0 0 40px; }
+  h2 { font-size: 24px; margin: 40px 0 12px; font-weight: 600; text-wrap: balance; }
+  h3 { font-size: 19px; margin: 36px 0 6px; font-weight: 600; line-height: 1.3; }
+  h4 { font-family: var(--cds-font-sans); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cds-text-secondary); margin: 18px 0 4px; font-weight: 600; }
+  p { margin: 0 0 14px; }
+  a { color: var(--cds-text-accent); }
+  blockquote { margin: 20px 0; padding: 4px 0 4px 20px; border-left: 3px solid var(--cds-text-accent); color: var(--cds-text-secondary); font-style: italic; }
+  pre, code { font-family: var(--cds-font-mono); font-size: 13.5px; }
+  code { word-break: break-word; }
+  pre { background: var(--cds-surface-1); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  .tablewrap { overflow-x: auto; margin: 20px 0; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--cds-font-sans); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--cds-border); vertical-align: top; }
+  th { font-weight: 600; color: var(--cds-text-secondary); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  td.num { text-align: right; }
+  figure { margin: 24px 0; }
+  figure svg { max-width: 100%; height: auto; display: block; }
+  figcaption { font-family: var(--cds-font-sans); font-size: 13px; color: var(--cds-text-secondary); margin-top: 8px; }
+  .meta { font-family: var(--cds-font-sans); font-size: 12.5px; color: var(--cds-text-secondary); margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 600; font-size: 11.5px; letter-spacing: 0.02em; border: 1px solid transparent; }
+  .tag-time { color: var(--cds-tag-time); background: var(--cds-tag-time-bg); }
+  .tag-mem { color: var(--cds-tag-mem); background: var(--cds-tag-mem-bg); }
+  .tag-both { color: var(--cds-tag-both); background: var(--cds-tag-both-bg); }
+  .tag-plain { color: var(--cds-text-secondary); border-color: var(--cds-border-strong); }
+  .finding { padding-bottom: 8px; border-bottom: 1px dashed var(--cds-border); }
+  .appendix { border-top: 1px solid var(--cds-border); margin-top: 56px; padding-top: 32px; }
+  .appendix h2 { font-size: 19px; color: var(--cds-text-secondary); }
+  .small { font-size: 14px; color: var(--cds-text-secondary); }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --cds-surface-0: #ffffff; --cds-surface-1: #fcfcfb; --cds-text-primary: #0b0b0b; --cds-text-secondary: #52514e; --cds-text-muted: #898781;
+      --cds-border: rgba(11, 11, 11, 0.1); --cds-border-strong: rgba(11, 11, 11, 0.2); --cds-text-accent: #184f95;
+      --cds-tag-time: #7a3e00; --cds-tag-time-bg: rgba(210, 120, 20, 0.12); --cds-tag-mem: #1e5a3a; --cds-tag-mem-bg: rgba(30, 140, 80, 0.12);
+      --cds-tag-both: #4a2f7a; --cds-tag-both-bg: rgba(110, 70, 180, 0.12); --cds-fig-hot: #b5471c; --cds-fig-box: #e9eef7; --cds-fig-box-stroke: #7f95bd;
+    }
+    body { font-size: 12pt; }
+    .doc { max-width: none; padding: 0; }
+    table, pre, figure, blockquote, .takeaways { break-inside: avoid; }
+    thead { display: table-header-group; }
+    h2, h3 { break-after: avoid; }
+  }
+</style>
+
+<article class="doc">
+
+  <header class="masthead">
+    <p class="eyebrow">Code audit · JavaScriptCore · August 2026</p>
+    <h1>FTL·B3·Air Compile-Time Audit</h1>
+    <p class="subtitle">Twenty verified opportunities to cut optimizing-tier compile time and compiler memory in JavaScriptCore's FTL, B3 and Air backends, ranked by expected payoff, with file-and-line evidence at HEAD <code>c73014505a</code>.</p>
+  </header>
+
+  <aside class="takeaways" aria-labelledby="takeaways-label">
+    <p class="takeaways-label" id="takeaways-label">Key takeaways</p>
+    <ul>
+      <li>Every FTL speculation check copies and re-prunes the whole OSR availability map and retains a full-width exit descriptor (9 bytes × frame slots) for the life of the code.</li>
+      <li>Every Wasm OMG compile keeps the entire B3 value graph alive through register allocation just to read one 8-byte Origin per instruction.</li>
+      <li>FTL hands B3 an IR that is roughly 30–50% larger than necessary: one constant per use and a Const+Add+Load triple per field access, both already solved in the Wasm OMG generator.</li>
+      <li>The greedy register allocator pays ~150 bytes of heap per Tmp and 656 bytes per basic block up front, and bubble-sorts concatenated spill runs.</li>
+      <li>Several B3 phases do full-procedure work that a one-line guard would skip: fixSSA on OMG, duplicateTails' unconditional CFG invalidation, CSE's second sweep over every loop block.</li>
+    </ul>
+  </aside>
+
+  <nav class="toc">
+    <div class="toc-label">Contents</div>
+    <ol>
+      <li><a href="#scope">Scope and method</a></li>
+      <li><a href="#pipeline">Where the pipeline spends its effort</a></li>
+      <li><a href="#ranking">Ranked summary</a></li>
+      <li><a href="#ftl">FTL lowering and OSR-exit metadata</a></li>
+      <li><a href="#b3">B3 phases</a></li>
+      <li><a href="#air">Air register allocation and liveness</a></li>
+      <li><a href="#cross">Cross-cutting infrastructure</a></li>
+      <li><a href="#plan">Suggested order of attack and how to measure</a></li>
+    </ol>
+  </nav>
+
+  <section id="scope">
+    <h2>Scope and method</h2>
+    <p>This audit looks only at <em>compiler</em> cost — wall-clock time on the compilation thread and memory allocated by the compiler — in the three optimizing backends of JavaScriptCore: <code>ftl/</code> (DFG→B3 lowering and OSR-exit machinery), <code>b3/</code> (the SSA middle end) and <code>b3/air/</code> (the machine-level IR, register allocator and code generator). Generated-code quality is out of scope except where a proposal might affect it.</p>
+    <p>The work was done by reading the source at commit <code>c73014505a</code> of <code>sosukesuzuki/WebKit</code>. Ten analysts each took a slice of the code (B3 data structures, ReduceStrength, the other B3 phases, B3→Air lowering, Air data structures, the greedy allocator, the remaining Air phases, FTL lowering, FTL exits and JIT code, and cross-cutting infrastructure). Every candidate they produced was then independently re-checked by two adversarial reviewers — one for factual correctness and staleness against HEAD, one for realistic impact and feasibility — and a final "completeness critic" looked for areas nobody had covered. In total 84 candidate findings were produced and all 84 survived fact-checking; many were found independently by two or three analysts, which is a useful cross-check. The top twenty are presented in full below; the rest are summarized in the appendix.</p>
+    <p>Two caveats. First, <strong>nothing here was measured</strong>: no build of WebKit was available, so all sizes are derived from struct field lists and all time estimates from loop structure and typical FTL/OMG procedure shapes (thousands to tens of thousands of B3 values, hundreds to thousands of blocks, tens of thousands of Air Tmps). Each finding states how to measure it. Second, this code base has already had a great deal of compile-time work: <code>B3::Value</code> stores its children inline with a 40-byte header, <code>Air::Inst</code> is exactly 64 bytes with three inline args, ReduceStrength is single-pass by default, LowerToAir uses index maps rather than hash maps, and the greedy allocator fuses several analyses into one walk. The findings below are what remains after accounting for those mitigations.</p>
+  </section>
+
+  <section id="pipeline">
+    <h2>Where the pipeline spends its effort</h2>
+    <p>The optimizing pipeline is a fixed sequence of phases (<code>b3/B3Generate.cpp</code> <code>generateToAir()</code>, then <code>b3/air/AirGenerate.cpp</code> <code>prepareForGeneration()</code>). The figure marks the phases where the findings concentrate. Three structural facts drive most of the cost: the FTL front end emits more B3 values than it needs to, so every early B3 phase walks a bloated graph; several B3 phases rebuild the same CFG analyses (predecessors, dominators, natural loops) after invalidation; and the Air register allocator — the single most expensive phase — carries per-Tmp and per-block side tables whose fixed costs dominate on large functions.</p>
+    <figure>
+      <svg viewBox="0 0 720 330" role="img" aria-label="Pipeline diagram of FTL, B3 and Air phases with hotspots marked">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--cds-text-secondary)"/></marker>
+        </defs>
+        <g font-family="var(--cds-font-sans)" font-size="11.5" fill="var(--cds-text-primary)">
+          <!-- FTL row -->
+          <text x="8" y="28" font-weight="600" fill="var(--cds-text-secondary)" font-size="11">FTL</text>
+          <rect x="50" y="12" width="140" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/>
+          <text x="120" y="33" text-anchor="middle">lowerDFGToB3</text>
+          <circle cx="184" cy="16" r="7" fill="var(--cds-fig-hot)"/><text x="184" y="20" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">1</text>
+          <circle cx="168" cy="16" r="7" fill="var(--cds-fig-hot)"/><text x="168" y="20" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">3</text>
+          <line x1="190" y1="29" x2="228" y2="29" stroke="var(--cds-text-secondary)" marker-end="url(#arr)"/>
+          <text x="300" y="33" text-anchor="middle" fill="var(--cds-text-secondary)">B3 Procedure (values, blocks)</text>
+          <!-- B3 row -->
+          <text x="8" y="100" font-weight="600" fill="var(--cds-text-secondary)" font-size="11">B3</text>
+          <g>
+            <rect x="50" y="84" width="92" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="96" y="105" text-anchor="middle">reduceStrength</text>
+            <circle cx="136" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="136" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">14</text>
+            <rect x="150" y="84" width="80" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="190" y="105" text-anchor="middle">hoist / CSE</text>
+            <circle cx="224" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="224" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">8</text>
+            <circle cx="208" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="208" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">9</text>
+            <rect x="238" y="84" width="100" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="288" y="105" text-anchor="middle">dupTails / fixSSA</text>
+            <circle cx="332" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="332" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">11</text>
+            <circle cx="316" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="316" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">10</text>
+            <rect x="346" y="84" width="92" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="392" y="105" text-anchor="middle">lowerMacros…</text>
+            <rect x="446" y="84" width="92" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="492" y="105" text-anchor="middle">reduceStrength</text>
+            <rect x="546" y="84" width="92" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="592" y="105" text-anchor="middle">lowerToAir</text>
+            <circle cx="632" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="632" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">19</text>
+            <circle cx="616" cy="88" r="7" fill="var(--cds-fig-hot)"/><text x="616" y="92" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">2</text>
+          </g>
+          <!-- analyses band -->
+          <rect x="50" y="128" width="588" height="24" rx="4" fill="none" stroke="var(--cds-border-strong)" stroke-dasharray="4 3"/>
+          <text x="344" y="144" text-anchor="middle" fill="var(--cds-text-secondary)">resetReachability / Dominators / NaturalLoops rebuilt ~8–15× per compile</text>
+          <circle cx="632" cy="132" r="7" fill="var(--cds-fig-hot)"/><text x="632" y="136" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">15</text>
+          <circle cx="616" cy="132" r="7" fill="var(--cds-fig-hot)"/><text x="616" y="136" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">16</text>
+          <!-- Air row -->
+          <text x="8" y="200" font-weight="600" fill="var(--cds-text-secondary)" font-size="11">Air</text>
+          <g>
+            <rect x="50" y="184" width="82" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="91" y="205" text-anchor="middle">simplify / DCE</text>
+            <rect x="140" y="184" width="150" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="215" y="205" text-anchor="middle">allocateRegistersByGreedy</text>
+            <circle cx="284" cy="188" r="7" fill="var(--cds-fig-hot)"/><text x="284" y="192" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">4</text>
+            <circle cx="268" cy="188" r="7" fill="var(--cds-fig-hot)"/><text x="268" y="192" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">5</text>
+            <circle cx="252" cy="188" r="7" fill="var(--cds-fig-hot)"/><text x="252" y="192" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">6</text>
+            <circle cx="236" cy="188" r="7" fill="var(--cds-fig-hot)"/><text x="236" y="192" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">7</text>
+            <circle cx="220" cy="188" r="7" fill="var(--cds-fig-hot)"/><text x="220" y="192" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">18</text>
+            <rect x="298" y="184" width="110" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="353" y="205" text-anchor="middle">lowerAfterRegAlloc</text>
+            <circle cx="402" cy="188" r="7" fill="var(--cds-fig-hot)"/><text x="402" y="192" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">17</text>
+            <rect x="416" y="184" width="110" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="471" y="205" text-anchor="middle">stack alloc / fixups</text>
+            <rect x="534" y="184" width="104" height="34" rx="6" fill="var(--cds-fig-box)" stroke="var(--cds-fig-box-stroke)"/><text x="586" y="205" text-anchor="middle">generate</text>
+          </g>
+          <rect x="50" y="228" width="588" height="24" rx="4" fill="none" stroke="var(--cds-border-strong)" stroke-dasharray="4 3"/>
+          <text x="344" y="244" text-anchor="middle" fill="var(--cds-text-secondary)">every walk over a Patch/Check Inst goes through CheckSpecial::hiddenBranch + virtual forEachArg</text>
+          <circle cx="632" cy="232" r="7" fill="var(--cds-fig-hot)"/><text x="632" y="236" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">13</text>
+          <rect x="50" y="262" width="588" height="24" rx="4" fill="none" stroke="var(--cds-border-strong)" stroke-dasharray="4 3"/>
+          <text x="344" y="278" text-anchor="middle" fill="var(--cds-text-secondary)">Air BasicBlock Inst vectors start at 16 × 64 B; Liveness adds 64 B per instruction boundary</text>
+          <circle cx="632" cy="266" r="7" fill="var(--cds-fig-hot)"/><text x="632" y="270" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">12</text>
+          <circle cx="616" cy="266" r="7" fill="var(--cds-fig-hot)"/><text x="616" y="270" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">7</text>
+          <!-- JIT code -->
+          <rect x="50" y="298" width="588" height="24" rx="4" fill="none" stroke="var(--cds-border-strong)" stroke-dasharray="4 3"/>
+          <text x="344" y="314" text-anchor="middle" fill="var(--cds-text-secondary)">retained for the life of the code: FTL OSRExitDescriptors (9 B × frame slots × exits)</text>
+          <circle cx="632" cy="302" r="7" fill="var(--cds-fig-hot)"/><text x="632" y="306" text-anchor="middle" font-size="9.5" fill="#fff" font-weight="700">20</text>
+        </g>
+      </svg>
+      <figcaption>The optimizing pipeline at optLevel 2, with the numbered findings placed at the phase where the cost is paid. The B3 front end (findings 1–3) inflates the input to everything downstream; the register allocator (4–7, 18) carries the largest fixed per-Tmp and per-block costs.</figcaption>
+    </figure>
+  </section>
+
+  <section id="ranking">
+    <h2>Ranked summary</h2>
+    <p>Impact is the reviewers' consensus estimate of the share of total FTL/OMG compile time or peak compiler memory on a large function; effort is S (hours), M (days) or L (a week or more). "Time" findings reduce compile time, "memory" findings reduce allocator traffic or peak/retained memory, "both" do both.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>Finding</th><th>Area</th><th>Kind</th><th>Impact</th><th>Effort</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><a href="#f1">Per-check OSR exit-state capture and full-width descriptors</a></td><td>FTL</td><td><span class="tag tag-both">both</span></td><td>medium (memory: high on exit-heavy code)</td><td>M</td></tr>
+        <tr><td>2</td><td><a href="#f2">OMG keeps the whole B3 graph alive through Air for the PC→Origin map</a></td><td>B3/Air/Wasm</td><td><span class="tag tag-mem">memory</span></td><td>medium–high (OMG peak)</td><td>M</td></tr>
+        <tr><td>3</td><td><a href="#f3">FTL emits one constant per use and Const+Add+Load per field access</a></td><td>FTL→B3</td><td><span class="tag tag-both">both</span></td><td>medium</td><td>S–M</td></tr>
+        <tr><td>4</td><td><a href="#f4">Greedy LiveRange heap-allocates 128 B per Tmp</a></td><td>Air</td><td><span class="tag tag-mem">memory</span></td><td>medium</td><td>S–M</td></tr>
+        <tr><td>5</td><td><a href="#f5">656-byte PhaseInsertionSet per basic block</a></td><td>Air</td><td><span class="tag tag-mem">memory</span></td><td>medium</td><td>S</td></tr>
+        <tr><td>6</td><td><a href="#f6">Bubble sort over concatenated spill-insertion runs</a></td><td>Air</td><td><span class="tag tag-time">time</span></td><td>medium on spill-heavy wasm</td><td>S</td></tr>
+        <tr><td>7</td><td><a href="#f7">64-byte liveness Actions per instruction boundary</a></td><td>Air</td><td><span class="tag tag-both">both</span></td><td>medium</td><td>M</td></tr>
+        <tr><td>8</td><td><a href="#f8">CSE re-sweeps every block of every loop</a></td><td>B3</td><td><span class="tag tag-time">time</span></td><td>medium</td><td>M</td></tr>
+        <tr><td>9</td><td><a href="#f9">CSE backward walks with no sole-holder pre-filter</a></td><td>B3</td><td><span class="tag tag-time">time</span></td><td>low–medium</td><td>S</td></tr>
+        <tr><td>10</td><td><a href="#f10">fixSSA early-out defeated by SparseCollection::isEmpty</a></td><td>B3 (OMG)</td><td><span class="tag tag-both">both</span></td><td>medium</td><td>S</td></tr>
+        <tr><td>11</td><td><a href="#f11">duplicateTails over-demotes and always invalidates the CFG</a></td><td>B3</td><td><span class="tag tag-both">both</span></td><td>low–medium</td><td>S</td></tr>
+        <tr><td>12</td><td><a href="#f12">1 KB minimum Inst storage per Air block</a></td><td>Air</td><td><span class="tag tag-mem">memory</span></td><td>medium</td><td>S</td></tr>
+        <tr><td>13</td><td><a href="#f13">CheckSpecial builds a throwaway Inst on every query; Patch forEachArg is virtual per arg</a></td><td>Air/B3</td><td><span class="tag tag-time">time</span></td><td>low–medium</td><td>M</td></tr>
+        <tr><td>14</td><td><a href="#f14">ReduceStrength escalates to a full second walk on any CFG change</a></td><td>B3</td><td><span class="tag tag-time">time</span></td><td>medium</td><td>M</td></tr>
+        <tr><td>15</td><td><a href="#f15">Predecessor recomputation is O(Σ indegree²), run 10–15× per compile</a></td><td>B3+Air</td><td><span class="tag tag-time">time</span></td><td>low (medium on br_table code)</td><td>S</td></tr>
+        <tr><td>16</td><td><a href="#f16">Dominators allocate a 128 B Vector per tree node, rebuilt 8–12×</a></td><td>WTF/B3</td><td><span class="tag tag-both">both</span></td><td>low</td><td>S</td></tr>
+        <tr><td>17</td><td><a href="#f17">lowerAfterRegAlloc recomputes whole-function register liveness</a></td><td>Air</td><td><span class="tag tag-both">both</span></td><td>low–medium</td><td>M</td></tr>
+        <tr><td>18</td><td><a href="#f18">Spill-code emission walks the whole function per round</a></td><td>Air</td><td><span class="tag tag-time">time</span></td><td>low–medium</td><td>M</td></tr>
+        <tr><td>19</td><td><a href="#f19">LowerToAir housekeeping: dead analyses, 272 B per value, missing VectorTraits</a></td><td>B3→Air</td><td><span class="tag tag-both">both</span></td><td>low</td><td>S</td></tr>
+        <tr><td>20</td><td><a href="#f20">OSRExitDescriptors are never compacted or shared</a></td><td>FTL</td><td><span class="tag tag-mem">memory</span></td><td>low–medium (retained)</td><td>M</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="ftl">
+    <h2>FTL lowering and OSR-exit metadata</h2>
+
+    <div class="finding" id="f1">
+      <h3>1. Every speculation check re-captures the full OSR exit state and retains a full-width descriptor</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">FTL</span><span class="tag tag-plain">impact: medium · memory high on exit-heavy code</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p>Each call to <code>speculate()</code> / <code>blessSpeculation()</code> (<code>ftl/FTLLowerDFGToB3.cpp:27177–27195</code>) allocates a new <code>OSRExitDescriptor</code> through <code>appendOSRExitDescriptor</code> (<code>:27108–27132</code>) whose <code>FixedOperands&lt;ExitValue&gt; m_values</code> has one slot per argument, local and tmp of the whole inlined frame stack (<code>ExitValue</code> is a 1-byte kind plus a packed 8-byte union, 9 bytes). It then calls <code>buildExitArguments</code> (<code>:27244–27313</code>), which:</p>
+      <pre>AvailabilityMap availabilityMap = this-&gt;availabilityMap();   // copy #1: Vector&lt;Availability&gt; (16 B × L)
+availabilityMap.pruneByLiveness(m_graph, exitOrigin);        // copy #2 + bytecode liveness walk
+...
+for (unsigned i = 0; i &lt; exitDescriptor-&gt;m_values.size(); ++i) {
+    ...
+    ExitValue exitValue = exitValueForAvailability(arguments, map, availability); // up to 7 HashMap probes
+    exitDescriptor-&gt;m_values[i] = exitValue;
+}</pre>
+      <p><code>pruneByLiveness</code> is <code>*this = filterByLiveness(...)</code> (<code>dfg/DFGAvailabilityMap.cpp:75–78</code>), and <code>filterByLiveness</code> allocates a second full-size <code>Operands&lt;Availability&gt;</code> and walks every inline frame's bytecode-liveness bit rows via <code>Graph::forAllLiveInBytecode</code> (<code>dfg/DFGGraph.h:1121–1160</code>). <code>exitValueForNode</code> (<code>:27380–27406</code>) probes up to seven separate <code>HashMap&lt;Node*, LoweredNodeValue&gt;</code> tables per node-backed operand. Finally the live values are appended one at a time into the check's <code>Vector&lt;Value*, 3&gt;</code> children.</p>
+      <h4>Why it costs</h4>
+      <p>For a frame with L operand slots, every check costs three heap allocations (two 16·L-byte availability copies and a 9·L-byte descriptor), an O(L + inline depth) liveness walk, an O(L) availability scan and an O(L · probes) value-resolution loop. Nothing in this depends on state that changes between checks emitted for the same DFG node: the availability map is only mutated in <code>compileBlock</code> (<code>:526</code>) and at the end of <code>compileNode</code> (<code>:2092</code>), and <code>exitOrigin</code> is constant for the node. Typical nodes emit two to four checks (an Int32 <code>GetByVal</code> emits cell, index, bounds and hole checks). The reviewers noted one subtlety: the <em>resolved</em> exit values can legitimately differ between checks of one node, because <code>lowInt32</code>/<code>lowJSValue</code> register new representations mid-node, so only the pruned availability and the materialization map are bit-identical; the value resolution needs a generation counter on the lowered-value maps to be cacheable.</p>
+      <p>The retained side is larger than the transient side. Every descriptor lives in <code>FTL::JITCode::osrExitDescriptors</code> for the lifetime of the compiled code (<code>ftl/FTLJITCode.h:86–90</code>); <code>shrinkToFit</code> only trims capacity. With N checks and L slots that is N·(9L + 48) bytes: for N = 1000, L = 100, roughly 1 MB per compiled function, plausibly comparable to or larger than the machine code itself.</p>
+      <h4>Proposal (staged)</h4>
+      <p>(1) Replace the two-step copy with <code>AvailabilityMap availabilityMap = this-&gt;availabilityMap().filterByLiveness(m_graph, exitOrigin);</code> (make <code>filterByLiveness</code> const) — this mirrors <code>DFGOSRAvailabilityAnalysisPhase.cpp:162</code> and removes one allocation per check with zero risk. (2) Keep a one-entry cache of "operands live in bytecode at <code>exitOrigin</code>" (a <code>FastBitVector</code> keyed on the full <code>CodeOrigin</code>) plus a reusable scratch <code>Operands&lt;Availability&gt;</code> member, filled in place; consecutive checks almost always share the origin. (3) Add a per-node cache keyed on (availability version bumped at <code>:526</code>/<code>:2092</code>, <code>exitOrigin</code>, a generation counter bumped by every <code>set*()</code> on the lowered-value maps) that stores the pruned availability, the materialization map and the resolved <code>(operand, ExitValue, LValue)</code> list; on a hit, only re-append the LValues. (4) Reserve capacity on the check's children vector before <code>appendColdAnys</code>. Descriptor sharing and compaction are covered in finding 20.</p>
+      <h4>Risk and measurement</h4>
+      <p>Low for stages 1–2 (liveness at a <code>CodeOrigin</code> is invariant during lowering). Medium for stage 3: the cache key must cover everything <code>buildExitArguments</code> reads; validate by recomputing and comparing under <code>JSC_validateFTLOSRExitLiveness</code>. To measure, note that today FTL lowering is attributed to "DFG" time because <code>m_timeBeforeFTL</code> is sampled <em>after</em> <code>lowerDFGToB3</code> (<code>dfg/DFGPlan.cpp:474–477</code>, consumed at <code>jit/JITPlan.cpp:294–295</code>); add a <code>CompilerTimingScope("FTL", "lowerDFGToB3")</code> and a counter of descriptors versus distinct (node, origin) keys, and sum <code>m_values.size() × 9</code> at <code>shrinkToFit</code> time.</p>
+    </div>
+
+    <div class="finding" id="f3">
+      <h3>3. FTL hands B3 an inflated graph: one constant per use, and Const+Add+Load per field access</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">FTL→B3</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: S (constants) · M (offsets)</span></p>
+      <h4>What happens today</h4>
+      <p><code>Output::constInt32/constInt64/constDouble</code> each append a brand-new constant value to the current block (<code>ftl/FTLOutput.cpp:119–132</code>); only the dozen values in <code>FTLCommonValues</code> are shared. <code>FTLLowerDFGToB3.cpp</code> has roughly 370 <code>constInt32</code>, 130 <code>constInt64</code>, 200 <code>constIntPtr</code> and 335 <code>weakPointer</code> call sites, plus one constant per <code>vmCall</code> (the operation pointer and the call-site index) and one per use of a DFG constant edge in <code>lowInt32</code>/<code>lowJSValue</code>. Separately, every field access goes through <code>Output::address</code> → <code>addPtr(base, offset)</code> → <code>add(base, constIntPtr(offset))</code> (<code>ftl/FTLOutput.h:286–305</code>) and then <code>Output::load/store</code> build a <code>MemoryValue</code> with offset 0 (<code>ftl/FTLOutput.cpp:429–469</code>), so each of the roughly 600–800 <code>m_out.load*/store*(…, m_heaps.X)</code> sites emits three values — Const, Add, Load — where B3's <code>MemoryValue</code> constructors that take an offset (<code>b3/B3MemoryValue.h:121–145</code>) would allow one.</p>
+      <h4>Why it costs</h4>
+      <p>B3 does eventually reach the canonical form: ReduceStrength's Const case hashes every constant, clones the first non-root occurrence into the root block and replaces the original with an <code>Identity</code> (<code>b3/B3ReduceStrength.cpp:3377–3396</code>), and its Load rule folds <code>Load(Add(x, c))</code> into an offset (<code>:2645–2662</code>). But each redundant value has already cost an arena allocation, a <code>SparseCollection</code> slot and a block-list slot at lowering time, one <code>ValueKey</code> hash and an in-place replacement in ReduceStrength, a revisit in ReduceStrength's second walk (finding 14), a <code>performSubstitution</code> fix-up in every user, and a DCE deletion. The extra Add/Const pairs additionally survive through <code>reduceDoubleToFloat</code> and are only removed by DCE. The reviewers' consensus is that redundant constants are 15–25% of initial FTL B3 values and that the Const+Add+Load shape inflates the initial graph by a further 30–50%, for a likely 2–5% of total FTL compile time and a proportional cut in peak B3 memory before DCE. The Wasm OMG generator already does both things right: it pools constants through <code>m_constantPool</code> (<code>wasm/WasmOMGIRGenerator.cpp:1141, 1502–1516</code>) and emits <code>MemoryValue</code>s with direct offsets (<code>:974, 1353, 2104</code>).</p>
+      <h4>Proposal</h4>
+      <p>Constants: add an <code>UncheckedKeyHashMap&lt;B3::ValueKey, LValue&gt; m_constantPool</code> to <code>FTL::Output</code>, have <code>constInt32/constInt64/constDouble/constFloat</code> do <code>ensure()</code> and on a miss create the value in the prologue block (which dominates everything, including catch entrypoints via the <code>EntrySwitch</code>). Because the prologue already has a terminator by the time most constants are requested, insert with an <code>InsertionSet</code> at index 0 as OMG does. Drop the per-use <code>result-&gt;setOrigin()</code> calls in <code>lowInt32</code>/<code>lowJSValue</code>, since they would mutate a shared value. Offsets: give <code>B3::TypedPointer</code> an <code>OffsetType m_offset</code>, have <code>Output::address</code> fold <code>field.offset()</code> into it instead of emitting an Add, and have the <code>load*/store*</code> family pass <code>pointer.offset()</code> to the offset-taking <code>MemoryValue</code> constructors; the ~10 sites that take <code>TypedPointer::value()</code> for non-memory arithmetic need a materialization helper. <code>legalizeMemoryOffsets</code> already repairs offsets the ISA cannot encode.</p>
+      <h4>Risk and measurement</h4>
+      <p>Low: both shapes are exactly what B3 canonicalizes to, so generated code is unchanged; the only observable difference is the B3 origin attached to constants in dumps. Measure with <code>JSC_dumpB3GraphAtEachPhase</code> (value count entering <code>reduceStrength(Initial)</code>) and <code>JSC_logPhaseTimes=1</code> / <code>JSC_reportTotalPhaseTimes=1</code>.</p>
+    </div>
+
+    <div class="finding" id="f20">
+      <h3>20. OSRExitDescriptors are retained forever and never compacted or shared</h3>
+      <p class="meta"><span class="tag tag-mem">memory</span><span class="tag tag-plain">FTL</span><span class="tag tag-plain">impact: low–medium (retained)</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p>Descriptors live in a <code>SegmentedVector&lt;OSRExitDescriptor, 8&gt;</code> on <code>FTL::JITCode</code> (<code>ftl/FTLJITCode.h:87–89</code>) and are allocated eagerly at lowering time (finding 1), while the <code>OSRExit</code> objects that reference them are created lazily in <code>prepareOSRExitHandle</code> from the check's generator (<code>ftl/FTLOSRExit.cpp:82–97</code>). A check that B3 later turns into a <code>Nop</code> (<code>b3/B3ReduceStrength.cpp:3210–3217</code>) or that sits in a block B3 deletes leaves an orphan descriptor; exception-handler descriptors from <code>preparePatchpointForExceptions</code> (35 call sites) are per patchpoint inside a try region; and two checks with identical (format, profile, exit state) get separate descriptors. <code>FTLCompile.cpp:231–236</code> then walks every descriptor × every operand to apply <code>localsOffset</code>.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Each descriptor retains 9·L + 48 bytes for the life of the code, with L the machine-frame operand count (union of all inlined frames). The reviewers rate the dead/duplicate fraction as modest for ordinary checks (FTL already elides statically unnecessary checks) but plausibly significant for exception-handler descriptors. Two complementary changes: store <code>m_values</code> sparsely (only non-<code>ExitValueDead</code> entries as <code>(operandIndex, ExitValue)</code> pairs, or a bitmap plus dense array); and after <code>B3::generate</code>, compact <code>osrExitDescriptors</code> to the set referenced by <code>m_osrExit</code>, lazy slow paths and exception handles. Pairs naturally with the per-node cache in finding 1, which makes descriptor sharing a by-product. Measure by logging descriptor count versus referenced count and total <code>m_values</code> bytes at <code>shrinkToFit</code>.</p>
+    </div>
+  </section>
+
+  <section id="b3">
+    <h2>B3 phases</h2>
+
+    <div class="finding" id="f2">
+      <h3>2. Wasm OMG keeps every B3 Value alive through the whole Air pipeline to read an 8-byte Origin per instruction</h3>
+      <p class="meta"><span class="tag tag-mem">memory</span><span class="tag tag-plain">B3 / Air / Wasm</span><span class="tag tag-plain">impact: medium–high on OMG peak</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p><code>B3Generate.cpp:149</code> calls <code>Procedure::freeUnneededB3ValuesAfterLowering()</code> right after <code>lowerToAir</code> so that the B3 graph is gone before register allocation, which is where Air memory peaks. That function returns before freeing anything when <code>m_code-&gt;shouldPreserveB3Origins()</code> is set (<code>b3/B3Procedure.cpp:475–476</code>). FTL sets that flag only for the sampling profiler or IR dumps (<code>ftl/FTLState.cpp:75–76</code>), but the Wasm OMG generator calls <code>procedure.setNeedsPCToOriginMap()</code> unconditionally (<code>wasm/WasmOMGIRGenerator.cpp:6964</code>), and that setter couples the two concepts:</p>
+      <pre>void Procedure::setNeedsPCToOriginMap()
+{
+    m_needsPCToOriginMap = true;
+    m_code-&gt;forcePreservationOfB3Origins();   // b3/B3Procedure.cpp:514-518
+}</pre>
+      <p>The only thing code generation reads from a preserved value is <code>inst.origin-&gt;origin()</code>, one <code>Origin</code> word per Air instruction (<code>b3/air/AirGenerate.cpp:205–209</code>; O0 path at <code>AirAllocateRegistersAndStackAndGenerateCode.cpp:587–593</code>), consumed by <code>WasmCallee.cpp:503–535</code> to build the call-site-index map. Every other Air dereference of <code>inst.origin</code> is for Specials, <code>CCall</code> and <code>WasmBoundsCheck</code> — exactly the opcodes that <code>freeUnneededB3ValuesAfterLowering</code> already preserves (<code>:478–503</code>).</p>
+      <h4>Why it costs</h4>
+      <p>For every OMG and OSR-entry compile, the full B3 graph — values at 48 bytes and up, <code>MemoryValue</code>s at 64–80, <code>StackmapValue</code>s at 112 plus their heap <code>m_reps</code>, and the <code>SparseCollection</code> slot vector — stays allocated through all thirteen Air phases. For a 50k-value wasm function that is several megabytes sitting at the pipeline's peak, per concurrent compile thread; one reviewer estimated 20–40% of OMG peak compiler memory on large functions, another 5–10%, depending on how large the Air side is. Compile time is roughly neutral either way.</p>
+      <h4>Proposal</h4>
+      <p>Split the flag: keep <code>m_preserveB3Origins</code> meaning "the full graph must survive" for dump/disassembler paths, and add a separate "needs PC→Origin map" condition. In <code>freeUnneededB3ValuesAfterLowering</code>, when only the map is needed, either (a) walk every Air Inst once, set a bit per <code>inst.origin-&gt;index()</code>, union with the existing Special-driven preservation set, and free the rest — safe by construction because every Air phase that creates a new Inst copies its origin from an existing one (verified at <code>AirBreakCriticalEdges.cpp:49</code>, <code>AirLowerAfterRegAlloc.cpp:165/231/263</code>, <code>AirAllocateRegistersByGreedy.cpp:3226</code> and the other insertion sites); or (b) go further and retarget non-preserved origins to one stub <code>Nop</code> value per distinct <code>Origin</code> (deduplicated through a <code>HashMap&lt;Origin bits, Value*&gt;</code>), so retention scales with the number of distinct wasm opcodes rather than B3 values.</p>
+      <h4>Risk and measurement</h4>
+      <p>Medium–low: any Air code that dereferenced a non-preserved origin would be a use-after-free, but the set of dereference sites is small and already enumerated by the existing preservation logic. Measure by logging <code>m_values.size()</code> before and after the sweep and comparing peak RSS / malloc high-water mark while OMG-compiling a large module with <code>JSC_useConcurrentJIT=0</code>.</p>
+    </div>
+
+    <div class="finding" id="f8">
+      <h3>8. CSE's loop re-sweep reprocesses every block of every natural loop</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">B3</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p>After the main reverse-post-order sweep, <code>eliminateCommonSubexpressions</code> collects the header and every body block of every natural loop into an <code>IndexSet</code> and calls <code>performCSE(&amp;loopBlocks)</code> a second time (<code>b3/B3EliminateCommonSubexpressions.cpp:374–389</code>). The comment explains why: in RPO the loop body has not been processed when the header is visited, so back-edge queries from the header miss matches that only appear once the body is summarized. The second pass runs the full <code>process()</code> pipeline on each block (<code>:485–566</code>): <code>performSubstitution</code> on every value, a <code>ValueKey</code> hash and linear match scan in <code>PureCSE</code> (which now also finds the value itself and skips it, <code>b3/B3PureCSE.cpp:80–82</code>), a rebuilt <code>ImpureBlockData</code>, and another backward search for every memory value.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>In hot FTL and OMG functions nearly all code is inside some loop, so CSE does close to its entire job twice. Only queries whose first-pass walk actually reached a not-yet-processed block (one later in RPO, i.e. across a back edge) can gain from the re-sweep, and nothing records which those were. Proposal, in order of safety: record a per-value bit in <code>findMemoryValue</code>/<code>findWasm*</code> when the backward walk pops a block whose RPO index is at or after the querying block's, and in pass 2 skip the backward walks for values without the bit; or restrict pass 2 to the blocks that issued such queries. The reviewers caution that pass 2 also yields secondary pure-CSE gains when <code>performSubstitution</code> re-keys a value whose child load was eliminated in pass 1, so a conservative filter (re-sweep any block that issued a back-edge query, plus blocks it dominates within the loop) is preferable to a precise one. Validate by comparing eliminated-value counts on a benchmark corpus; measure with a <code>CompilerTimingScope</code> around each <code>performCSE</code> call.</p>
+    </div>
+
+    <div class="finding" id="f9">
+      <h3>9. CSE backward walks have no "anyone else holds this pointer" pre-filter and allocate a worklist per query</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">B3</span><span class="tag tag-plain">impact: low–medium</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p><code>findMemoryValue</code> (<code>b3/B3EliminateCommonSubexpressions.cpp:980–1035</code>) checks the current block's <code>memoryValuesAtTail</code>, early-outs if the block has an overlapping write, then constructs a fresh <code>BlockWorklist</code> (a <code>BitVector</code> plus vector; a heap allocation once the procedure has more than 63 blocks) and walks predecessors until it finds a match, an overlapping write, or the root. A match requires another <code>MemoryValue</code> keyed by the same <code>lastChild</code> pointer. For a load whose address value is used by no other memory value — very common: unique address arithmetic, first touch of a field — the walk can never succeed and runs until a clobbering write or the root. The Wasm-struct path already recognizes this: it tallies holders per key in <code>m_structKeyFilters</code> during the summary pass and bails before walking when the querying value is the sole holder (<code>:1108–1122</code>, used at <code>:1144</code>, rationale at <code>:1601–1605</code>). The plain memory path and <code>findWasmArrayValue</code> (<code>:1375–1416</code>) do not.</p>
+      <h4>Proposal</h4>
+      <p>Mirror the struct filter for <code>MemoryValue</code> and array keys: an <code>UncheckedKeyHashMap&lt;Value*, {Value* first; unsigned count}&gt;</code> populated wherever <code>memoryValuesAtTail.add()</code> is called, and an <code>isOnlyHolderOfPointer(ptr)</code> check at the top of <code>findMemoryValue</code>. Replace the per-query <code>BlockWorklist</code> in <code>findMemoryValue</code>, <code>findStoreAfterClobber</code>, <code>findWasm*</code> and <code>processWasmAddressValue</code> with an epoch-stamped <code>IndexMap&lt;BasicBlock*, unsigned&gt;</code> plus a reusable stack owned by the CSE object (the pattern <code>SSACalculator::computePhis</code> already uses). One reviewer notes the walk is a DFS that aborts at the first clobbering block, so in call-heavy FTL code most walks already die quickly; the win is concentrated in call-free, load-heavy regions (OMG numeric and GC code, FTL array loops) and is doubled by the loop re-sweep in finding 8. CSE results are unchanged.</p>
+    </div>
+
+    <div class="finding" id="f10">
+      <h3>10. fixSSA's early-out tests SparseCollection::isEmpty(), which is false forever once any Variable was allocated</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">B3 (OMG)</span><span class="tag tag-plain">impact: medium on every OMG compile</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p><code>fixSSA</code> returns early when <code>proc.variables().isEmpty()</code> (<code>b3/B3FixSSA.cpp:354</code>, again at <code>:366</code>). But <code>SparseCollection::isEmpty()</code> is <code>m_vector.isEmpty()</code> (<code>b3/B3SparseCollection.h:126</code>), and <code>remove()</code> nulls the slot and pushes the index onto a free list without shrinking the vector (<code>:74–79</code>); <code>packIndices()</code> is only ever called on <code>m_values</code>. OMG creates one <code>Variable</code> per wasm local and argument, runs its own <code>fixSSA</code> before <code>prepareForGeneration</code> (<code>wasm/WasmOMGIRGenerator.cpp:6999, 7005</code>), and the DCE inside <code>reduceStrength(Initial)</code> then deletes every variable (<code>b3/B3EliminateDeadCode.cpp:96–100</code>). When the pipeline's own <code>fixSSA</code> runs (<code>B3Generate.cpp</code>), the collection is all holes but not "empty".</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Every OMG compile therefore pays <code>fixSSALocally</code> (a full value walk with <code>performSubstitution</code>), two <code>killDeadVariables</code> walks, a <code>breakCriticalEdges</code> scan, a <code>VariableLiveness</code> whose dense matrices are sized blocks × ⌈N/64⌉ words × 4 (up to the 4 MB-per-matrix budget, zero-filled), an <code>SSACalculator</code> with dominance frontiers, and the conversion walk — for a guaranteed no-op. The fix needs no new state: <code>SparseCollection</code> already tracks holes, so <code>bool isEmpty() const { return m_vector.size() == m_indexFreeList.size(); }</code> makes both early-outs effective; alternatively have <code>killDeadVariables</code> report survivors. Additionally, since <code>duplicateTails</code> is the only in-pipeline producer of Variables, <code>B3Generate.cpp</code> could skip <code>fixSSA</code> when it demoted nothing (see finding 11). FTL never creates Variables, so this is OMG-specific. Measure with <code>JSC_logPhaseTimes=1</code>: the <code>fixSSA</code>, <code>VariableLiveness</code> and <code>fixSSA: computePhis/convert</code> scopes should vanish for the second run.</p>
+    </div>
+
+    <div class="finding" id="f11">
+      <h3>11. duplicateTails demotes values from every candidate block and unconditionally invalidates the CFG</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">B3</span><span class="tag tag-plain">impact: low–medium</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p>Candidates are all blocks with ≤3 values, ≤3 successors and a Void terminal (<code>b3/B3DuplicateTails.cpp:71–89</code>, <code>maxB3TailDupBlockSize = 3</code>). <code>valuesToDemote</code> then includes every Phi in a candidate and every value defined in a candidate and used elsewhere (<code>:93–103</code>), and <code>demoteValues</code> runs on all of them <em>before</em> the phase decides what to clone. Cloning only happens for blocks ending in <code>Jump</code> to a candidate (<code>:110–143</code>). Candidates reached only through <code>Branch</code>/<code>Switch</code> edges — the ubiquitous FTL shape <code>x = Load(…); Branch(x)</code> sitting behind another branch — are never duplicated, yet their exported values are turned into <code>Variable + Set + Get</code> per use. Finally the phase calls <code>m_proc.resetReachability(); m_proc.invalidateCFG();</code> unconditionally (<code>:146–147</code>), even when it cloned nothing.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Unneeded demotion creates Variables and values that are torn down again, and it forces the pipeline's <code>fixSSA</code> (finding 10) to run its full machinery: <code>VariableLiveness</code> matrices, <code>SSACalculator</code>, dominance frontiers, only to replace each <code>Get</code> with the original dominating value. The unconditional invalidation discards the memoized <code>Dominators</code> and triggers a predecessor recomputation (finding 15) on every optLevel-2 compile. Proposal: run the clone loop twice — a side-effect-free pass that records <code>(block, tail)</code> pairs while mirroring <code>candidates.remove(block)</code> (the only mutable state it depends on), then build <code>valuesToDemote</code> only from recorded tails, call <code>demoteValues</code> only if non-empty, perform the recorded clones, and return a <code>bool changed</code> so that <code>resetReachability()</code>/<code>invalidateCFG()</code> and the downstream <code>fixSSA</code> run only when something was cloned. Generated code is unchanged because non-duplicated tails never needed demotion. Measure with <code>JSC_logPhaseTimes=1</code> on <code>duplicateTails</code> and <code>fixSSA</code>, and by counting <code>proc.variables().size()</code> after the phase.</p>
+    </div>
+
+    <div class="finding" id="f14">
+      <h3>14. ReduceStrength escalates to a full second walk whenever any CFG or SSA cleanup changed anything</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">B3</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p>With <code>Options::useB3ReduceStrengthFixpoint=false</code> (the default) the pass is single-pass by design, but <code>runSinglePass</code> (<code>b3/B3ReduceStrength.cpp:627–657</code>) still contains a binary escalation: after walk 1 it runs <code>simplifyCFGToFixpoint()</code> and <code>simplifySSA()</code> with <code>m_changed</code> reset, and then:</p>
+      <pre>if (m_didSpecializeSelect || m_changed) {
+    m_valueForConstant.clear();
+    reduceAllBlocksStrength();   // new RPO, resetValueOwners, Dominators recompute, PureCSE rebuilt, every value re-dispatched
+    simplifyCFGToFixpoint();
+}
+eliminateDeadCodeImpl(m_proc);</pre>
+      <p>A single merged block or a single folded Phi sets <code>m_changed</code> (<code>handleChangedCFGIfNecessary</code>, <code>:4949–4957</code>). Because <code>eliminateDeadCodeImpl</code> runs only before walk 1 (<code>:684</code>) and after walk 2 (<code>:647</code>), walk 2 also re-dispatches every <code>Identity</code> corpse walk 1 left behind — one per non-root constant in FTL input (finding 3).</p>
+      <h4>Why it costs, proposal</h4>
+      <p>For FTL input the trigger is plausibly the common case: <code>FTL::Output::branch</code> never folds constant conditions, so constant branches from lowering are folded in walk 1, which changes the CFG. When triggered, walk 2 roughly doubles the dominant part of the phase (dominators, <code>PureCSE</code> rebuild, per-value dispatch with up to 8 attempts each); with ReduceStrength at roughly 15–25% of B3 time and two runs per compile, the realistic upside is a few percent to ~10% of B3 time. Two options: (a) the cheap one — run <code>eliminateDeadCodeImpl</code> (or a block-local compaction of Identity/Nop values) between the walks so walk 2 does not visit corpses; (b) the targeted one — track dirty blocks (the three blocks produced by <code>specializeSelect</code>, blocks merged or retargeted by <code>simplifyCFG</code>, owner blocks of folded Phis and their users) and run <code>reduceBlockStrength</code> only on those, with <code>PureCSE</code> seeded from dominating blocks. The reviewers flag (b) as hard to make exactly equivalent and as carrying generated-code risk; (a) is safe. Measure with a counter of how often the escalation fires and a <code>CompilerTimingScope</code> around the second <code>reduceAllBlocksStrength</code>.</p>
+    </div>
+  </section>
+
+  <section id="air">
+    <h2>Air register allocation and liveness</h2>
+
+    <div class="finding" id="f4">
+      <h3>4. Every greedy-allocator LiveRange heap-allocates a 128-byte Deque buffer, and TmpData is 88 bytes</h3>
+      <p class="meta"><span class="tag tag-mem">memory</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: S–M</span></p>
+      <h4>What happens today</h4>
+      <p><code>LiveRange</code> stores its intervals in a <code>Deque&lt;Interval&gt; m_intervals</code> (<code>b3/air/AirAllocateRegistersByGreedy.cpp:373</code>; <code>Interval = WTF::Range&lt;uint32_t&gt;</code>, 8 bytes). <code>Deque</code> with inline capacity 0 starts with <code>m_capacityMask = 0</code>, so the first <code>prepend</code>/<code>append</code> calls <code>expandCapacity()</code>, which allocates <code>max(16, 0) = 16</code> slots (<code>WTF/wtf/Deque.h:455</code>) — 128 bytes. Every Tmp that is live anywhere pays this, plus every spill and split Tmp created during allocation (<code>addTmpImpl</code> → <code>prepend</code>, <code>:2209–2222</code>), though most SSA-derived Tmps have exactly one or two intervals. <code>sizeof(Deque)</code> is 40 bytes, so <code>LiveRange</code> is 48 and <code>TmpData</code> (<code>:684–738</code>) is 88; <code>m_map</code> is a <code>TmpMap&lt;TmpData&gt;</code> over the absolute index space of both banks (<code>:3636</code>). <code>Coalescables::m_entries</code> (<code>:677</code>) has the same first-growth pattern for any Tmp appearing in a Tmp–Tmp move, and <code>LiveRange::merge/subtract</code> allocate fresh 128-byte buffers as well.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>About 150 bytes and one malloc/free pair per Tmp: ~3 MB and 20k allocator calls for a 20k-Tmp FTL function, ~30 MB and ~10 ms for a 200k-Tmp OMG function, and worse locality in <code>tryAllocate</code>/<code>tryEvict</code>/<code>forEachConflict</code>, which chase the heap pointer for every candidate register. The Deque was chosen for O(1) prepend in the backward liveness walk. Two variants: the zero-logic-change one is <code>Deque&lt;Interval, 4&gt;</code> (Deque sacrifices one inline slot, so 3 intervals inline, TmpData grows to ~120 B but no heap allocation for the common case); the better one is <code>Vector&lt;Interval, 2&gt;</code> with intervals appended in reverse during <code>buildLiveRanges</code> (the backward walk produces them in decreasing order) and one <code>reverse()</code> per Tmp at the end — all prepend producers are confined to <code>buildLiveRanges</code> (<code>:1386, 1555</code>) and <code>addTmpImpl</code> on an empty range. <code>intervals()</code> returns <code>const Deque&lt;Interval&gt;&amp;</code> and is consumed widely, so that variant is a moderate refactor. Also give <code>Coalescables</code> an inline capacity of 2. Measure allocations inside <code>GreedyRegAlloc::buildLiveRanges</code> with a malloc interposer and compare the existing <code>CompilerTimingScope</code>s.</p>
+    </div>
+
+    <div class="finding" id="f5">
+      <h3>5. A 656-byte PhaseInsertionSet is constructed for every basic block up front</h3>
+      <p class="meta"><span class="tag tag-mem">memory</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p><code>PhaseInsertion</code> is <code>Insertion&lt;Inst&gt;</code> (8 + 64 bytes) plus a 4-byte phase, padded to 80 bytes; <code>PhaseInsertionSet</code> holds <code>Vector&lt;PhaseInsertion, 8&gt;</code> (<code>b3/air/AirPhaseInsertionSet.h:91</code>), i.e. a 16-byte header plus 640 bytes of inline storage. <code>GreedyAllocator</code>'s constructor builds <code>IndexMap&lt;BasicBlock*, PhaseInsertionSet&gt; m_insertionSets(code.size())</code> (<code>b3/air/AirAllocateRegistersByGreedy.cpp:850</code>); <code>PhaseInsertionSet</code> is copyable, so the map goes through the fill-with constructor and writes every 656-byte stride. This happens before liveness is even computed, and the vast majority of blocks never receive an insertion (spills and split fixups only). The inline capacity of 8 was inherited from the single-instance, reused <code>Air::InsertionSet</code> pattern, where it is amortized across blocks.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Roughly 640 bytes per block held for the allocator's whole lifetime, on every optLevel-2 compile (greedy is the only O2 allocator at HEAD): 0.3–1.3 MB for a typical FTL procedure — comparable to the Inst storage of the same blocks — 6.5 MB at 10k blocks and 65 MB at 100k blocks, which can be 10–20% of peak for large OMG functions. Fix is a one-line container change: <code>Vector&lt;PhaseInsertion&gt; m_insertions;</code> (inline capacity 0, 16 bytes when empty, <code>reserveInitialCapacity</code> on first insert), or a sparse map with a <code>Vector&lt;uint32_t&gt; blockToSetIndex</code> and a dense vector appended on first use. No correctness risk. Measure peak RSS around <code>allocateRegistersByGreedy</code> on a large wasm module.</p>
+    </div>
+
+    <div class="finding" id="f6">
+      <h3>6. PhaseInsertionSet bubble-sorts insertions that arrive as several independently sorted runs</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: medium on spill-heavy wasm, noise on FTL</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p><code>PhaseInsertionSet::execute</code> is <code>bubbleSort(m_insertions.mutableSpan()); executeInsertions(...)</code> (<code>b3/air/AirPhaseInsertionSet.cpp:38–39</code>). <code>WTF::bubbleSort</code> is the adaptive cocktail-shaker variant documented as fast for "usually already sorted" input. Within one spill round the per-block appends are indeed sorted (the phase ordering puts <code>SpillMoveTo</code> before <code>SpillMoveFrom</code>). But the allocator appends several runs to the same per-block set before the single <code>execute()</code> at <code>:3366</code>: <code>allocateRegisters&lt;GP&gt;()</code> completes all its rounds before <code>allocateRegisters&lt;FP&gt;()</code>, so the FP run is a second ascending sequence concatenated after the GP run; additional rounds occur whenever newly enqueued spill Tmps evict assigned Tmps that then spill (<code>:2299–2335</code>, <code>:2479–2485</code>); and <code>insertFixupCode</code> appends split-around-clobber and intra-block fixups grouped by Tmp rather than by instruction index (<code>:3337–3442</code>).</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Merging two ascending runs of sizes n₁ and n₂ with bubble sort costs O(n₁·n₂) swaps, each moving three 80-byte records. FTL blocks are small, so this is noise there; a large straight-line wasm block that spills heavily in both banks can have thousands of insertions and spend several to hundreds of milliseconds in <code>execute()</code>. The fix is two lines and preserves identical output: <code>if (!std::ranges::is_sorted(m_insertions)) std::ranges::stable_sort(m_insertions);</code> — <code>operator&lt;</code> orders by (index, phase) and both sorts are stable, so equal keys keep append order. Apply the same guard to <code>Air::InsertionSet::execute</code> and <code>GenericBlockInsertionSet::execute</code> (used by <code>breakCriticalEdges</code>, which also generates non-monotonic indices). Measure with a timing scope around <code>execute()</code> on a spill-heavy wasm module.</p>
+    </div>
+
+    <div class="finding" id="f7">
+      <h3>7. Air liveness materializes a 64-byte use/def record per instruction boundary that the dense solver reads once</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p><code>LivenessAdapter::prepareToCompute</code> allocates, per block, a <code>Vector&lt;Actions&gt;</code> of <code>size()+1</code> entries where <code>Actions</code> is two <code>Vector&lt;unsigned, 4&gt;</code> (<code>b3/air/AirLivenessAdapter.h:54–61, 76–101</code>). <code>sizeof(Vector&lt;unsigned, 4&gt;)</code> is 32 bytes (pointer, capacity, size, 16 bytes inline), so each boundary costs 64 bytes — exactly <code>sizeof(Inst)</code> — and boundaries with more than four distinct uses or defs (calls, and every OSR-exit Patch carrying dozens of <code>ColdUse</code> args) spill to the heap and pay <code>appendIfNotContains</code>'s linear scan. In the dense solver, which is the default below a 32M-bit budget, <code>computeDense</code> reads the actions exactly once to derive gen/kill (<code>WTF/wtf/Liveness.h:469–488</code>); the fixpoint never touches them again, yet the table stays alive until the <code>Liveness</code> object dies. The greedy allocator builds a <code>UnifiedTmpLiveness</code> (<code>AirAllocateRegistersByGreedy.cpp:1299</code>), uses only <code>liveAtHead</code>/<code>liveAtTail</code>, and then re-derives the per-instruction early/late use/def lists with its own <code>forEachTmp</code> walk (<code>:1476–1496</code>). At optLevel 2 the structure is built twice (greedy, then <code>StackSlotLiveness</code> in the stack allocator), plus <code>RegLiveness</code> passes.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Memory: ~64 bytes per boundary per instance — 6.4 MB per 100k instructions, overlapping the greedy allocator's <code>TmpData</code> map and liveness matrices. Time: one extra role-aware instruction walk with vector appends, duplicated by greedy's second pass; the reviewers put this at 3–6% of <code>buildLiveRanges</code>. Two options: (a) a CSR layout — per block one flat use-index vector, one def-index vector and a boundary-offset array, deduplicated with a per-block generation set — drops the cost to 8 bytes per boundary plus 4 per actual entry and removes the per-boundary heap spills and the quadratic dedup; (b) a "no actions cache" mode for dense-only clients that need only head/tail sets, where <code>prepareToCompute</code> sets gen/kill bits directly from <code>inst.forEach&lt;Thing&gt;</code> — the greedy allocator would opt in and could also feed its second pass from the same walk. Option (b) must keep actions for <code>computeSparse</code> and for <code>LocalCalc</code> clients (stack allocator, <code>RegLiveness::LocalCalcForUnifiedTmpLiveness</code>). Results are bit-identical. The existing <code>CompilerTimingScope("Air", "Liveness")</code> measures it.</p>
+    </div>
+
+    <div class="finding" id="f12">
+      <h3>12. Every Air basic block allocates at least 1 KB of Inst storage</h3>
+      <p class="meta"><span class="tag tag-mem">memory</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: medium</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p><code>BasicBlock::InstList</code> is a plain <code>Vector&lt;Inst&gt;</code> (<code>b3/air/AirBasicBlock.h:55</code>) and <code>WTF::Vector</code>'s default <code>minCapacity</code> is 16 (<code>WTF/wtf/Forward.h:166</code>), so the first append to any block allocates 16 × 64 = 1024 bytes. Air CFGs contain many one-to-three-instruction blocks: critical-edge pads (<code>AirBreakCriticalEdges.cpp:47–49</code>), loop entry/exit pads, FTL check and slow-path blocks, wasm <code>br_if</code> continuations. Larger blocks carry up to 33% slack from 1.5× growth because <code>B3LowerToAir::finishAppendingInstructions</code> (<code>b3/B3LowerToAir.cpp:1761–1769</code>) appends one at a time even though it knows the total beforehand. No <code>reserveInitialCapacity</code> or <code>shrinkToFit</code> exists anywhere in <code>b3/air</code> for Inst vectors.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>For a 3k-block / 30k-Inst function, roughly 1.9 MB of live Insts versus ~1.4 MB of minimum-capacity slack plus growth slack — wasted Inst storage comparable to used storage, held for the entire Air pipeline. Declare <code>InstList</code> as <code>Vector&lt;Inst, 0, CrashOnOverflow, 2&gt;</code> (or 4), call <code>reserveInitialCapacity</code> with the exact total in <code>finishAppendingInstructions</code> and in <code>lowerEntrySwitch</code>'s clone loop. No risk; measure by summing <code>capacity() × 64</code> versus <code>size() × 64</code> across blocks after <code>lowerToAir</code>.</p>
+    </div>
+
+    <div class="finding" id="f13">
+      <h3>13. CheckSpecial builds a throwaway Inst on every query, and every Patch walk pays virtual per-arg dispatch</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">Air / B3 Specials</span><span class="tag tag-plain">impact: low–medium</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p>Simple Air opcodes answer <code>forEachArg</code>, <code>admitsStack</code> and <code>isValidForm</code> from the generated <code>g_formTable</code>. <code>Patch</code> instructions instead go <code>PatchCustom::forEachArg</code> → virtual <code>Special::forEachArg</code> → <code>StackmapSpecial::forEachArgImpl</code>, which per argument does a bounds-checked <code>m_reps</code> read, a <code>child.value()-&gt;type()</code> load from an otherwise-cold B3 <code>Value</code>, a switch on the rep kind, and an indirect <code>ScopedLambda</code> call (<code>b3/B3StackmapSpecial.cpp:75–152</code>). <code>CheckSpecial</code> goes further: <code>forEachArg</code>, <code>isValid</code>, <code>admitsStack</code>, <code>shouldTryAliasingDef</code> and <code>generate</code> each call <code>hiddenBranch()</code>, which copies the check args into a <code>Vector&lt;Arg, 8&gt;</code> and constructs a temporary <code>Inst</code> (<code>b3/B3CheckSpecial.cpp:102–110</code>); since <code>Inst</code> keeps only three args inline, the <code>Vector&amp;&amp;</code> constructor calls <code>releaseBuffer()</code>, which mallocs a 64–80-byte buffer that the temporary's destructor frees (<code>b3/air/AirInst.h:79–89</code>). This applies to <code>CheckAdd</code> on both architectures (4 args), arm64 <code>CheckSub</code>/<code>CheckMul</code> (4–5 args) and x86_64 immediate <code>CheckMul</code>; plain <code>Check</code> (3 args) stays inline.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>Air walks each instruction's args on the order of 10–15 times per compile (padInterference, analyzeCode, greedy's passes plus <code>admitsStack</code> per Tmp arg, liveness ×2, spill insertion, <code>RegLiveness</code> ×2, stack allocation, lowerStackArgs, generate). In FTL output Patch args — every check carries the live state — can be a large share of all Air args, at ten times the per-arg cost of the table path; reviewers estimate several percent of Air time, with the hiddenBranch malloc a smaller additive term (~15–30 malloc/free pairs per checked arithmetic op). Proposal: have <code>B3LowerToAir::fillStackmap</code>, which already visits every constrained child, record one <code>ENCODE_INST_FORM</code> byte per stackmap arg so that <code>forEachArgImpl</code> becomes a flat loop over bytes (keeping only the <code>ForceLateUseUnlessRecoverable</code> identity test dynamic); and have <code>opcode_generator.rb</code> emit <code>forEachArgSimple(Opcode, std::span&lt;Arg&gt;, …)</code> and <code>admitsStack(Opcode, std::span&lt;const Arg&gt;, unsigned)</code> overloads so <code>CheckSpecial</code> can query the form table for its arg sub-span without materializing an <code>Inst</code>, reserving the Inst-building path for <code>generate()</code>. Caching per-stackmap forms also removes the last reason Air needs stackmap children's <code>Value</code>s alive, enabling more freeing in finding 2. Validate against the dynamic computation under the Air validation options; count <code>hiddenBranch()</code> calls per compile.</p>
+    </div>
+
+    <div class="finding" id="f17">
+      <h3>17. lowerAfterRegAlloc recomputes whole-function register liveness for a handful of ColdCCall/Shuffle instructions</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: low–medium</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p>After the allocator, <code>lowerAfterRegAlloc</code> needs the set of physical registers live after each <code>ColdCCall</code>/<code>Shuffle</code>. It gets it by running <code>padInterference</code> over every adjacent instruction pair, constructing a <code>RegLiveness</code> (a <code>forEach&lt;Reg&gt;</code> walk over every instruction building two <code>RegisterSet</code>s per boundary, gen/kill sets and a CFG fixpoint, <code>b3/air/AirRegLiveness.cpp:42–130</code>) and running a backward <code>LocalCalc</code> over every instruction of every block (<code>b3/air/AirLowerAfterRegAlloc.cpp:62–90</code>), although only the blocks containing a relevant instruction ever read the result. Because <code>usesColdCCall</code> is set for any rare <code>CCall</code> at O2 — FTL's <code>vmCall</code> slow paths, OMG's slow-path operations — essentially every optimized compile pays this, and <code>reportUsedRegisters</code> runs another <code>RegLiveness</code> right after.</p>
+      <h4>Proposal</h4>
+      <p>In <code>GreedyAllocator::assignRegisters()</code>, which already visits every instruction with all assignments final, compute for each <code>ColdCCall</code>/<code>Shuffle</code> the set of registers whose assigned intervals cover the instruction's late point (<code>m_regRanges[reg].m_allocations</code>) plus pinned registers, and stash it in a side table on <code>Code</code> that <code>lowerAfterRegAlloc</code> consumes, dropping its <code>padInterference</code>, <code>RegLiveness</code> and the all-blocks <code>LocalCalc</code>. The reviewers note two complications: fixup insertion after point assignment means interval points no longer map 1:1 to instruction positions, and pinned-register modelling must match <code>RegLiveness</code> exactly; a simpler intermediate step is to run the <code>LocalCalc</code> only over blocks that contain a relevant instruction (one cheap opcode scan first). Roughly three full instruction walks and 32 bytes per boundary transient on every FTL compile — plausibly 2–4% of Air time.</p>
+    </div>
+
+    <div class="finding" id="f18">
+      <h3>18. Spill-code emission walks the entire function per bank per round</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">Air</span><span class="tag tag-plain">impact: low–medium</span><span class="tag tag-plain">effort: M</span></p>
+      <h4>What happens today</h4>
+      <p><code>spill()</code> only flips <code>m_needsEmitSpillCode</code> (<code>b3/air/AirAllocateRegistersByGreedy.cpp:3015–3042</code>); <code>emitSpillCodeAndEnqueueNewTmps</code> (<code>:3076–3335</code>) then scans every Tmp of the bank for <code>Stage::Spilled</code> to allocate slots, and visits every instruction in the function running <code>forEachArg</code> (in-place spill and rematerialization attempts with <code>admitsStack</code>/<code>isValidForm</code>/<code>spillSlot()</code> lookups) followed by <code>forEachTmp</code> (load/store insertion). The batching comment at <code>:3038–3039</code> explains that this avoids one traversal per spilled Tmp, but each round still costs two full role-aware walks regardless of how few Tmps spilled, and additional rounds happen whenever newly enqueued <code>Unspillable</code> spill Tmps evict assigned Tmps that subsequently spill (<code>:2299–2335</code>).</p>
+      <h4>Proposal</h4>
+      <p>Maintain a <code>BitVector</code> of dirty blocks: in <code>spill()</code>, call <code>forEachBlockInLiveRange</code> (<code>:1047–1067</code>) and mark each block — the live range covers every point at which the Tmp is used or defined, including after split-around-clobbers, since holes are only punched at instructions that do not reference it. Iterate only dirty blocks in <code>emitSpillCodeAndEnqueueNewTmps</code>, and keep a <code>Vector&lt;Tmp&gt; m_newlySpilled</code> to replace the O(numTmps) slot scan. Reviewers cap the expected win: the spill heuristic prefers long-range Tmps, whose ranges cover much of the function, so the dirty set is often large; for lightly spilling functions the win is most of the phase. Wrap the function in a <code>CompilerTimingScope</code> and count rounds per bank to measure.</p>
+    </div>
+  </section>
+
+  <section id="cross">
+    <h2>Cross-cutting infrastructure</h2>
+
+    <div class="finding" id="f15">
+      <h3>15. Predecessor recomputation is O(Σ indegree²) and runs 10–15 times per compile</h3>
+      <p class="meta"><span class="tag tag-time">time</span><span class="tag tag-plain">B3 + Air</span><span class="tag tag-plain">impact: low in general · medium on br_table-style CFGs</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <pre>bool addPredecessor(BasicBlock* block, BasicBlock* predecessor)   // b3/B3BasicBlockUtils.h:37-46
+{
+    auto&amp; predecessors = block-&gt;predecessors();
+    if (predecessors.contains(predecessor))   // linear scan
+        return false;
+    predecessors.append(predecessor);
+    return true;
+}
+void updatePredecessorsAfter(BasicBlock* root)                      // :74-86
+{
+    ... while (!worklist.isEmpty()) {
+        BasicBlock* block = worklist.takeLast();
+        for (BasicBlock* successor : block-&gt;successorBlocks()) {
+            if (addPredecessor(successor, block))
+                worklist.append(successor);     // re-pushed once per distinct predecessor
+        }
+    }
+}</pre>
+      <p>There is no visited set: a block with in-degree d is popped d times, and each pop re-scans every successor's predecessor list with <code>contains()</code>. The same helper backs <code>B3::Procedure::resetReachability</code> (<code>b3/B3Procedure.cpp:212–243</code>) and <code>Air::Code::resetReachability</code> (<code>b3/air/AirCode.cpp:241–255</code>). B3 calls it at pipeline start, after each CFG-changing ReduceStrength walk, in <code>inferSwitches</code>, <code>duplicateTails</code> (unconditionally, finding 11), <code>foldPathConstants</code>, <code>lowerMacros</code> and <code>lowerMacrosAfterOptimizations</code>; Air adds <code>prepareForGeneration</code>, up to three <code>simplifyCFG</code>s, <code>lowerEntrySwitch</code> and <code>fixSpillsAfterTerminals</code>.</p>
+      <h4>Why it costs, proposal</h4>
+      <p>For ordinary CFGs (in-degree ≤ 8) this is linear in practice. For a dispatch header or merge block with K ≈ 500–2000 predecessors — wasm <code>br_table</code> interpreter loops, giant single-exit functions, <code>inferSwitches</code> output — each recomputation is ~1.5·K² pointer compares, repeated 10–15 times: a few to ~20 ms per compile. Rewrite <code>recomputePredecessors</code>/<code>updatePredecessorsAfter</code> to O(V+E): a <code>BitVector</code> visited set so each block is processed once, and dedup of repeated edges (a <code>Switch</code> with the same target twice) by checking only <code>preds(s).last() == b</code>, which is valid because all b→s edges are appended contiguously in one iteration over <code>succ(b)</code>. Air's multi-entrypoint case shares one visited set across entrypoints. Keep the general <code>addPredecessor</code> for incremental callers. Predecessor <em>order</em> may change; nothing should depend on it, but validate with <code>JSC_validateGraphAtEachPhase</code>.</p>
+    </div>
+
+    <div class="finding" id="f16">
+      <h3>16. WTF::Dominators allocates a 128-byte Vector per non-leaf tree node, and B3 rebuilds it 8–12 times</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">WTF / B3 (also DFG)</span><span class="tag tag-plain">impact: low</span><span class="tag tag-plain">effort: S</span></p>
+      <h4>What happens today</h4>
+      <p>The dominator computation itself is already Semi-NCA with compact 16-bit state, but the result keeps one <code>Vector&lt;Node&gt; idomKids</code> per block (<code>WTF/wtf/Dominators.h:919</code>), appended to as each block's idom is discovered (<code>:66–68</code>). With <code>minCapacity = 16</code>, the first append on every non-leaf dominator-tree node mallocs 128 bytes of which 8–16 are typically used, so a build costs ~0.4–0.6·N malloc/free pairs and ~100 KB per 1000 blocks. <code>Procedure</code> memoizes <code>Dominators</code>, <code>NaturalLoops</code> and the backwards variants until <code>invalidateCFG()</code> (<code>b3/B3Procedure.cpp:337–363</code>), but the pipeline invalidates often (ReduceStrength ×1–3 per run, <code>hoistLoopInvariantValues</code>, CSE after <code>breakCriticalEdges</code>, <code>fixSSA</code>, <code>foldPathConstants</code>, <code>moveConstants</code>), so a typical optLevel-2 compile builds it 8–12 times plus 3–4 <code>NaturalLoops</code> and a <code>BackwardsDominators</code>.</p>
+      <h4>Proposal</h4>
+      <p>Simplest: intrusive first-child/next-sibling links — replace <code>Vector&lt;Node&gt; idomKids</code> with <code>Node firstKid; Node nextSibling;</code> in <code>BlockData</code> (same 32 bytes, zero allocations, built in the same loop by prepending). Alternatively a CSR layout (one flat kids vector plus per-block offsets built by count/prefix-sum/fill). The only readers are the pre/post numbering DFS (<code>:102</code>), <code>forAllBlocksDominatedBy</code>/<code>StrictlyDominatedBy</code> (<code>:177–193</code>) and <code>dump</code>. DFG shares the template and benefits too. Absolute cost is modest (sub-ms to low-ms per compile) but it is pure overhead; <code>Dominators</code> has a <code>selfCheck</code> mode to validate identical answers.</p>
+    </div>
+
+    <div class="finding" id="f19">
+      <h3>19. LowerToAir housekeeping: dead analyses, 272 bytes per value, and missing VectorTraits</h3>
+      <p class="meta"><span class="tag tag-both">both</span><span class="tag tag-plain">B3→Air</span><span class="tag tag-plain">impact: low</span><span class="tag tag-plain">effort: S</span></p>
+      <p>Three small, independent items in <code>b3/B3LowerToAir.cpp</code> that together trim a few percent of the phase.</p>
+      <p><strong>Dead <code>preferRightForResult()</code>.</strong> The function (<code>:989–1025</code>) is only reachable from <code>appendBinOp</code> (<code>:1143–1150</code>) and the <code>CheckAdd</code> path (<code>:6313</code>) after an <code>isValidForm(opcode, Tmp, Tmp, Tmp)</code> test fails — and every commutative opcode pair plus <code>BranchAdd32/64</code> has an unprefixed three-operand form in <code>AirOpcode.opcodes</code> on both x86_64 and arm64. To support it, the lowering constructs <code>PhiChildren</code> (16 bytes per value index, zero-filled, plus a heap vector per Phi) and a full <code>UseCounts</code> whose constructor sorts every value's children to compute <code>numUsingInstructions</code> (O(k log k) per stackmap value with dozens of children). Delete the function and its two call sites, switch <code>m_useCounts</code> to <code>UseCountsWithoutUsingInstructions</code> (every remaining user calls <code>numUses()</code> only), and drop <code>m_phiChildren</code>.</p>
+      <p><strong><code>Vector&lt;Vector&lt;Inst, 4&gt;&gt; m_insts</code></strong> (<code>:6800</code>). Each inner element is 272 bytes and the outer vector is retained at the largest block's value count; every Inst is moved once on outer growth and once more into an unreserved Air block. Replace with a flat <code>Vector&lt;Inst&gt;</code> plus a <code>Vector&lt;unsigned&gt;</code> of group starts, and <code>reserveInitialCapacity</code> the Air block in <code>finishAppendingInstructions</code> (finding 12).</p>
+      <p><strong>No <code>VectorTraits</code> for <code>Air::Inst</code>, <code>Arg</code>, <code>Tmp</code>.</strong> <code>Inst</code> has a user-defined move and destructor, <code>Arg</code> and <code>Tmp</code> user-provided default constructors, so <code>canMoveWithMemcpy</code> is false and every <code>Vector</code> growth, <code>removeAllMatching</code> compaction (DCE, stack allocator, <code>assignRegisters</code>) and <code>removeAt</code> moves elements one at a time with a branch and a variable-length memcpy. All three are trivially relocatable (the out-of-line arg pointer is uniquely owned). A three-line <code>template&lt;&gt; struct VectorTraits&lt;JSC::B3::Air::Inst&gt; : VectorTraitsBase&lt;false, void&gt; { static constexpr bool canMoveWithMemcpy = true; };</code> (and the same for <code>Arg</code>/<code>Tmp</code>, or making <code>Arg</code>'s constructor <code>= default</code>) turns those into bulk memcpys; one reviewer notes <code>executeInsertions</code> has its own shifting loop and would not benefit. Roughly 1% of Air time, risk-free.</p>
+    </div>
+  </section>
+
+  <section id="plan">
+    <h2>Suggested order of attack and how to measure</h2>
+    <p>Start with the changes that are small and carry no codegen risk, because they can land independently and each has a clear before/after: the fixSSA emptiness check (10), <code>PhaseInsertionSet</code> inline capacity and sort guard (5, 6), Air <code>InstList</code> minimum capacity and reservation (12), the <code>VectorTraits</code> specializations and dead <code>preferRightForResult</code> (19), the Dominators tree layout (16), the predecessor rewrite (15) and the CSE sole-holder filter (9). Then the two FTL front-end changes (3), which shrink the input to every downstream phase, and the two-stage exit-capture cleanup (1, stages 1–2). The larger items — OMG origin retention (2), the LiveRange container (4), liveness actions (7), the CSE re-sweep (8), ReduceStrength's second walk (14), Patch form caching (13), allocator-derived register liveness (17) and dirty-block spill emission (18) — each deserve a measurement first.</p>
+    <p>The existing instrumentation is sufficient for most of this. <code>JSC_logPhaseTimes=1</code> and <code>JSC_reportTotalPhaseTimes=1</code> report every <code>CompilerTimingScope</code>, and every B3 and Air <code>PhaseScope</code> is one; the greedy allocator already has scopes for <code>buildLiveRanges</code> and <code>allocateRegisters</code>, and Air liveness has its own. <code>JSC_dumpB3GraphAtEachPhase=1</code> and <code>JSC_dumpAirGraphAtEachPhase=1</code> give value and instruction counts per phase. Two gaps are worth closing first: add a <code>CompilerTimingScope</code> around <code>FTL::lowerDFGToB3</code>, because today it is attributed to DFG time (<code>dfg/DFGPlan.cpp:474–477</code>); and add a per-compile allocation counter (a malloc interposer, or <code>fastMallocStatistics</code> deltas around <code>prepareForGeneration</code>) so the memory findings can be quantified rather than estimated. Run everything with <code>JSC_useConcurrentJIT=0</code> so the compile thread is the measured thread, on an FTL-heavy JavaScript workload and on a large wasm module for the OMG-specific items (2, 10, 15).</p>
+  </section>
+
+  <section class="appendix">
+    <h2>Appendix A — Further verified candidates</h2>
+    <p class="small">Each of these was confirmed against HEAD by both reviewers but rated lower in impact. They are listed by area; effort is S unless noted.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Area</th><th>Candidate</th><th>Location</th><th>Kind</th></tr></thead>
+      <tbody>
+        <tr><td>B3</td><td>ReduceStrength runs a Select-specialization search for every Check that allocates a <code>HashSet</code> worklist and scans the block window, even when no Select exists nearby; Identity corpses lengthen the scan in walk 2.</td><td><code>B3ReduceStrength.cpp:3210–3300, 4264–4298</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>PhiChildren</code> (16 B per value index, one heap vector per Phi) is rebuilt up to five times per compile: twice per ReduceStrength run in <code>simplifySSA</code>, once in LowerToAir.</td><td><code>B3ReduceStrength.cpp:4970–5029</code>, <code>B3PhiChildren.cpp:38–49</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>PureCSE</code>'s hash map (64-byte buckets, every pure value inserted) is freed and regrown from 8 buckets on each <code>reduceAllBlocksStrength</code> walk instead of being cleared in place.</td><td><code>B3ReduceStrength.cpp:698–704</code>, <code>B3PureCSE.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>hoistLoopInvariantValues</code> runs a whole-loop backward BFS with a fresh <code>IndexSet</code> for every trapping-load or control-dependent candidate instead of once per (loop, block).</td><td><code>B3HoistLoopInvariantValues.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>IntRange::rangeFor()</code> is an unmemoized depth-5 recursion with binary fan-out (up to 63 calls per operand), re-run per CheckAdd/Sub/Mul per attempt per walk.</td><td><code>B3ReduceStrength.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3</td><td><code>performCSE</code> deep-copies <code>ImpureBlockData</code> (7 hash maps + 2 RangeSets) into the per-block <code>IndexMap</code> instead of moving it.</td><td><code>B3EliminateCommonSubexpressions.cpp:399–414</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>foldPathConstants</code> materializes a Const for the not-taken successor of every Branch (and each Switch target) up front with a per-override <code>InsertionSet::execute</code>, although almost none are used.</td><td><code>B3FoldPathConstants.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>moveConstants::findBestConstant</code> scans every materialization in every dominator for each constant-pointer load and each Add/Sub with a non-immediate constant — O(queries × hoisted constants). (M)</td><td><code>B3MoveConstants.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3</td><td><code>eliminateDeadCodeImpl</code>'s <code>GraphNodeWorklist&lt;Value*, IndexSet&gt;</code> grows its <code>BitVector</code> one word at a time (exact resize), reallocating O(V/64) times per run, five runs per compile; the same exact-growth pattern affects every <code>IndexSet</code>/<code>TmpSet</code> filled in increasing index order (~12 sites).</td><td><code>B3EliminateDeadCode.cpp</code>, <code>WTF/IndexSet.h</code>, <code>WTF/BitVector.h</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>lowerMacros</code> builds a whole-procedure <code>UseCountsWithoutUsingInstructions</code> consulted only for <code>AtomicXchgSub</code> on x86.</td><td><code>B3LowerMacros.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>demoteValues</code> does 3–4 <code>HashMap</code> probes per value and child edge over the whole procedure although the demote set is tiny.</td><td><code>B3FixSSA.cpp:272–342</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3</td><td><code>BlockInsertionSet::splitForward</code> copies the block prefix and memmoves the suffix per split, so K macro lowerings in one N-value block cost O(K·N). (M)</td><td><code>B3BlockInsertionSet.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3</td><td><code>inferSwitches</code> re-materializes an N-case switch description (N × 24-byte copies + sort) for every single-predecessor successor, inside a whole-procedure fixpoint.</td><td><code>B3InferSwitches.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td><code>reduceDoubleToFloat</code> does a full value walk with <code>performSubstitution</code> and <code>IndexSet</code> inserts before discovering there is no <code>DoubleToFloat</code>/<code>FloatToDouble</code> at all.</td><td><code>B3ReduceDoubleToFloat.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3</td><td><code>canonicalizePrePostIncrements</code> (off by default) builds <code>BackwardsCFG</code>+<code>BackwardsDominators</code> and seven hash maps before checking whether a candidate exists.</td><td><code>B3CanonicalizePrePostIncrements.cpp:47–66</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td>The <code>SparseCollection&lt;Value&gt;</code> index space is never packed during the B3 pipeline (only after lowering), so every dense value-indexed map is sized to the high-water mark and every <code>values()</code> iteration skips holes.</td><td><code>B3Procedure.cpp:505</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3</td><td>The <code>ValueRep</code> vector of every Check/Patchpoint is heap-copied three times inside B3 and a fourth time into FTL's <code>FixedVector</code>; <code>StackmapValue::appendColdAnys</code> grows the children vector one element at a time (3→16→24→36→…).</td><td><code>B3StackmapValue.cpp:40–52</code>, <code>B3StackmapGenerationParams</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3→Air</td><td><code>loadPromise()</code>/<code>crossesInterference()</code>/<code>effectiveAddr()</code> are computed eagerly before checking whether any memory-operand form exists — always wasted on arm64.</td><td><code>B3LowerToAir.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3→Air</td><td>The arm64 <code>ccmp</code> chain matcher passes <code>usedValues</code> by value, so fused compare values are never <code>commitInternal()</code>'d and are lowered a second time as dead Insts/Tmps.</td><td><code>B3LowerToAir.cpp:2432–2441</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3→Air</td><td><code>tmp()</code> computes <code>Value::key()</code> and probes <code>Procedure::isFastConstant</code> for every new Tmp although only constants can be fast constants.</td><td><code>B3LowerToAir.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>B3→Air</td><td>Every Phi gets two Tmps and an unconditional Move even when no Upsilon can execute between the Phi and its uses. (L, hard)</td><td><code>B3LowerToAir.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>Air</td><td><code>Inst::hasEarlyDef</code>/<code>hasLateUseOrDef</code>/<code>hasArgEffects</code> do a full non-short-circuiting <code>forEachArg</code> walk per call; <code>padInterference</code> calls them for every adjacent pair up to three times per compile.</td><td><code>AirInst.h</code>, <code>AirPadInterference.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>Air</td><td><code>GreedyAllocator</code> computes Dominators+NaturalLoops and the non-rare-block worklist twice within one call; <code>rewriteCoalescedTmps</code> runs once per bank and <code>handleCalleeSaves</code> rescans the function for used registers right after <code>assignRegisters</code>.</td><td><code>AirAllocateRegistersByGreedy.cpp</code>, <code>AirHandleCalleeSaves.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>Air</td><td><code>trySplitAroundClobbers</code> re-examines every clobber point once per allowed register, repeating <code>findBlockContainingPoint</code> and a <code>forEachTmpFast</code> over wide call/Patch instructions.</td><td><code>AirAllocateRegistersByGreedy.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>Air</td><td><code>fixObviousSpills</code> copies a three-vector <code>State</code> on every block visit (fixpoint and fix pass) and again into each first-seen successor, ~3 heap allocations per visit.</td><td><code>AirFixObviousSpills.cpp</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>Air</td><td><code>optimizePairedLoadStore</code> removes each merged store with <code>Vector::removeAt</code> in a backward scan, shifting the block tail once per pair.</td><td><code>AirOptimizePairedLoadStore.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>Air</td><td><code>fixPartialRegisterStalls</code> (x86) walks every instruction to compute block-exit FP def distances although only the last 16 instructions of a block can contribute.</td><td><code>AirFixPartialRegisterStalls.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>Air</td><td>Patch/Check Insts adopt over-allocated <code>Vector&lt;Arg, 8&gt;</code> buffers (1.5× growth slack) that live for the whole Air pipeline.</td><td><code>B3LowerToAir.cpp</code>, <code>AirInst.h:79–89</code></td><td><span class="tag tag-mem">memory</span></td></tr>
+        <tr><td>Air</td><td><code>generateWithAlreadyAllocatedRegisters</code> heap-allocates a ref-counted <code>Box&lt;Label&gt;</code> per block and re-materializes the callee-save <code>RegisterAtOffsetList</code> at every prologue.</td><td><code>AirGenerate.cpp</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>FTL</td><td><code>LoweredNodeValue</code> lookups go through seven separate <code>HashMap&lt;Node*, …&gt;</code> tables; exit resolution probes up to all seven per operand (JSValue, the most common, is the fifth probe).</td><td><code>FTLLowerDFGToB3.cpp:27380–27406</code></td><td><span class="tag tag-time">time</span></td></tr>
+        <tr><td>FTL</td><td>Each OSR exit allocates a <code>ThreadSafeRefCounted OSRExitHandle</code> plus a dedicated <code>SharedTask</code> link task; the hot path discards the handle immediately. <code>ValueRep</code>s are stored at 16 bytes though most fit in 8.</td><td><code>FTLOSRExit.cpp:82–97</code>, <code>B3ValueRep.h</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>FTL/B3</td><td>A ~60 KB <code>AbstractHeapRepository</code> (~260 heap objects, each with a child Vector, 12 linear <code>changeParent</code> calls) is constructed and destroyed per Procedure; <code>IndexedAbstractHeap</code> allocates a formatted <code>CString</code> name per distinct index in release builds. (M)</td><td><code>B3AbstractHeapRepository.cpp:77–129</code>, <code>B3AbstractHeap.cpp:155–218</code></td><td><span class="tag tag-both">both</span></td></tr>
+        <tr><td>B3/Air</td><td>After lowering, <code>freeUnneededB3ValuesAfterLowering</code> keeps every child of Check/Patchpoint/CCall alive although Air reads only each child's 4-byte <code>Type</code>; snapshotting types would free them (extends finding 2, enabled by finding 13). (M)</td><td><code>B3Procedure.cpp:487–496</code>, <code>B3StackmapSpecial.cpp:133–175</code></td><td><span class="tag tag-mem">memory</span></td></tr>
+        <tr><td>FTL</td><td>B3 <code>Procedure</code>/Air <code>Code</code>, the <code>LinkBuffer</code>'s assembler copy and link-task closures stay alive through <code>FTL::link</code> and <code>Plan::finalizeInThread</code> (already partly mitigated by value freeing; residual).</td><td><code>FTLCompile.cpp</code>, <code>FTLLink.cpp</code>, <code>DFGPlan.cpp</code></td><td><span class="tag tag-mem">memory</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2>Appendix B — Things that were checked and found already handled</h2>
+    <p class="small">For the avoidance of repeated proposals: <code>B3::Value</code> is 40 bytes with trailing inline children and no per-opcode payload bloat (<code>b3/B3Value.h:933–941</code>); <code>Air::Inst</code> is exactly 64 bytes with three inline args and a custom out-of-line buffer (<code>b3/air/AirInst.h:321</code>); <code>Air::Arg</code> is 16 bytes with unions (<code>AirArg.h:1850–1867</code>); ReduceStrength is single-pass by default (<code>useB3ReduceStrengthFixpoint=false</code>); <code>canonicalizePrePostIncrements</code> is off by default; LowerToAir already uses <code>IndexSet</code>/<code>IndexMap</code> for <code>m_locked</code>/<code>m_valueToTmp</code> (<code>B3LowerToAir.cpp:6787–6789</code>); <code>CheckSpecial</code> instances are hash-consed per shape; <code>WTF::Liveness</code> uses dense bitset gen/kill with a 4 MB budget and a sparse fallback; the greedy allocator fuses <code>TmpWidth</code> and <code>UseCounts</code> into one walk; <code>Procedure</code> memoizes dominators and loops; <code>freeUnneededB3ValuesAfterLowering</code> already sheds the B3 graph for FTL; <code>simplifyCFG</code> reserves capacity when merging blocks; IR validation and dumping are fully gated behind options in release builds.</p>
+
+    <h2>Appendix C — Method</h2>
+    <p class="small">Ten slice analysts, twenty adversarial verifiers (one factual, one impact/feasibility per slice), one completeness critic with two further verifiers: 33 agents, ~1,900 file reads and searches, all against the checkout at <code>c73014505a</code>. Findings that a verifier could not confirm from the code were to be dropped; none were. Findings that were found independently by more than one analyst (the OMG origin retention, the PhaseInsertionSet buffer and sort, the exit-state capture, predecessor recomputation, the liveness actions table, the Deque growth) were merged. Impact ratings are the verifiers' consensus and, where the two disagreed, the report gives the range. No claim in this document rests on a measurement.</p>
+  </section>
+
+</article>
+
+<script>
+  (() => {
+    const list = document.querySelector('nav.toc ol')
+    const heads = document.querySelectorAll('article.doc > section:not(.appendix) > h2')
+    const sections = document.querySelectorAll('article.doc section:not(.appendix)')
+    if (!list) return
+    if (heads.length === 0 || heads.length < sections.length) {
+      list.dataset.toc = heads.length === 0 ? 'static-no-heads' : 'static-partial-match'
+      return
+    }
+    list.dataset.toc = 'rebuilt'
+    list.textContent = ''
+    heads.forEach((h, i) => {
+      const sec = h.parentElement
+      if (!sec.id) sec.id = 'auto-s' + (i + 1)
+      const a = document.createElement('a')
+      a.href = '#' + sec.id
+      a.textContent = h.textContent
+      const li = document.createElement('li')
+      li.appendChild(a)
+      list.appendChild(li)
+    })
+  })()
+</script>
