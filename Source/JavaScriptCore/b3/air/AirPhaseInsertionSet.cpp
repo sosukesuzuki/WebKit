@@ -29,13 +29,16 @@
 #if ENABLE(B3_JIT)
 
 #include "AirBasicBlock.h"
-#include <wtf/BubbleSort.h>
+#include <algorithm>
 
 namespace JSC { namespace B3 { namespace Air {
 
 void PhaseInsertionSet::execute(BasicBlock* block)
 {
-    bubbleSort(m_insertions.mutableSpan());
+    // Insertions arrive as several independently ascending runs (GP spill rounds, then FP, then
+    // split fixups grouped by Tmp). Both sorts are stable on (index, phase), so the result is identical.
+    if (!std::is_sorted(m_insertions.begin(), m_insertions.end()))
+        std::stable_sort(m_insertions.begin(), m_insertions.end());
     executeInsertions(block->m_insts, m_insertions);
 }
 
