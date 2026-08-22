@@ -47,7 +47,35 @@ using namespace B3;
 
 Output::Output(State& state)
     : m_proc(*state.proc)
+    , m_constantInsertionSet(*state.proc)
 {
+}
+
+void Output::initializeConstants(B3::Procedure& proc, B3::BasicBlock* prologue)
+{
+    CommonValues::initializeConstants(proc, prologue);
+    m_constantsBlock = prologue;
+}
+
+void Output::flushConstants()
+{
+    if (m_constantsBlock)
+        m_constantInsertionSet.execute(m_constantsBlock);
+}
+
+LValue Output::pooledConstant(B3::Opcode opcode, B3::Type type, int64_t bits)
+{
+    if (!m_constantsBlock) {
+        LValue value = m_proc.addConstant(origin(), type, static_cast<uint64_t>(bits));
+        m_block->append(value);
+        return value;
+    }
+    auto result = m_constantPool.ensure(B3::ValueKey(opcode, type, bits), [&] {
+        LValue value = m_proc.addConstant(origin(), type, static_cast<uint64_t>(bits));
+        m_constantInsertionSet.insertValue(0, value);
+        return value;
+    });
+    return result.iterator->value;
 }
 
 Output::~Output() = default;
@@ -118,17 +146,17 @@ LValue Output::constBool(bool value)
 
 LValue Output::constInt32(int32_t value)
 {
-    return m_block->appendNew<B3::Const32Value>(m_proc, origin(), value);
+    return pooledConstant(B3::Const32, B3::Int32, value);
 }
 
 LValue Output::constInt64(int64_t value)
 {
-    return m_block->appendNew<B3::Const64Value>(m_proc, origin(), value);
+    return pooledConstant(B3::Const64, B3::Int64, value);
 }
 
 LValue Output::constDouble(double value)
 {
-    return m_block->appendNew<B3::ConstDoubleValue>(m_proc, origin(), value);
+    return pooledConstant(B3::ConstDouble, B3::Double, std::bit_cast<int64_t>(value));
 }
 
 LValue Output::phi(LType type)

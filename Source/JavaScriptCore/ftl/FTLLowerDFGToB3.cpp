@@ -431,6 +431,7 @@ public:
         // dealing with IR that would have failed validation. For example, it would be valid to
         // write a B3 phase that so aggressively assumes the lack of orphans that it would crash
         // if any orphans were around. We might even have such phases already.
+        m_out.flushConstants();
         m_proc.deleteOrphans();
 
         // We put the blocks into the B3 procedure in a super weird order. Now we reorder them.
