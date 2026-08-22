@@ -1,0 +1,767 @@
+diff --git a/Source/JavaScriptCore/b3/B3CheckSpecial.cpp b/Source/JavaScriptCore/b3/B3CheckSpecial.cpp
+index f3393607e6..a5721e28a8 100644
+--- a/Source/JavaScriptCore/b3/B3CheckSpecial.cpp
++++ b/Source/JavaScriptCore/b3/B3CheckSpecial.cpp
+@@ -33,6 +33,7 @@
+ #include "B3StackmapGenerationParams.h"
+ #include "B3ValueInlines.h"
+ #include "CCallHelpers.h"
++#include "CompilerTimingScope.h"
+ #include <wtf/TZoneMallocInlines.h>
+ 
+ namespace JSC { namespace B3 {
+@@ -101,6 +102,9 @@ CheckSpecial::~CheckSpecial() = default;
+ 
+ Inst CheckSpecial::hiddenBranch(const Inst& inst) const
+ {
++    addCompileStat("air.checkSpecial.hiddenBranchCalls", 1);
++    if (m_numCheckArgs > Inst::inlineCapacity)
++        addCompileStat("air.checkSpecial.hiddenBranchCallsThatMalloc", 1);
+     Vector<Arg, 8> args;
+     args.appendUsingFunctor(m_numCheckArgs, [&](size_t i) {
+         return inst.args()[i + 1];
+diff --git a/Source/JavaScriptCore/b3/B3DuplicateTails.cpp b/Source/JavaScriptCore/b3/B3DuplicateTails.cpp
+index d85646d126..77cc717583 100644
+--- a/Source/JavaScriptCore/b3/B3DuplicateTails.cpp
++++ b/Source/JavaScriptCore/b3/B3DuplicateTails.cpp
+@@ -35,6 +35,7 @@
+ #include "B3PhaseScope.h"
+ #include "B3Procedure.h"
+ #include "B3ValueInlines.h"
++#include "CompilerTimingScope.h"
+ #include <wtf/IndexSet.h>
+ 
+ namespace JSC { namespace B3 {
+@@ -101,12 +102,17 @@ public:
+                 }
+             }
+         }
++        addCompileStat("b3.duplicateTails.runs", 1);
++        addCompileStat("b3.duplicateTails.candidates", candidates.size());
++        addCompileStat("b3.duplicateTails.valuesDemoted", valuesToDemote.size());
+         demoteValues(m_proc, valuesToDemote);
+         if (B3DuplicateTailsInternal::verbose) {
+             dataLog("Procedure after value demotion:\n");
+             dataLog(m_proc);
+         }
+ 
++        unsigned numClones = 0;
++        IndexSet<BasicBlock*> clonedTails;
+         for (BasicBlock* block : m_proc) {
+             if (block->last()->opcode() != Jump)
+                 continue;
+@@ -123,6 +129,8 @@ public:
+             // We're about to change 'block'. Make sure that nobody duplicates block after this
+             // point.
+             candidates.remove(block);
++            numClones++;
++            clonedTails.add(tail);
+ 
+             if (B3DuplicateTailsInternal::verbose)
+                 dataLog("Duplicating ", *tail, " into ", *block, "\n");
+@@ -143,6 +151,19 @@ public:
+             block->successors() = tail->successors();
+         }
+ 
++        addCompileStat("b3.duplicateTails.clones", numClones);
++        addCompileStat("b3.duplicateTails.distinctTailsCloned", clonedTails.size());
++        if (!numClones)
++            addCompileStat("b3.duplicateTails.runsWithNoClones", 1);
++        if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++            // How many demoted values lived in a tail that was never cloned?
++            unsigned wasted = 0;
++            for (Value* value : valuesToDemote.values(m_proc.values())) {
++                if (!clonedTails.contains(value->owner))
++                    wasted++;
++            }
++            addCompileStat("b3.duplicateTails.valuesDemotedInUnclonedTails", wasted);
++        }
+         m_proc.resetReachability();
+         m_proc.invalidateCFG();
+     }
+diff --git a/Source/JavaScriptCore/b3/B3EliminateCommonSubexpressions.cpp b/Source/JavaScriptCore/b3/B3EliminateCommonSubexpressions.cpp
+index 1ce8672902..746adba17c 100644
+--- a/Source/JavaScriptCore/b3/B3EliminateCommonSubexpressions.cpp
++++ b/Source/JavaScriptCore/b3/B3EliminateCommonSubexpressions.cpp
+@@ -43,6 +43,7 @@
+ #include "B3SSACalculator.h"
+ #include "B3UpsilonValue.h"
+ #include "B3ValueInlines.h"
++#include "CompilerTimingScope.h"
+ #include "B3ValueKeyInlines.h"
+ #include "B3WasmArrayElementValue.h"
+ #include "B3WasmArrayGetValue.h"
+@@ -371,8 +372,18 @@ public:
+             dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "Block ", *block, ": ", data);
+         }
+ 
++        if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++            for (Value* value : m_proc.values()) {
++                if (MemoryValue* memory = value->as<MemoryValue>())
++                    m_statPointerHolders.add(memory->lastChild(), 0).iterator->value++;
++            }
++        }
++
+         // Perform CSE. This edits code.
+-        performCSE(nullptr);
++        {
++            CompilerTimingScope timingScope("B3"_s, "CSE: pass 1"_s);
++            performCSE(nullptr);
++        }
+ 
+         // Re-sweep loop blocks once to catch some additional cases. In reverse-post-order the loop body hasn't been
+         // processed when we visit the header, so back-edge queries from the header miss matches that show up after the body is processed.
+@@ -385,8 +396,12 @@ public:
+                 for (unsigned j = 0; j < loop.size(); ++j)
+                     loopBlocks.add(loop.at(j));
+             }
++            CompilerTimingScope timingScope("B3"_s, "CSE: pass 2 (loop re-sweep)"_s);
++            addCompileStat("b3.cse.pass2.blocks", loopBlocks.size());
++            addCompileStat("b3.cse.pass2.runs", 1);
+             performCSE(&loopBlocks);
+         }
++        addCompileStat("b3.cse.pass1.blocks", m_proc.size());
+ 
+         finalize();
+ 
+@@ -989,16 +1004,27 @@ private:
+             return { };
+         }
+         
++        addCompileStat("b3.cse.memQueries", 1);
+         if (MemoryValue* match = m_data.memoryValuesAtTail.find(ptr, filter)) {
+             dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Found ", *match, " locally.");
++            addCompileStat("b3.cse.memQueries.localMatch", 1);
+             return { match };
+         }
+ 
+         if (readsMutability != Mutability::Immutable && m_data.writes.overlaps(range)) {
+             dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Giving up because of writes.");
++            addCompileStat("b3.cse.memQueries.localWriteEarlyOut", 1);
+             return { };
+         }
+ 
++        bool soleHolder = false;
++        if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++            addCompileStat("b3.cse.memQueries.walks", 1);
++            auto it = m_statPointerHolders.find(ptr);
++            soleHolder = it == m_statPointerHolders.end() || it->value <= 1;
++            if (soleHolder)
++                addCompileStat("b3.cse.memQueries.walksWithSoleHolderPointer", 1);
++        }
+         BlockWorklist worklist;
+         worklist.pushAll(m_block->predecessors());
+ 
+@@ -1006,6 +1032,9 @@ private:
+ 
+         while (BasicBlock* block = worklist.pop()) {
+             dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Looking at ", *block);
++            addCompileStat("b3.cse.memQueries.blocksVisited", 1);
++            if (soleHolder)
++                addCompileStat("b3.cse.memQueries.blocksVisitedWithSoleHolderPointer", 1);
+ 
+             ImpureBlockData& data = m_impureBlockData[block];
+ 
+@@ -1579,6 +1608,7 @@ private:
+     }
+ 
+     Procedure& m_proc;
++    UncheckedKeyHashMap<Value*, unsigned> m_statPointerHolders;
+ 
+     Dominators* m_dominators { nullptr };
+     PureCSE m_pureCSE;
+diff --git a/Source/JavaScriptCore/b3/B3FixSSA.cpp b/Source/JavaScriptCore/b3/B3FixSSA.cpp
+index 716caaa3c5..575e0b842a 100644
+--- a/Source/JavaScriptCore/b3/B3FixSSA.cpp
++++ b/Source/JavaScriptCore/b3/B3FixSSA.cpp
+@@ -353,6 +353,20 @@ bool fixSSA(Procedure& proc)
+ 
+     if (proc.variables().isEmpty())
+         return false;
++
++    if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++        unsigned liveVariables = 0;
++        for (Variable* variable : proc.variables()) {
++            (void)variable;
++            liveVariables++;
++        }
++        addCompileStat("b3.fixSSA.runsPastIsEmptyCheck", 1);
++        addCompileStat("b3.fixSSA.liveVariablesAtEntry", liveVariables);
++        if (!liveVariables)
++            addCompileStat("b3.fixSSA.runsWithZeroLiveVariables", 1);
++        if (!liveVariables)
++            addCompileStat("b3.fixSSA.runsWithZeroLiveVariables.values", proc.values().size());
++    }
+     
+     // Lots of variables have trivial local liveness. We can allocate those without any
+     // trouble.
+diff --git a/Source/JavaScriptCore/b3/B3Generate.cpp b/Source/JavaScriptCore/b3/B3Generate.cpp
+index 9b47be500a..d2052491cc 100644
+--- a/Source/JavaScriptCore/b3/B3Generate.cpp
++++ b/Source/JavaScriptCore/b3/B3Generate.cpp
+@@ -28,7 +28,9 @@
+ 
+ #if ENABLE(B3_JIT)
+ 
++#include "AirCode.h"
+ #include "AirGenerate.h"
++#include "AirInstInlines.h"
+ #include "B3CanonicalizePrePostIncrements.h"
+ #include "B3Common.h"
+ #include "B3DuplicateTails.h"
+@@ -82,9 +84,17 @@ void generateToAir(Procedure& procedure)
+     if (shouldValidateIR())
+         validate(procedure);
+     
++    if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++        addCompileStat(procedure.isWasm() ? "b3.wasm.procedures" : "b3.js.procedures", 1);
++        addCompileStat(procedure.isWasm() ? "b3.wasm.valuesAtEntry" : "b3.js.valuesAtEntry", procedure.values().size());
++        addCompileStat(procedure.isWasm() ? "b3.wasm.blocksAtEntry" : "b3.js.blocksAtEntry", procedure.size());
++    }
++
+     if (procedure.optLevel() >= 2) {
+         reduceDoubleToFloat(procedure);
+         reduceStrength(procedure, ReduceStrengthPass::Initial);
++        if (Options::reportTotalPhaseTimes()) [[unlikely]]
++            addCompileStat(procedure.isWasm() ? "b3.wasm.valuesAfterReduceStrengthInitial" : "b3.js.valuesAfterReduceStrengthInitial", procedure.values().size());
+         if (Options::useB3HoistLoopInvariantValues())
+             hoistLoopInvariantValues(procedure);
+         eliminateCommonSubexpressions(procedure);
+@@ -143,7 +153,26 @@ void generateToAir(Procedure& procedure)
+         dataLog(procedure);
+     }
+ 
++    if (Options::reportTotalPhaseTimes()) [[unlikely]]
++        addCompileStat(procedure.isWasm() ? "b3.wasm.valuesBeforeLowerToAir" : "b3.js.valuesBeforeLowerToAir", procedure.values().size());
+     lowerToAir(procedure);
++    if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++        Air::Code& code = procedure.code();
++        uint64_t blocks = 0, tinyBlocks = 0, insts = 0, capacity = 0;
++        for (Air::BasicBlock* block : code) {
++            blocks++;
++            insts += block->size();
++            capacity += block->insts().capacity();
++            if (block->size() <= 3)
++                tinyBlocks++;
++        }
++                addCompileStat(procedure.isWasm() ? "air.wasm.blocksAfterLowering" : "air.js.blocksAfterLowering", blocks);
++        addCompileStat(procedure.isWasm() ? "air.wasm.blocksWithAtMost3Insts" : "air.js.blocksWithAtMost3Insts", tinyBlocks);
++        addCompileStat(procedure.isWasm() ? "air.wasm.instsAfterLowering" : "air.js.instsAfterLowering", insts);
++        addCompileStat(procedure.isWasm() ? "air.wasm.instBytesUsed" : "air.js.instBytesUsed", insts * sizeof(Air::Inst));
++        addCompileStat(procedure.isWasm() ? "air.wasm.instBytesAllocated" : "air.js.instBytesAllocated", capacity * sizeof(Air::Inst));
++        addCompileStat(procedure.isWasm() ? "air.wasm.tmpsAfterLowering" : "air.js.tmpsAfterLowering", code.numTmps(GP) + code.numTmps(FP));
++    }
+     if (shouldDumpIR(procedure, B3Mode))
+         procedure.setShouldDumpIR();
+     procedure.freeUnneededB3ValuesAfterLowering();
+diff --git a/Source/JavaScriptCore/b3/B3LowerToAir.cpp b/Source/JavaScriptCore/b3/B3LowerToAir.cpp
+index c5b7ee7106..66bcbb40d1 100644
+--- a/Source/JavaScriptCore/b3/B3LowerToAir.cpp
++++ b/Source/JavaScriptCore/b3/B3LowerToAir.cpp
+@@ -58,6 +58,7 @@
+ #include "B3UpsilonValue.h"
+ #include "B3UseCounts.h"
+ #include "B3ValueInlines.h"
++#include "CompilerTimingScope.h"
+ #include "B3Variable.h"
+ #include "B3VariableValue.h"
+ #include "B3WasmAddressValue.h"
+@@ -988,6 +989,7 @@ private:
+     // kernels.
+     bool preferRightForResult(Value* left, Value* right)
+     {
++        addCompileStat("b3.lowerToAir.preferRightForResultCalls", 1);
+         // The default is to move left into result, because that's required for non-commutative instructions.
+         // The value that we want to move into result position is the one that dies here. So, if we're
+         // compiling a commutative operation and we know that actually right is the one that dies right here,
+diff --git a/Source/JavaScriptCore/b3/B3Procedure.cpp b/Source/JavaScriptCore/b3/B3Procedure.cpp
+index 6f0d8bb8b4..8652c0e90c 100644
+--- a/Source/JavaScriptCore/b3/B3Procedure.cpp
++++ b/Source/JavaScriptCore/b3/B3Procedure.cpp
+@@ -40,6 +40,7 @@
+ #include "B3OriginDump.h"
+ #include "B3ProcedureInlines.h"
+ #include "B3ValueInlines.h"
++#include "CompilerTimingScope.h"
+ #include "B3Variable.h"
+ #include "JITOpaqueByproducts.h"
+ #include <wtf/GraphOrdering.h>
+@@ -211,7 +212,11 @@ void Procedure::resetValueOwners()
+ 
+ void Procedure::resetReachability()
+ {
+-    recomputePredecessors(m_blocks);
++    {
++        CompilerTimingScope timingScope("B3"_s, "resetReachability: recomputePredecessors"_s);
++        addCompileStat("b3.resetReachability.calls", 1);
++        recomputePredecessors(m_blocks);
++    }
+     
+     // The common case is that this does not find any dead blocks.
+     bool foundDead = false;
+@@ -336,15 +341,21 @@ void Procedure::deleteOrphans()
+ 
+ Dominators& Procedure::dominators()
+ {
+-    if (!m_dominators)
++    if (!m_dominators) {
++        CompilerTimingScope timingScope("B3"_s, "Dominators build"_s);
++        addCompileStat("b3.dominators.builds", 1);
+         m_dominators = makeUnique<Dominators>(*this);
++    }
+     return *m_dominators;
+ }
+ 
+ NaturalLoops& Procedure::naturalLoops()
+ {
+-    if (!m_naturalLoops)
++    if (!m_naturalLoops) {
++        CompilerTimingScope timingScope("B3"_s, "NaturalLoops build"_s);
++        addCompileStat("b3.naturalLoops.builds", 1);
+         m_naturalLoops = makeUnique<NaturalLoops>(*this);
++    }
+     return *m_naturalLoops;
+ }
+ 
+@@ -472,8 +483,19 @@ void Procedure::freeUnneededB3ValuesAfterLowering()
+     m_backwardsDominators = nullptr;
+     m_fastConstants.clear();
+ 
+-    if (m_code->shouldPreserveB3Origins())
++    if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++        uint64_t bytes = 0;
++        for (Value* value : m_values)
++            bytes += sizeof(Value) + value->numChildren() * sizeof(Value*); // lower bound: ignores subclass payloads and VarArgs vector headers
++        addCompileStat(m_isWasm ? "b3.wasm.valuesAtFree" : "b3.js.valuesAtFree", m_values.size());
++        addCompileStat(m_isWasm ? "b3.wasm.valueBytesAtFree" : "b3.js.valueBytesAtFree", bytes);
++    }
++
++    if (m_code->shouldPreserveB3Origins()) {
++        addCompileStat(m_isWasm ? "b3.wasm.proceduresPreservingAllValues" : "b3.js.proceduresPreservingAllValues", 1);
++        addCompileStat(m_isWasm ? "b3.wasm.valuesKeptBecausePreserveOrigins" : "b3.js.valuesKeptBecausePreserveOrigins", m_values.size());
+         return;
++    }
+ 
+     BitVector valuesToPreserve;
+     valuesToPreserve.ensureSize(m_values.size());
+@@ -503,6 +525,7 @@ void Procedure::freeUnneededB3ValuesAfterLowering()
+             m_values.remove(value);
+     }
+     m_values.packIndices();
++    addCompileStat(m_isWasm ? "b3.wasm.valuesKeptForSpecials" : "b3.js.valuesKeptForSpecials", m_values.size());
+ }
+ 
+ void Procedure::setShouldDumpIR()
+diff --git a/Source/JavaScriptCore/b3/B3ReduceStrength.cpp b/Source/JavaScriptCore/b3/B3ReduceStrength.cpp
+index 999cdda89a..d7d9c6e30c 100644
+--- a/Source/JavaScriptCore/b3/B3ReduceStrength.cpp
++++ b/Source/JavaScriptCore/b3/B3ReduceStrength.cpp
+@@ -44,6 +44,7 @@
+ #include "B3UpsilonValue.h"
+ #include "B3ValueKeyInlines.h"
+ #include "B3ValueInlines.h"
++#include "CompilerTimingScope.h"
+ #include "B3WasmArrayLengthValue.h"
+ #include "B3WasmArrayNewValue.h"
+ #include "B3WasmRefTypeCheckValue.h"
+@@ -638,7 +639,11 @@ public:
+                 // appends cloned values that never saw the reducer) or the CFG/SSA cleanup above
+                 // exposed new opportunities (merged blocks enabling Check CSE, or a folded Phi
+                 // turning Branch(Phi) into Branch(Identity)).
++                addCompileStat("b3.reduceStrength.runs", 1);
+                 if (m_didSpecializeSelect || m_changed) {
++                    CompilerTimingScope timingScope("B3"_s, "reduceStrength: second walk"_s);
++                    addCompileStat("b3.reduceStrength.secondWalks", 1);
++                    addCompileStat("b3.reduceStrength.secondWalkValuesVisited", m_proc.values().size());
+                     m_valueForConstant.clear();
+                     reduceAllBlocksStrength();
+                     simplifyCFGToFixpoint();
+diff --git a/Source/JavaScriptCore/b3/air/AirAllocateRegistersByGreedy.cpp b/Source/JavaScriptCore/b3/air/AirAllocateRegistersByGreedy.cpp
+index 7b57f0eaa4..2e2450a453 100644
+--- a/Source/JavaScriptCore/b3/air/AirAllocateRegistersByGreedy.cpp
++++ b/Source/JavaScriptCore/b3/air/AirAllocateRegistersByGreedy.cpp
+@@ -1560,6 +1560,30 @@ private:
+             ASSERT(!activeEnds[tmp]);
+         });
+ #endif
++        if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++            uint64_t tmps = 0, withIntervals = 0, oneInterval = 0, twoIntervals = 0, threeOrMore = 0;
++            m_code.forEachTmp([&](Tmp tmp) {
++                tmps++;
++                size_t n = m_map[tmp].liveRange.intervals().size();
++                if (!n)
++                    return;
++                withIntervals++;
++                if (n == 1)
++                    oneInterval++;
++                else if (n == 2)
++                    twoIntervals++;
++                else
++                    threeOrMore++;
++            });
++            addCompileStat("air.greedy.tmps", tmps);
++            addCompileStat("air.greedy.tmpsWithLiveRange", withIntervals);
++            addCompileStat("air.greedy.tmpsWith1Interval", oneInterval);
++            addCompileStat("air.greedy.tmpsWith2Intervals", twoIntervals);
++            addCompileStat("air.greedy.tmpsWith3PlusIntervals", threeOrMore);
++            addCompileStat("air.greedy.blocks", m_code.size());
++            addCompileStat("air.greedy.phaseInsertionSetBytes", static_cast<uint64_t>(m_code.size()) * sizeof(PhaseInsertionSet));
++            addCompileStat("air.greedy.tmpDataBytes", static_cast<uint64_t>(tmps) * sizeof(TmpData));
++        }
+     }
+ 
+     void coalesceWithPinnedRegisters()
+@@ -2328,6 +2352,8 @@ private:
+                 }
+             }
+             if (m_needsEmitSpillCode) {
++                CompilerTimingScope timingScope("Air"_s, "GreedyRegAlloc::emitSpillCode"_s);
++                addCompileStat(bank == GP ? "air.greedy.spillRoundsGP" : "air.greedy.spillRoundsFP", 1);
+                 emitSpillCodeAndEnqueueNewTmps<bank>();
+                 m_needsEmitSpillCode = false;
+                 m_didSpill[bank] = true;
+diff --git a/Source/JavaScriptCore/b3/air/AirLivenessAdapter.h b/Source/JavaScriptCore/b3/air/AirLivenessAdapter.h
+index 0e7da2f26d..4272a5681f 100644
+--- a/Source/JavaScriptCore/b3/air/AirLivenessAdapter.h
++++ b/Source/JavaScriptCore/b3/air/AirLivenessAdapter.h
+@@ -31,6 +31,7 @@
+ #include "AirCFG.h"
+ #include "AirCode.h"
+ #include "AirInstInlines.h"
++#include "CompilerTimingScope.h"
+ #include "AirStackSlot.h"
+ #include "AirTmpInlines.h"
+ #include <wtf/ForbidHeapAllocation.h>
+@@ -76,9 +77,12 @@ public:
+     void prepareToCompute()
+     {
+         dataLogLnIf(AirLivenessAdapterInternal::verbose, "Prepare to compute tmp or stack slot liveness for code: ", code);
++        addCompileStat("air.liveness.prepareToCompute", 1);
+         for (BasicBlock* block : code) {
+             ActionsForBoundary& actionsForBoundary = actions[block];
+             actionsForBoundary.resize(block->size() + 1);
++            addCompileStat("air.liveness.boundaries", block->size() + 1);
++            addCompileStat("air.liveness.actionsBytes", (block->size() + 1) * sizeof(Actions));
+ 
+             for (size_t instIndex = block->size(); instIndex--;) {
+                 Inst& inst = block->at(instIndex);
+diff --git a/Source/JavaScriptCore/b3/air/AirPhaseInsertionSet.cpp b/Source/JavaScriptCore/b3/air/AirPhaseInsertionSet.cpp
+index b6d8938088..41f473b472 100644
+--- a/Source/JavaScriptCore/b3/air/AirPhaseInsertionSet.cpp
++++ b/Source/JavaScriptCore/b3/air/AirPhaseInsertionSet.cpp
+@@ -29,12 +29,34 @@
+ #if ENABLE(B3_JIT)
+ 
+ #include "AirBasicBlock.h"
++#include "CompilerTimingScope.h"
++#include <algorithm>
+ #include <wtf/BubbleSort.h>
+ 
+ namespace JSC { namespace B3 { namespace Air {
+ 
+ void PhaseInsertionSet::execute(BasicBlock* block)
+ {
++    CompilerTimingScope timingScope("Air"_s, "PhaseInsertionSet::execute"_s);
++    if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++        addCompileStat("air.phaseInsertionSet.executes", 1);
++        if (m_insertions.isEmpty())
++            addCompileStat("air.phaseInsertionSet.executesWithNoInsertions", 1);
++        else {
++            addCompileStat("air.phaseInsertionSet.insertions", m_insertions.size());
++            if (!std::ranges::is_sorted(m_insertions)) {
++                addCompileStat("air.phaseInsertionSet.unsortedSets", 1);
++                addCompileStat("air.phaseInsertionSet.unsortedInsertions", m_insertions.size());
++                // Number of ascending runs the appends formed (1 = sorted).
++                uint64_t runs = 1;
++                for (size_t i = 1; i < m_insertions.size(); ++i) {
++                    if (m_insertions[i] < m_insertions[i - 1])
++                        runs++;
++                }
++                addCompileStat("air.phaseInsertionSet.ascendingRunsInUnsortedSets", runs);
++            }
++        }
++    }
+     bubbleSort(m_insertions.mutableSpan());
+     executeInsertions(block->m_insts, m_insertions);
+ }
+diff --git a/Source/JavaScriptCore/dfg/DFGPlan.cpp b/Source/JavaScriptCore/dfg/DFGPlan.cpp
+index 68e4326375..e837149b0e 100644
+--- a/Source/JavaScriptCore/dfg/DFGPlan.cpp
++++ b/Source/JavaScriptCore/dfg/DFGPlan.cpp
+@@ -471,7 +471,10 @@ Plan::CompilationPath Plan::compileInThreadImpl()
+ 
+         dfg.nextPhase();
+         FTL::State state(dfg);
+-        FTL::lowerDFGToB3(state);
++        {
++            CompilerTimingScope timingScope("FTL"_s, "lowerDFGToB3"_s);
++            FTL::lowerDFGToB3(state);
++        }
+ 
+         if (computeCompileTimes()) [[unlikely]]
+             m_timeBeforeFTL = MonotonicTime::now();
+diff --git a/Source/JavaScriptCore/ftl/FTLLowerDFGToB3.cpp b/Source/JavaScriptCore/ftl/FTLLowerDFGToB3.cpp
+index 4f6c070c19..8f1da13520 100644
+--- a/Source/JavaScriptCore/ftl/FTLLowerDFGToB3.cpp
++++ b/Source/JavaScriptCore/ftl/FTLLowerDFGToB3.cpp
+@@ -53,6 +53,7 @@
+ #include "DFGMayExit.h"
+ #include "DFGOSRAvailabilityAnalysisPhase.h"
+ #include "DFGOSRExitFuzz.h"
++#include "CompilerTimingScope.h"
+ #include "DirectArguments.h"
+ #include "FTLExceptionTarget.h"
+ #include "FTLForOSREntryJITCode.h"
+@@ -434,6 +435,36 @@ public:
+ 
+         // We put the blocks into the B3 procedure in a super weird order. Now we reorder them.
+         m_out.applyBlockOrder();
++
++        if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++            uint64_t numValues = 0, numConsts = 0, numLoadOfAddConst = 0, numAddConst = 0, numMemory = 0;
++            for (B3::Value* value : m_proc.values()) {
++                numValues++;
++                if (value->isConstant())
++                    numConsts++;
++                if (value->opcode() == B3::Add && value->numChildren() == 2 && value->child(1)->hasIntPtr())
++                    numAddConst++;
++                if (B3::MemoryValue* memory = value->as<B3::MemoryValue>()) {
++                    numMemory++;
++                    B3::Value* address = memory->lastChild();
++                    if (address->opcode() == B3::Add && address->child(1)->hasIntPtr())
++                        numLoadOfAddConst++;
++                }
++            }
++            addCompileStat("ftl.lowering.procedures", 1);
++            addCompileStat("ftl.lowering.values", numValues);
++            addCompileStat("ftl.lowering.constValues", numConsts);
++            addCompileStat("ftl.lowering.addConstValues", numAddConst);
++            addCompileStat("ftl.lowering.memoryValues", numMemory);
++            addCompileStat("ftl.lowering.memoryValuesWithAddConstAddress", numLoadOfAddConst);
++            addCompileStat("ftl.lowering.blocks", m_proc.size());
++            addCompileStat("ftl.exit.descriptors", m_ftlState.jitCode->osrExitDescriptors.size());
++            uint64_t descriptorBytes = 0;
++            for (OSRExitDescriptor& descriptor : m_ftlState.jitCode->osrExitDescriptors)
++                descriptorBytes += sizeof(OSRExitDescriptor) + descriptor.m_values.size() * sizeof(ExitValue);
++            addCompileStat("ftl.exit.descriptorBytesRetained", descriptorBytes);
++            addCompileStat("ftl.exit.distinctNodeOriginKeys", m_statDistinctExitKeys);
++        }
+     }
+ 
+ private:
+@@ -524,6 +555,7 @@ private:
+         m_aiCheckedNodes.clear();
+ 
+         m_availabilityCalculator.beginBlock(m_highBlock);
++        m_statAvailabilityVersion++;
+ 
+         m_state.reset();
+         m_state.beginBasicBlock(m_highBlock);
+@@ -2090,6 +2122,7 @@ private:
+         }
+ 
+         m_availabilityCalculator.executeNode(m_node);
++        m_statAvailabilityVersion++;
+         m_interpreter.executeEffects(nodeIndex);
+ 
+         return { true, codeGenerationResult };
+@@ -27245,6 +27278,17 @@ IGNORE_CLANG_WARNINGS_END
+         OSRExitDescriptor* exitDescriptor, CodeOrigin exitOrigin, StackmapArgumentList& arguments, FormattedValue lowValue,
+         unsigned offsetOfExitArgumentsInStackmapLocations = 0)
+     {
++        CompilerTimingScope timingScope("FTL"_s, "buildExitArguments"_s);
++        if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++            addCompileStat("ftl.exit.buildExitArguments", 1);
++            addCompileStat("ftl.exit.operandSlots", exitDescriptor->m_values.size());
++            // Count how many exits would share a capture if we cached per (node, exitOrigin, availability version, lowValue presence).
++            std::tuple<DFG::Node*, uint64_t, unsigned, bool> key { m_node, static_cast<uint64_t>(exitOrigin.hash()), m_statAvailabilityVersion, !!lowValue };
++            if (key != m_statLastExitKey) {
++                m_statLastExitKey = key;
++                m_statDistinctExitKeys++;
++            }
++        }
+         if (!!lowValue)
+             arguments.append(lowValue.value());
+ 
+@@ -27788,6 +27832,9 @@ IGNORE_CLANG_WARNINGS_END
+     UncheckedKeyHashMap<Node*, LValue> m_phis;
+ 
+     LocalOSRAvailabilityCalculator m_availabilityCalculator;
++    unsigned m_statAvailabilityVersion { 0 };
++    uint64_t m_statDistinctExitKeys { 0 };
++    std::tuple<DFG::Node*, uint64_t, unsigned, bool> m_statLastExitKey { nullptr, 0, 0, false };
+ 
+     InPlaceAbstractState m_state;
+     AbstractInterpreter<InPlaceAbstractState> m_interpreter;
+diff --git a/Source/JavaScriptCore/ftl/FTLOSRExit.cpp b/Source/JavaScriptCore/ftl/FTLOSRExit.cpp
+index af664fd4dc..d5102b3d1b 100644
+--- a/Source/JavaScriptCore/ftl/FTLOSRExit.cpp
++++ b/Source/JavaScriptCore/ftl/FTLOSRExit.cpp
+@@ -29,6 +29,7 @@
+ #if ENABLE(FTL_JIT)
+ 
+ #include "B3StackmapGenerationParams.h"
++#include "CompilerTimingScope.h"
+ #include "FTLJITCode.h"
+ #include "FTLSlowPathCall.h"
+ #include "FTLState.h"
+@@ -91,6 +92,8 @@ Ref<OSRExitHandle> OSRExitDescriptor::prepareOSRExitHandle(
+         exit.m_exitCallSiteIndex = callSiteIndexForCodeOrigin(state, nodeOrigin.semantic);
+ 
+     unsigned index = state.jitCode->m_osrExit.size();
++    addCompileStat("ftl.exit.osrExitsGenerated", 1);
++    addCompileStat("ftl.exit.osrExitValueRepBytes", sizeof(OSRExit) + (params.size() - offset) * sizeof(B3::ValueRep));
+     state.jitCode->m_osrExit.append(WTF::move(exit));
+     return adoptRef(*new OSRExitHandle(index, state.jitCode.get()));
+ }
+diff --git a/Source/JavaScriptCore/ftl/FTLOutput.cpp b/Source/JavaScriptCore/ftl/FTLOutput.cpp
+index 4910ccd398..1d471a31c0 100644
+--- a/Source/JavaScriptCore/ftl/FTLOutput.cpp
++++ b/Source/JavaScriptCore/ftl/FTLOutput.cpp
+@@ -38,6 +38,8 @@
+ #include "B3StackmapGenerationParams.h"
+ #include "B3UpsilonValue.h"
+ #include "B3ValueInlines.h"
++#include "B3ValueKey.h"
++#include "CompilerTimingScope.h"
+ #include "ProbeContext.h"
+ #include "SuperSampler.h"
+ 
+@@ -116,18 +118,30 @@ LValue Output::constBool(bool value)
+     return booleanFalse;
+ }
+ 
++void Output::noteConstantStat(B3::Opcode opcode, int64_t bits)
++{
++    if (Options::reportTotalPhaseTimes()) [[unlikely]] {
++        addCompileStat("ftl.output.constValuesEmitted", 1);
++        if (m_statConstantKeys.add(B3::ValueKey(opcode, opcode == B3::ConstDouble ? B3::Double : (opcode == B3::Const32 ? B3::Int32 : B3::Int64), bits)).isNewEntry)
++            addCompileStat("ftl.output.constValuesDistinct", 1);
++    }
++}
++
+ LValue Output::constInt32(int32_t value)
+ {
++    noteConstantStat(B3::Const32, value);
+     return m_block->appendNew<B3::Const32Value>(m_proc, origin(), value);
+ }
+ 
+ LValue Output::constInt64(int64_t value)
+ {
++    noteConstantStat(B3::Const64, value);
+     return m_block->appendNew<B3::Const64Value>(m_proc, origin(), value);
+ }
+ 
+ LValue Output::constDouble(double value)
+ {
++    noteConstantStat(B3::ConstDouble, std::bit_cast<int64_t>(value));
+     return m_block->appendNew<B3::ConstDoubleValue>(m_proc, origin(), value);
+ }
+ 
+diff --git a/Source/JavaScriptCore/ftl/FTLOutput.h b/Source/JavaScriptCore/ftl/FTLOutput.h
+index b182d035a1..82f4f6d76b 100644
+--- a/Source/JavaScriptCore/ftl/FTLOutput.h
++++ b/Source/JavaScriptCore/ftl/FTLOutput.h
+@@ -36,7 +36,9 @@
+ #include "B3Procedure.h"
+ #include "B3SwitchValue.h"
+ #include "B3TypedPointer.h"
++#include "B3ValueKey.h"
+ #include "B3Width.h"
++#include "CompilerTimingScope.h"
+ #include "FTLAbbreviatedTypes.h"
+ #include "FTLCommonValues.h"
+ #include "FTLSelectPredictability.h"
+@@ -287,6 +289,7 @@ public:
+     {
+         if (!immediate)
+             return value;
++        addCompileStat("ftl.output.addPtrWithImmediate", 1);
+         return add(value, constIntPtr(immediate));
+     }
+ 
+@@ -470,6 +473,9 @@ public:
+ #endif
+     B3::Procedure& m_proc;
+ 
++    void noteConstantStat(B3::Opcode, int64_t bits);
++    UncheckedKeyHashSet<B3::ValueKey> m_statConstantKeys;
++
+     DFG::Node* m_origin { nullptr };
+     LBasicBlock m_block { nullptr };
+     LBasicBlock m_nextBlock { nullptr };
+diff --git a/Source/JavaScriptCore/tools/CompilerTimingScope.cpp b/Source/JavaScriptCore/tools/CompilerTimingScope.cpp
+index 255290e914..12a9e943ff 100644
+--- a/Source/JavaScriptCore/tools/CompilerTimingScope.cpp
++++ b/Source/JavaScriptCore/tools/CompilerTimingScope.cpp
+@@ -60,8 +60,24 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+         return duration;
+     }
+ 
++    void addStat(const char* name, uint64_t delta)
++    {
++        Locker locker { lock };
++        for (auto& pair : stats) {
++WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
++            if (!strcmp(pair.first, name)) {
++WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
++                pair.second += delta;
++                return;
++            }
++        }
++        stats.append({ name, delta });
++    }
++
+     void logTotals()
+     {
++        for (auto& pair : stats)
++            dataLogLn("stat: ", pair.first, " = ", pair.second);
+         for (auto& tuple : totals) {
+             dataLogLn(
+                 "total ms: ", FixedWidthDouble(std::get<2>(tuple).milliseconds(), 8, 3), " max ms: ", FixedWidthDouble(std::get<3>(tuple).milliseconds(), 7, 3), " [", std::get<0>(tuple), "] ", std::get<1>(tuple));
+@@ -70,6 +86,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+     
+ private:
+     Vector<std::tuple<const char*, const char*, Seconds, Seconds>> totals;
++    Vector<std::pair<const char*, uint64_t>> stats;
+     Lock lock;
+ };
+ 
+@@ -105,6 +122,11 @@ CompilerTimingScope::~CompilerTimingScope()
+     }
+ }
+ 
++void addCompileStatSlow(const char* name, uint64_t delta)
++{
++    compilerTimingScopeState().addStat(name, delta);
++}
++
+ void logTotalPhaseTimes()
+ {
+     compilerTimingScopeState().logTotals();
+diff --git a/Source/JavaScriptCore/tools/CompilerTimingScope.h b/Source/JavaScriptCore/tools/CompilerTimingScope.h
+index de7b0806b5..f83c100e1f 100644
+--- a/Source/JavaScriptCore/tools/CompilerTimingScope.h
++++ b/Source/JavaScriptCore/tools/CompilerTimingScope.h
+@@ -25,6 +25,7 @@
+ 
+ #pragma once
+ 
++#include "Options.h"
+ #include <wtf/MonotonicTime.h>
+ #include <wtf/Noncopyable.h>
+ #include <wtf/text/ASCIILiteral.h>
+@@ -50,4 +51,13 @@ private:
+ 
+ JS_EXPORT_PRIVATE void logTotalPhaseTimes();
+ 
++// Process-wide compile statistics counters, reported alongside phase times when
++// Options::reportTotalPhaseTimes() is set. Cheap enough to leave in hot paths.
++JS_EXPORT_PRIVATE void addCompileStatSlow(const char* name, uint64_t delta);
++inline void addCompileStat(const char* name, uint64_t delta = 1)
++{
++    if (Options::reportTotalPhaseTimes()) [[unlikely]]
++        addCompileStatSlow(name, delta);
++}
++
+ } // namespace JSC
