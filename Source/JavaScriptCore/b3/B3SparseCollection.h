@@ -123,7 +123,7 @@ public:
     }
 
     unsigned size() const { return m_vector.size(); }
-    bool isEmpty() const { return m_vector.isEmpty(); }
+    bool isEmpty() const { return m_vector.size() == m_indexFreeList.size(); }
     
     T* at(unsigned index) const { return m_vector[index].get(); }
     T* operator[](unsigned index) const { return at(index); }
