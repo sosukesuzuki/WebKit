@@ -1762,6 +1762,10 @@ private:
     {
         // Now append the instructions. m_insts contains them in reverse order, so we process
         // it in reverse.
+        size_t numInsts = target->size();
+        for (auto& insts : m_insts)
+            numInsts += insts.size();
+        target->insts().reserveCapacity(numInsts);
         for (unsigned i = m_insts.size(); i--;) {
             for (Inst& inst : m_insts[i])
                 target->appendInst(WTF::move(inst));

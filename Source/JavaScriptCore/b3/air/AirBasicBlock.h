@@ -52,7 +52,7 @@ public:
     static const char* const dumpPrefix;
     static constexpr unsigned uninsertedIndex = UINT_MAX;
 
-    typedef Vector<Inst> InstList;
+    typedef Vector<Inst, 0, CrashOnOverflow, 2> InstList;
     typedef Vector<BasicBlock*, 2> PredecessorList;
     typedef Vector<FrequentedBlock, 2> SuccessorList;
 
