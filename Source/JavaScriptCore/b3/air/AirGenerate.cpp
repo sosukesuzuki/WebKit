@@ -200,9 +200,9 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
     };
 
     PCToOriginMap& pcToOriginMap = code.proc().pcToOriginMap();
-    bool shouldPreserveB3Origins = code.shouldPreserveB3Origins();
+    bool needsPCToOriginMap = code.needsPCToOriginMap();
     auto addItem = [&] (Inst& inst) {
-        if (!shouldPreserveB3Origins)
+        if (!needsPCToOriginMap)
             return;
         if (inst.origin)
             pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), inst.origin->origin());
@@ -303,7 +303,7 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
         disassembler->startLatePath(jit);
 
     for (auto& [origin, latePath] : context.latePaths) {
-        if (code.shouldPreserveB3Origins())
+        if (needsPCToOriginMap)
             pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), origin);
         latePath->run(jit, context);
     }

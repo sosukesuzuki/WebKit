@@ -40,6 +40,7 @@
 #include "B3OriginDump.h"
 #include "B3ProcedureInlines.h"
 #include "B3ValueInlines.h"
+#include "CompilerTimingScope.h"
 #include "B3Variable.h"
 #include "JITOpaqueByproducts.h"
 #include <wtf/GraphOrdering.h>
@@ -462,6 +463,7 @@ void Procedure::setNumEntrypoints(unsigned numEntrypoints)
 
 void Procedure::freeUnneededB3ValuesAfterLowering()
 {
+    CompilerTimingScope timingScope("B3"_s, "freeUnneededB3ValuesAfterLowering"_s);
     // We cannot clear m_stackSlots() or m_tuples here, as they are unfortunately modified and read respectively by Air.
     m_variables.clearAll();
     m_blocks.clear();
@@ -498,6 +500,43 @@ void Procedure::freeUnneededB3ValuesAfterLowering()
             break;
         }
     }
+    if (m_needsPCToOriginMap) {
+        // Only the PC->Origin map needs origins (Wasm OMG), and code generation reads nothing but
+        // inst.origin->origin() from a non-Special value. Keep one representative Value per distinct
+        // Origin and point every other Inst with that Origin at it, so that retention scales with the
+        // number of distinct origins rather than with the number of values. Every Air phase that creates
+        // a new Inst copies its origin from an existing Inst, so no dangling pointer can appear later.
+        // Like the children kept for Specials above, a representative may end up with children that
+        // were freed; nothing in Air follows them.
+        UncheckedKeyHashMap<uint64_t, Value*> representativeForOrigin;
+        Value* lastOriginValue = nullptr;
+        Value* lastRepresentative = nullptr;
+        for (Air::BasicBlock* block : *m_code) {
+            for (Air::Inst& inst : *block) {
+                if (!inst.origin)
+                    continue;
+                if (inst.origin == lastOriginValue) {
+                    inst.origin = lastRepresentative;
+                    continue;
+                }
+                lastOriginValue = inst.origin;
+                if (valuesToPreserve.quickGet(inst.origin->index())) {
+                    lastRepresentative = inst.origin;
+                    continue;
+                }
+                uint64_t originBits = std::bit_cast<uint64_t>(inst.origin->origin());
+                if (!originBits)
+                    lastRepresentative = nullptr;
+                else {
+                    auto result = representativeForOrigin.add(originBits, inst.origin);
+                    if (result.isNewEntry)
+                        valuesToPreserve.quickSet(inst.origin->index());
+                    lastRepresentative = result.iterator->value;
+                }
+                inst.origin = lastRepresentative;
+            }
+        }
+    }
     for (Value* value : m_values) {
         if (!valuesToPreserve.quickGet(value->index()))
             m_values.remove(value);
@@ -513,8 +552,9 @@ void Procedure::setShouldDumpIR()
 
 void Procedure::setNeedsPCToOriginMap()
 { 
+    // This only requires inst.origin->origin() to stay readable until code generation; see
+    // freeUnneededB3ValuesAfterLowering(), which keeps that true without keeping the whole graph.
     m_needsPCToOriginMap = true;
-    m_code->forcePreservationOfB3Origins();
 }
 
 void Procedure::setIonGraphPasses(Ref<JSON::Array>&& array)

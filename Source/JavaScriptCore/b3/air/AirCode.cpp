@@ -238,6 +238,11 @@ RegisterAtOffsetList Code::calleeSaveRegisterAtOffsetList() const
     return result;
 }
 
+bool Code::needsPCToOriginMap() const
+{
+    return m_preserveB3Origins || m_proc.needsPCToOriginMap();
+}
+
 void Code::resetReachability()
 {
     recomputePredecessorsFromRoots(m_blocks, [&](auto&& functor) {

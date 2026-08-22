@@ -285,7 +285,7 @@ public:
     JS_EXPORT_PRIVATE RegisterSet mutableGPRs();
 
     void NODELETE setNeedsPCToOriginMap();
-    bool needsPCToOriginMap() { return m_needsPCToOriginMap; }
+    bool needsPCToOriginMap() const { return m_needsPCToOriginMap; }
 
     JS_EXPORT_PRIVATE void freeUnneededB3ValuesAfterLowering();
 
