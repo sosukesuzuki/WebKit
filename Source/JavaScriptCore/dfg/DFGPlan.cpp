@@ -471,7 +471,10 @@ Plan::CompilationPath Plan::compileInThreadImpl()
 
         dfg.nextPhase();
         FTL::State state(dfg);
-        FTL::lowerDFGToB3(state);
+        {
+            CompilerTimingScope timingScope("FTL"_s, "lowerDFGToB3"_s);
+            FTL::lowerDFGToB3(state);
+        }
 
         if (computeCompileTimes()) [[unlikely]]
             m_timeBeforeFTL = MonotonicTime::now();

@@ -53,6 +53,7 @@
 #include "DFGMayExit.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSRExitFuzz.h"
+#include "CompilerTimingScope.h"
 #include "DirectArguments.h"
 #include "FTLExceptionTarget.h"
 #include "FTLForOSREntryJITCode.h"
@@ -27245,6 +27246,7 @@ IGNORE_CLANG_WARNINGS_END
         OSRExitDescriptor* exitDescriptor, CodeOrigin exitOrigin, StackmapArgumentList& arguments, FormattedValue lowValue,
         unsigned offsetOfExitArgumentsInStackmapLocations = 0)
     {
+        CompilerTimingScope timingScope("FTL"_s, "buildExitArguments"_s);
         if (!!lowValue)
             arguments.append(lowValue.value());
 
