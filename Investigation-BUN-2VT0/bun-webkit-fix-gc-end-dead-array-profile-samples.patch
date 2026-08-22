@@ -1,0 +1,70 @@
+--- a/Source/JavaScriptCore/bytecode/ArrayProfile.cpp	2026-08-22 22:10:25.979897882 +0000
++++ b/Source/JavaScriptCore/bytecode/ArrayProfile.cpp	2026-08-22 22:10:26.008202381 +0000
+@@ -30,6 +30,9 @@
+ #include "JSCellInlines.h"
+ #include "JSGlobalObjectInlines.h"
+ #include "JSTypedArrays.h"
++#include "MarkedBlockInlines.h"
++#include "MarkedSpaceInlines.h"
++#include "Options.h"
+ #include <wtf/CommaPrinter.h>
+ #include <wtf/StringPrintStream.h>
+ 
+@@ -123,12 +126,55 @@
+         out.print(comma, "BigUint64ArrayMode"_s);
+ }
+ 
++// An ArrayProfile's sampled StructureIDs are untraced. They are folded into the prediction (and cleared) by
++// CodeBlock::reconcileWeakReferencesAtGCEnd, which only runs for CodeBlocks that were visited in the current
++// collection. A CodeBlock that an eden collection did not visit keeps its samples across that cycle, so a sample can
++// name a Structure that the eden collection swept. The Structure's MarkedBlock may since have been freed and, with
++// mimalloc purging on Windows (MEM_DECOMMIT), be unreadable, so StructureID::decode() must not be dereferenced for
++// such a sample. Decide liveness from the MarkedBlock set and this cycle's mark bits, which never touches the
++// Structure's memory. A dropped sample is logged under verboseOSR so the condition stays observable.
++static bool isStructureIDLiveAtGCEnd(VM& vm, StructureID structureID, Structure*& result)
++{
++    Structure* structure = structureID.tryDecode();
++    if (!structure)
++        return false;
++    if (!MarkedBlock::isAtomAligned(structure))
++        return false;
++    MarkedBlock* candidate = MarkedBlock::blockFor(structure);
++    if (!vm.heap.objectSpace().blocks().set().contains(candidate))
++        return false;
++    Subspace* subspace = candidate->handle().subspace();
++    if (subspace != &vm.heap.structureSpace && subspace != &vm.heap.brandedStructureSpace)
++        return false;
++    // After marking, a Structure is alive iff it is marked in this cycle. This reads only the block's mark bits.
++    if (!candidate->isMarked(vm.heap.objectSpace().markingVersion(), structure))
++        return false;
++    result = structure;
++    return true;
++}
++
+ void ArrayProfile::computeUpdatedPrediction(CodeBlock* codeBlock)
+ {
++    VM& vm = codeBlock->vm();
++    // Only the GC-end reconcile pass can run against a Structure that died in an earlier cycle. Compiler threads and
++    // the mutator's tier-up checks run with the world running, where the MarkedBlock set cannot be consulted safely;
++    // those callers only see samples written since the last reconcile, whose Structures were alive at that point.
++    bool validateLiveness = vm.heap.currentThreadIsDoingGCWork();
++    auto fold = [&](StructureID structureID, ASCIILiteral which) {
++        Structure* structure = nullptr;
++        if (validateLiveness) {
++            if (!isStructureIDLiveAtGCEnd(vm, structureID, structure)) {
++                dataLogLnIf(Options::verboseOSR(), "Dropping dead ArrayProfile sample ", which, " id=0x", hex(structureID.bits()), " in ", *codeBlock);
++                return;
++            }
++        } else
++            structure = structureID.decode();
++        computeUpdatedPrediction(codeBlock, structure);
++    };
+     if (auto structureID = std::exchange(m_lastSeenStructureID, StructureID()))
+-        computeUpdatedPrediction(codeBlock, structureID.decode());
++        fold(structureID, "m_lastSeenStructureID"_s);
+     if (auto structureID = std::exchange(m_speculationFailureStructureID, StructureID()))
+-        computeUpdatedPrediction(codeBlock, structureID.decode());
++        fold(structureID, "m_speculationFailureStructureID"_s);
+ }
+ 
+ void ArrayProfile::computeUpdatedPrediction(CodeBlock* codeBlock, Structure* lastSeenStructure)

@@ -1,0 +1,173 @@
+diff --git a/Source/JavaScriptCore/bytecode/ArrayProfile.cpp b/Source/JavaScriptCore/bytecode/ArrayProfile.cpp
+index 2d20e49f7b..78117cb2b0 100644
+--- a/Source/JavaScriptCore/bytecode/ArrayProfile.cpp
++++ b/Source/JavaScriptCore/bytecode/ArrayProfile.cpp
+@@ -32,6 +32,7 @@
+ #include "JSTypedArrays.h"
+ #include <wtf/CommaPrinter.h>
+ #include <wtf/StringPrintStream.h>
++#include <cstdlib>
+ 
+ namespace JSC {
+ 
+@@ -123,12 +124,46 @@ void dumpArrayModes(PrintStream& out, ArrayModes arrayModes)
+         out.print(comma, "BigUint64ArrayMode"_s);
+ }
+ 
++static NEVER_INLINE void bunValidateProfiledStructureID(CodeBlock* codeBlock, ArrayProfile* profile, StructureID id, const char* which)
++{
++    Structure* structure = id.tryDecode();
++    bool ok = structure && !(std::bit_cast<uintptr_t>(structure) & (MarkedBlock::atomSize - 1));
++    if (ok)
++        ok = structure->structureID() == codeBlock->vm().structureStructure->structureID();
++    static bool probe = !!getenv("BUN_PROBE");
++    if (probe) {
++        bool marked = structure && !(std::bit_cast<uintptr_t>(structure) & (MarkedBlock::atomSize - 1)) && codeBlock->vm().heap.isMarked(structure);
++        dataLogLn("PROBE decode ", which, " id=0x", hex(id.bits()), " ok=", ok, " marked=", marked, " scope=", (codeBlock->vm().heap.collectionScope() ? (*codeBlock->vm().heap.collectionScope() == CollectionScope::Full ? "full" : "eden") : "none"), " cb=", RawPointer(codeBlock), " ", codeBlock->inferredName());
++    }
++    if (ok) [[likely]]
++        return;
++    WTF::dataFile().flush();
++    dataLogLn("BUN-2VT0: garbage StructureID in ArrayProfile (ArrayProfile::computeUpdatedPrediction)");
++    dataLogLn("  field=", which, " raw=0x", hex(id.bits()), " profile=", RawPointer(profile), " codeBlock=", RawPointer(codeBlock), " ", *codeBlock, " jitType=", codeBlock->jitType(), " thread=", Thread::currentSingleton().uid());
++    dataLogLn("  structureIDBase=0x", hex(structureIDBase()), " decoded=", RawPointer(structure));
++    auto* bytes = std::bit_cast<uint8_t*>(profile);
++    StringPrintStream out;
++    out.print("  profile bytes (-64..+16):");
++    for (int i = -64; i < 16; ++i) {
++        if (!(i % 8))
++            out.print(" ");
++        out.printf("%02x", bytes[i]);
++    }
++    dataLogLn(out.toCString());
++    WTF::dataFile().flush();
++    CRASH_WITH_INFO(id.bits(), std::bit_cast<uintptr_t>(profile));
++}
++
+ void ArrayProfile::computeUpdatedPrediction(CodeBlock* codeBlock)
+ {
+-    if (auto structureID = std::exchange(m_lastSeenStructureID, StructureID()))
++    if (auto structureID = std::exchange(m_lastSeenStructureID, StructureID())) {
++        bunValidateProfiledStructureID(codeBlock, this, structureID, "m_lastSeenStructureID");
+         computeUpdatedPrediction(codeBlock, structureID.decode());
+-    if (auto structureID = std::exchange(m_speculationFailureStructureID, StructureID()))
++    }
++    if (auto structureID = std::exchange(m_speculationFailureStructureID, StructureID())) {
++        bunValidateProfiledStructureID(codeBlock, this, structureID, "m_speculationFailureStructureID");
+         computeUpdatedPrediction(codeBlock, structureID.decode());
++    }
+ }
+ 
+ void ArrayProfile::computeUpdatedPrediction(CodeBlock* codeBlock, Structure* lastSeenStructure)
+diff --git a/Source/JavaScriptCore/bytecode/CodeBlock.cpp b/Source/JavaScriptCore/bytecode/CodeBlock.cpp
+index d8915876a7..67d2b86aa7 100644
+--- a/Source/JavaScriptCore/bytecode/CodeBlock.cpp
++++ b/Source/JavaScriptCore/bytecode/CodeBlock.cpp
+@@ -3140,7 +3140,48 @@ void CodeBlock::updateAllArrayProfilePredictions()
+     UnlinkedCodeBlock* unlinkedCodeBlock = this->unlinkedCodeBlock();
+     bool isBuiltinFunction = unlinkedCodeBlock->isBuiltinFunction();
+     auto unlinkedArrayProfiles = unlinkedCodeBlock->unlinkedArrayProfiles().mutableSpan();
+-    auto process = [&] (ArrayProfile& profile) {
++    // BUN-2VT0 instrumentation: validate every StructureID in every ArrayProfile before decoding it.
++    auto validateStructureID = [&] (StructureID id, const char* which, const char* opName, void* entry, size_t entrySize, unsigned entryIndex) {
++        if (!id)
++            return;
++        Structure* structure = id.tryDecode();
++        bool ok = structure && !(std::bit_cast<uintptr_t>(structure) & (MarkedBlock::atomSize - 1));
++        if (ok) {
++            // Every Structure cell's own header StructureID is the structureStructure's ID.
++            StructureID expected = vm().structureStructure->structureID();
++            ok = structure->structureID() == expected;
++        }
++        if (ok) [[likely]]
++            return;
++        WTF::dataFile().flush();
++        dataLogLn("BUN-2VT0: garbage StructureID in ArrayProfile");
++        dataLogLn("  field=", which, " raw=0x", hex(id.bits()), " opcode=", opName, " entryIndex=", entryIndex, " entrySize=", entrySize, " entry=", RawPointer(entry), " profileIndex=", index);
++        dataLogLn("  codeBlock=", RawPointer(this), " ", *this, " jitType=", jitType(), " metadata=", RawPointer(m_metadata.get()), " numValueProfiles=", m_metadata->unlinkedMetadata()->numValueProfiles());
++        dataLogLn("  structureIDBase=0x", hex(structureIDBase()), " startOfStructureHeap=0x", hex(startOfStructureHeap()), " sizeOfStructureHeap=0x", hex(g_jscConfig.sizeOfStructureHeap), " decoded=", RawPointer(structure));
++        auto* bytes = static_cast<uint8_t*>(entry);
++        StringPrintStream out;
++        out.print("  entry bytes:");
++        for (size_t i = 0; i < entrySize; ++i) {
++            if (!(i % 8))
++                out.print(" ");
++            out.printf("%02x", bytes[i]);
++        }
++        dataLogLn(out.toCString());
++        StringPrintStream out2;
++        out2.print("  64 bytes before:");
++        for (size_t i = 0; i < 64; ++i) {
++            if (!(i % 8))
++                out2.print(" ");
++            out2.printf("%02x", bytes[i - 64]);
++        }
++        dataLogLn(out2.toCString());
++        WTF::dataFile().flush();
++        CRASH_WITH_INFO(id.bits(), std::bit_cast<uintptr_t>(entry), entryIndex);
++    };
++
++    auto process = [&] (ArrayProfile& profile, const char* opName, void* entry, size_t entrySize, unsigned entryIndex) {
++        validateStructureID(profile.m_lastSeenStructureID, "m_lastSeenStructureID", opName, entry, entrySize, entryIndex);
++        validateStructureID(profile.m_speculationFailureStructureID, "m_speculationFailureStructureID", opName, entry, entrySize, entryIndex);
+         profile.computeUpdatedPrediction(this);
+         if (!isBuiltinFunction)
+             unlinkedArrayProfiles[index].update(profile);
+@@ -3148,15 +3189,21 @@ void CodeBlock::updateAllArrayProfilePredictions()
+     };
+ 
+ #define VISIT(__op) \
+-    m_metadata->forEach<__op>([&] (auto& metadata) { process(metadata.m_arrayProfile); });
++    { \
++        unsigned entryIndex = 0; \
++        m_metadata->forEach<__op>([&] (auto& metadata) { process(metadata.m_arrayProfile, #__op, &metadata, sizeof(metadata), entryIndex++); }); \
++    }
+ 
+     FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(VISIT)
+ 
+ #undef VISIT
+ 
+-    m_metadata->forEach<OpIteratorNext>([&] (auto& metadata) {
+-        process(metadata.m_iterableProfile);
+-    });
++    {
++        unsigned entryIndex = 0;
++        m_metadata->forEach<OpIteratorNext>([&] (auto& metadata) {
++            process(metadata.m_iterableProfile, "OpIteratorNext", &metadata, sizeof(metadata), entryIndex++);
++        });
++    }
+ }
+ 
+ void CodeBlock::updateAllArrayAllocationProfilePredictions()
+diff --git a/Source/JavaScriptCore/bytecode/SpeculatedType.cpp b/Source/JavaScriptCore/bytecode/SpeculatedType.cpp
+index 8256ed8a1f..900e7963fe 100644
+--- a/Source/JavaScriptCore/bytecode/SpeculatedType.cpp
++++ b/Source/JavaScriptCore/bytecode/SpeculatedType.cpp
+@@ -48,6 +48,7 @@
+ #include "JSSetIterator.h"
+ #include "JSWeakMap.h"
+ #include "JSWeakSet.h"
++#include "MarkedBlock.h"
+ #include "ProxyObject.h"
+ #include "RegExpObject.h"
+ #include "ScopedArguments.h"
+@@ -595,8 +596,17 @@ SpeculatedType speculationFromCell(JSCell* cell)
+ {
+     // FIXME: rdar://69036888: remove isSanePointer checks when no longer needed.
+     if (!Integrity::isSanePointer(cell)) [[unlikely]] {
+-        ASSERT_NOT_REACHED();
+-        return SpecNone;
++        dataLogLn("BUN-2VT0: insane cell pointer in speculationFromCell: ", RawPointer(cell));
++        CRASH_WITH_INFO(std::bit_cast<uintptr_t>(cell));
++    }
++    {
++        // BUN-2VT0 instrumentation: the cell header must carry a decodable StructureID.
++        uintptr_t bits = std::bit_cast<uintptr_t>(cell);
++        Structure* structure = cell->structureID().tryDecode();
++        if ((bits & 7) || !structure || (std::bit_cast<uintptr_t>(structure) & (MarkedBlock::atomSize - 1))) [[unlikely]] {
++            dataLogLn("BUN-2VT0: garbage cell in ValueProfile bucket: cell=", RawPointer(cell), " headerStructureID=0x", hex(cell->structureID().bits()), " thread=", Thread::currentSingleton().uid());
++            CRASH_WITH_INFO(bits, cell->structureID().bits());
++        }
+     }
+ 
+     if (cell->isString()) {
