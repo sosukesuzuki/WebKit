@@ -240,13 +240,14 @@ RegisterAtOffsetList Code::calleeSaveRegisterAtOffsetList() const
 
 void Code::resetReachability()
 {
-    clearPredecessors(m_blocks);
-    if (m_entrypoints.isEmpty())
-        updatePredecessorsAfter(m_blocks[0].get());
-    else {
-        for (const FrequentedBlock& entrypoint : m_entrypoints)
-            updatePredecessorsAfter(entrypoint.block());
-    }
+    recomputePredecessorsFromRoots(m_blocks, [&](auto&& functor) {
+        if (m_entrypoints.isEmpty())
+            functor(m_blocks[0].get());
+        else {
+            for (const FrequentedBlock& entrypoint : m_entrypoints)
+                functor(entrypoint.block());
+        }
+    });
     
     for (auto& block : m_blocks) {
         if (isBlockDead(block.get()) && !isEntrypoint(block.get()))
