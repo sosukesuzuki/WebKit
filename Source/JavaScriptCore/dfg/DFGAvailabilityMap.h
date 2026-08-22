@@ -79,7 +79,7 @@ struct AvailabilityMap {
         closeOverNodes(has, add);
     }
     
-    AvailabilityMap filterByLiveness(Graph&, CodeOrigin);
+    AvailabilityMap filterByLiveness(Graph&, CodeOrigin) const;
 
     void validateAvailability(Graph& graph, Node* where) const;
 

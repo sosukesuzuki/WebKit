@@ -35,7 +35,7 @@
 
 namespace JSC { namespace DFG {
 
-AvailabilityMap AvailabilityMap::filterByLiveness(Graph& graph, CodeOrigin where)
+AvailabilityMap AvailabilityMap::filterByLiveness(Graph& graph, CodeOrigin where) const
 {
     AvailabilityMap filtered;
     filtered.m_locals = Operands<Availability>(OperandsLike, m_locals, Availability::unavailable());

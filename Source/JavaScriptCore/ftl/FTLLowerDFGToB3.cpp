@@ -27250,8 +27250,7 @@ IGNORE_CLANG_WARNINGS_END
         if (!!lowValue)
             arguments.append(lowValue.value());
 
-        AvailabilityMap availabilityMap = this->availabilityMap();
-        availabilityMap.pruneByLiveness(m_graph, exitOrigin);
+        AvailabilityMap availabilityMap = this->availabilityMap().filterByLiveness(m_graph, exitOrigin);
 
         UncheckedKeyHashMap<Node*, ExitTimeObjectMaterialization*> map;
         availabilityMap.forEachAvailability(
