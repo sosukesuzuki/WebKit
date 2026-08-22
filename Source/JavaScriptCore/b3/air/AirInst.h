@@ -324,4 +324,14 @@ static_assert(std::is_trivially_destructible_v<Arg>);
 
 } } } // namespace JSC::B3::Air
 
+namespace WTF {
+
+// Inst owns either inline Args (trivially copyable) or a uniquely owned out-of-line buffer, so
+// relocating the 64 bytes and forgetting the source is correct.
+template<> struct VectorTraits<JSC::B3::Air::Inst> : VectorTraitsBase<false, void> {
+    static constexpr bool canMoveWithMemcpy = true;
+};
+
+} // namespace WTF
+
 #endif // ENABLE(B3_JIT)

@@ -320,6 +320,11 @@ namespace WTF {
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Air::Tmp> : SimpleClassHashTraits<JSC::B3::Air::Tmp> { };
 
+template<> struct VectorTraits<JSC::B3::Air::Tmp> : VectorTraitsBase<false, void> {
+    static constexpr bool canMoveWithMemcpy = true;
+    static constexpr bool canCopyWithMemcpy = true;
+};
+
 } // namespace WTF
 
 #endif // ENABLE(B3_JIT)

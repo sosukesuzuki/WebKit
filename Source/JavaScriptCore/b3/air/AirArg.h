@@ -1871,6 +1871,11 @@ static_assert(sizeof(Arg) == 16, "Arg is expected to stay 16 bytes.");
 
 namespace WTF {
 
+template<> struct VectorTraits<JSC::B3::Air::Arg> : VectorTraitsBase<false, void> {
+    static constexpr bool canMoveWithMemcpy = true;
+    static constexpr bool canCopyWithMemcpy = true;
+};
+
 JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Kind);
 JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Temperature);
 JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Phase);
