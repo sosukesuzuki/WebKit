@@ -1766,10 +1766,8 @@ private:
         for (auto& insts : m_insts)
             numInsts += insts.size();
         target->insts().reserveCapacity(numInsts);
-        for (unsigned i = m_insts.size(); i--;) {
-            for (Inst& inst : m_insts[i])
-                target->appendInst(WTF::move(inst));
-        }
+        for (unsigned i = m_insts.size(); i--;)
+            target->insts().appendVector(WTF::move(m_insts[i]));
         m_insts.shrink(0);
     }
     

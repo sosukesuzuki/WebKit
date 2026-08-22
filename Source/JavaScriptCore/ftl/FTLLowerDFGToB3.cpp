@@ -42,6 +42,7 @@
 #include "CPUInlines.h"
 #include "CallFrameShuffler.h"
 #include "ClonedArguments.h"
+#include "CompilerTimingScope.h"
 #include "DFGAbstractInterpreterInlines.h"
 #include "DFGCFAPhase.h"
 #include "DFGCapabilities.h"
@@ -53,7 +54,6 @@
 #include "DFGMayExit.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSRExitFuzz.h"
-#include "CompilerTimingScope.h"
 #include "DirectArguments.h"
 #include "FTLExceptionTarget.h"
 #include "FTLForOSREntryJITCode.h"
@@ -305,7 +305,7 @@ public:
         m_out.setFrequency(1);
 
         m_out.appendTo(prologue, hasMultipleEntrypoints ? callEntrypointArgumentSpeculations : m_handleExceptions);
-        m_out.initializeConstants(m_proc, prologue);
+        m_out.initializeConstants(prologue);
         createPhiVariables();
 
         uint64_t sizeOfCaptured = sizeof(JSValue) * m_graph.m_nextMachineLocal;

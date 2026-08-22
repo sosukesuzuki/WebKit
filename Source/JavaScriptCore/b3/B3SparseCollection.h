@@ -122,6 +122,8 @@ public:
         m_vector.clear();
     }
 
+    // size() is the index-space bound, including holes left by remove(); use isEmpty() to ask
+    // whether anything is live.
     unsigned size() const { return m_vector.size(); }
     bool isEmpty() const { return m_vector.size() == m_indexFreeList.size(); }
     

@@ -40,8 +40,8 @@
 #include "B3OriginDump.h"
 #include "B3ProcedureInlines.h"
 #include "B3ValueInlines.h"
-#include "CompilerTimingScope.h"
 #include "B3Variable.h"
+#include "CompilerTimingScope.h"
 #include "JITOpaqueByproducts.h"
 #include <wtf/GraphOrdering.h>
 #include <wtf/ListDump.h>
@@ -508,29 +508,26 @@ void Procedure::freeUnneededB3ValuesAfterLowering()
         // a new Inst copies its origin from an existing Inst, so no dangling pointer can appear later.
         // Like the children kept for Specials above, a representative may end up with children that
         // were freed; nothing in Air follows them.
+        // Origin has no hash traits, so the map is keyed by its bits; a null Origin is all zero bits.
         UncheckedKeyHashMap<uint64_t, Value*> representativeForOrigin;
-        Value* lastOriginValue = nullptr;
+        uint64_t lastOriginBits = 0;
         Value* lastRepresentative = nullptr;
         for (Air::BasicBlock* block : *m_code) {
             for (Air::Inst& inst : *block) {
-                if (!inst.origin)
+                if (!inst.origin || valuesToPreserve.quickGet(inst.origin->index()))
                     continue;
-                if (inst.origin == lastOriginValue) {
-                    inst.origin = lastRepresentative;
-                    continue;
-                }
-                lastOriginValue = inst.origin;
-                if (valuesToPreserve.quickGet(inst.origin->index())) {
-                    lastRepresentative = inst.origin;
+                Origin origin = inst.origin->origin();
+                if (!origin) {
+                    inst.origin = nullptr;
                     continue;
                 }
-                uint64_t originBits = std::bit_cast<uint64_t>(inst.origin->origin());
-                if (!originBits)
-                    lastRepresentative = nullptr;
-                else {
+                // Consecutive Insts usually share an Origin (one wasm opcode lowers to several Values).
+                uint64_t originBits = std::bit_cast<uint64_t>(origin);
+                if (originBits != lastOriginBits) {
                     auto result = representativeForOrigin.add(originBits, inst.origin);
                     if (result.isNewEntry)
                         valuesToPreserve.quickSet(inst.origin->index());
+                    lastOriginBits = originBits;
                     lastRepresentative = result.iterator->value;
                 }
                 inst.origin = lastRepresentative;

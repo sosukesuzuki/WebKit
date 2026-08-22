@@ -51,26 +51,28 @@ Output::Output(State& state)
 {
 }
 
-void Output::initializeConstants(B3::Procedure& proc, B3::BasicBlock* prologue)
+void Output::initializeConstants(B3::BasicBlock* prologue)
 {
-    CommonValues::initializeConstants(proc, prologue);
+    CommonValues::initializeConstants(m_proc, prologue);
     m_constantsBlock = prologue;
+    // The well-known constants live in the prologue already; let the pool hand them out too.
+    for (LValue value : { int32Zero, int32One, int64Zero, intPtrZero, intPtrOne, intPtrTwo, intPtrThree, intPtrEight, doubleZero, doubleEncodeOffsetAsDouble })
+        m_constantPool.add(value->key(), value);
+#if USE(BIGINT32)
+    m_constantPool.add(bigInt32Zero->key(), bigInt32Zero);
+#endif
 }
 
 void Output::flushConstants()
 {
-    if (m_constantsBlock)
-        m_constantInsertionSet.execute(m_constantsBlock);
+    ASSERT(m_constantsBlock);
+    m_constantInsertionSet.execute(m_constantsBlock);
 }
 
-LValue Output::pooledConstant(B3::Opcode opcode, B3::Type type, int64_t bits)
+LValue Output::pooledConstant(B3::Type type, int64_t bits)
 {
-    if (!m_constantsBlock) {
-        LValue value = m_proc.addConstant(origin(), type, static_cast<uint64_t>(bits));
-        m_block->append(value);
-        return value;
-    }
-    auto result = m_constantPool.ensure(B3::ValueKey(opcode, type, bits), [&] {
+    ASSERT(m_constantsBlock);
+    auto result = m_constantPool.ensure(B3::ValueKey(B3::opcodeForConstant(type), type, bits), [&] {
         LValue value = m_proc.addConstant(origin(), type, static_cast<uint64_t>(bits));
         m_constantInsertionSet.insertValue(0, value);
         return value;
@@ -146,17 +148,17 @@ LValue Output::constBool(bool value)
 
 LValue Output::constInt32(int32_t value)
 {
-    return pooledConstant(B3::Const32, B3::Int32, value);
+    return pooledConstant(B3::Int32, value);
 }
 
 LValue Output::constInt64(int64_t value)
 {
-    return pooledConstant(B3::Const64, B3::Int64, value);
+    return pooledConstant(B3::Int64, value);
 }
 
 LValue Output::constDouble(double value)
 {
-    return pooledConstant(B3::ConstDouble, B3::Double, std::bit_cast<int64_t>(value));
+    return pooledConstant(B3::Double, std::bit_cast<int64_t>(value));
 }
 
 LValue Output::phi(LType type)

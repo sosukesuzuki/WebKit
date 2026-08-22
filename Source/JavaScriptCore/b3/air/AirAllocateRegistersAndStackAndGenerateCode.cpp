@@ -584,7 +584,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 
     Disassembler* disassembler = m_code.disassembler();
     PCToOriginMap& pcToOriginMap = m_code.proc().pcToOriginMap();
-    bool needsPCToOriginMap = m_code.needsPCToOriginMap();
+    bool needsPCToOriginMap = m_code.proc().needsPCToOriginMap();
     auto addItem = [&](Inst& inst) {
         if (!needsPCToOriginMap)
             return;
@@ -1038,7 +1038,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
         disassembler->startLatePath(*m_jit);
 
     for (auto& [origin, latePath] : context.latePaths) {
-        if (m_code.needsPCToOriginMap())
+        if (needsPCToOriginMap)
             pcToOriginMap.appendItem(m_jit->labelIgnoringWatchpoints(), origin);
         latePath->run(*m_jit, context);
     }

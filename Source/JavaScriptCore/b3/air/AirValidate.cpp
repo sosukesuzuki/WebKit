@@ -64,6 +64,7 @@ public:
         for (Special* special : m_code.specials())
             validSpecials.add(special);
 
+        bool originsMustBeLive = m_code.shouldPreserveB3Origins() || m_code.proc().needsPCToOriginMap();
         for (BasicBlock* block : m_code) {
             // Blocks that are entrypoints must not have predecessors.
             if (m_code.isEntrypoint(block))
@@ -83,6 +84,10 @@ public:
                         break;
                     }
                 }
+                // Once values are freed after lowering, origins are only guaranteed to stay valid when
+                // something reads them: the PC-to-origin map or a dump. Otherwise they may dangle by design.
+                if (inst.origin && originsMustBeLive)
+                    VALIDATE(m_code.proc().values().at(inst.origin->index()) == inst.origin, ("At ", inst, " in ", *block));
                 VALIDATE(inst.isValidForm(), ("At ", inst, " in ", *block));
                 if (instIndex == block->size() - 1)
                     VALIDATE(inst.isTerminal(), ("At ", inst, " in ", *block));

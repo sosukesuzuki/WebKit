@@ -94,6 +94,7 @@ bool lowerEntrySwitch(Code& code)
         entrypoints.append(FrequentedBlock(map[code[0]], entrypointFrequencies[entrypointIndex]));
         for (BasicBlock* block : worklist.seen().values(code)) {
             BasicBlock* newBlock = map[block];
+            newBlock->insts().reserveInitialCapacity(block->size());
             for (const Inst& inst : *block)
                 newBlock->appendInst(inst);
             newBlock->successors() = block->successors();

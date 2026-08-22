@@ -200,7 +200,7 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
     };
 
     PCToOriginMap& pcToOriginMap = code.proc().pcToOriginMap();
-    bool needsPCToOriginMap = code.needsPCToOriginMap();
+    bool needsPCToOriginMap = code.proc().needsPCToOriginMap();
     auto addItem = [&] (Inst& inst) {
         if (!needsPCToOriginMap)
             return;

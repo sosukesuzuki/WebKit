@@ -30,15 +30,22 @@
 
 #include "AirBasicBlock.h"
 #include <algorithm>
+#include <wtf/BubbleSort.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
 void PhaseInsertionSet::execute(BasicBlock* block)
 {
     // Insertions arrive as several independently ascending runs (GP spill rounds, then FP, then
-    // split fixups grouped by Tmp). Both sorts are stable on (index, phase), so the result is identical.
-    if (!std::is_sorted(m_insertions.begin(), m_insertions.end()))
-        std::stable_sort(m_insertions.begin(), m_insertions.end());
+    // split fixups grouped by Tmp), which makes the adaptive bubble sort quadratic on big blocks. All
+    // three sorts are stable on (index, phase), so the result is identical; small sets stay on the
+    // bubble sort because std::stable_sort allocates a scratch buffer.
+    if (!std::is_sorted(m_insertions.begin(), m_insertions.end())) {
+        if (m_insertions.size() <= 32)
+            bubbleSort(m_insertions.mutableSpan());
+        else
+            std::stable_sort(m_insertions.begin(), m_insertions.end());
+    }
     executeInsertions(block->m_insts, m_insertions);
 }
 

@@ -88,7 +88,7 @@ public:
     void execute(BasicBlock*);
 
 private:
-    Vector<PhaseInsertion> m_insertions;
+    Vector<PhaseInsertion, 0, CrashOnOverflow, 4> m_insertions;
 };
 
 } } } // namespace JSC::B3::Air

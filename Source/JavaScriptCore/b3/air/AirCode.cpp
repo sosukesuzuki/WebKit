@@ -238,21 +238,16 @@ RegisterAtOffsetList Code::calleeSaveRegisterAtOffsetList() const
     return result;
 }
 
-bool Code::needsPCToOriginMap() const
-{
-    return m_preserveB3Origins || m_proc.needsPCToOriginMap();
-}
-
 void Code::resetReachability()
 {
-    recomputePredecessorsFromRoots(m_blocks, [&](auto&& functor) {
-        if (m_entrypoints.isEmpty())
-            functor(m_blocks[0].get());
-        else {
-            for (const FrequentedBlock& entrypoint : m_entrypoints)
-                functor(entrypoint.block());
-        }
-    });
+    Vector<BasicBlock*, 4> roots;
+    if (m_entrypoints.isEmpty())
+        roots.append(m_blocks[0].get());
+    else {
+        for (const FrequentedBlock& entrypoint : m_entrypoints)
+            roots.append(entrypoint.block());
+    }
+    recomputePredecessorsFromRoots(m_blocks, roots);
     
     for (auto& block : m_blocks) {
         if (isBlockDead(block.get()) && !isEntrypoint(block.get()))

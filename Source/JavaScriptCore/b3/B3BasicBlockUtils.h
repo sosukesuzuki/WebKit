@@ -27,6 +27,7 @@
 
 #if ENABLE(B3_JIT)
 
+#include <array>
 #include <wtf/BitVector.h>
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/IndexSet.h>
@@ -95,37 +96,40 @@ void clearPredecessors(Vector<std::unique_ptr<BasicBlock>>& blocks)
 }
 
 // Full recomputation from scratch: visits every reachable block exactly once, so it is O(V + E)
-// instead of O(sum of indegree^2). Repeated edges from one block to the same successor are appended
-// contiguously (a block's successor list is walked in one go), so checking last() dedups them.
-template<typename BasicBlock, typename RootFunctor>
-void recomputePredecessorsFromRoots(Vector<std::unique_ptr<BasicBlock>>& blocks, const RootFunctor& forEachRoot)
+// instead of O(sum of indegree^2). A block's edges are all added while it is being processed, so
+// remembering the last block that added itself to each successor dedups repeated edges (a Switch
+// with the same target twice) without scanning the predecessor list.
+template<typename BasicBlock, typename Roots>
+void recomputePredecessorsFromRoots(Vector<std::unique_ptr<BasicBlock>>& blocks, const Roots& roots)
 {
     clearPredecessors(blocks);
     BitVector visited;
     visited.ensureSize(blocks.size());
+    Vector<BasicBlock*> lastPredecessorAdded;
+    lastPredecessorAdded.fill(nullptr, blocks.size());
     Vector<BasicBlock*, 16> worklist;
-    forEachRoot([&](BasicBlock* root) {
+    for (BasicBlock* root : roots) {
         if (visited.quickSet(root->index()))
-            return;
+            continue;
         worklist.append(root);
         while (!worklist.isEmpty()) {
             BasicBlock* block = worklist.takeLast();
             for (BasicBlock* successor : block->successorBlocks()) {
-                auto& predecessors = successor->predecessors();
-                if (!predecessors.isEmpty() && predecessors.last() == block)
+                if (lastPredecessorAdded[successor->index()] == block)
                     continue;
-                predecessors.append(block);
+                lastPredecessorAdded[successor->index()] = block;
+                successor->predecessors().append(block);
                 if (!visited.quickSet(successor->index()))
                     worklist.append(successor);
             }
         }
-    });
+    }
 }
 
 template<typename BasicBlock>
 void recomputePredecessors(Vector<std::unique_ptr<BasicBlock>>& blocks)
 {
-    recomputePredecessorsFromRoots(blocks, [&](auto&& functor) { functor(blocks[0].get()); });
+    recomputePredecessorsFromRoots(blocks, std::array { blocks[0].get() });
 }
 
 template<typename BasicBlock>

@@ -1871,6 +1871,7 @@ static_assert(sizeof(Arg) == 16, "Arg is expected to stay 16 bytes.");
 
 namespace WTF {
 
+static_assert(std::is_trivially_copyable_v<JSC::B3::Air::Arg>);
 template<> struct VectorTraits<JSC::B3::Air::Arg> : VectorTraitsBase<false, void> {
     static constexpr bool canMoveWithMemcpy = true;
     static constexpr bool canCopyWithMemcpy = true;

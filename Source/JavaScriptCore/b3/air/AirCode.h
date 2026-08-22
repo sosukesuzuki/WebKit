@@ -345,9 +345,6 @@ public:
 
     bool shouldPreserveB3Origins() const { return m_preserveB3Origins; }
     void forcePreservationOfB3Origins() { m_preserveB3Origins = true; }
-    // True when code generation must record a PC->Origin map. Unlike shouldPreserveB3Origins(), this does
-    // not imply that every B3 Value survives lowering: see Procedure::freeUnneededB3ValuesAfterLowering().
-    bool needsPCToOriginMap() const;
 
     bool NODELETE usesSIMD() const;
 

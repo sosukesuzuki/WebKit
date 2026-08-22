@@ -33,10 +33,10 @@
 #include "B3BasicBlockInlines.h"
 #include "B3CCallValue.h"
 #include "B3FrequentedBlock.h"
+#include "B3InsertionSet.h"
 #include "B3Procedure.h"
 #include "B3SwitchValue.h"
 #include "B3TypedPointer.h"
-#include "B3InsertionSet.h"
 #include "B3ValueKey.h"
 #include "B3Width.h"
 #include "FTLAbbreviatedTypes.h"
@@ -108,7 +108,7 @@ public:
     LValue NODELETE constBool(bool value);
     // Constants are pooled per procedure and inserted at the top of the prologue block, which
     // dominates everything; this is the shape B3's ReduceStrength canonicalizes to anyway.
-    void initializeConstants(B3::Procedure&, B3::BasicBlock* prologue);
+    void initializeConstants(B3::BasicBlock* prologue);
     void flushConstants();
     LValue constInt32(int32_t value);
 
@@ -476,11 +476,6 @@ public:
 #endif
     B3::Procedure& m_proc;
 
-    LValue pooledConstant(B3::Opcode, B3::Type, int64_t bits);
-    UncheckedKeyHashMap<B3::ValueKey, LValue> m_constantPool;
-    B3::InsertionSet m_constantInsertionSet;
-    B3::BasicBlock* m_constantsBlock { nullptr };
-
     DFG::Node* m_origin { nullptr };
     LBasicBlock m_block { nullptr };
     LBasicBlock m_nextBlock { nullptr };
@@ -490,7 +485,12 @@ public:
     double m_frequency { 1 };
 
 private:
+    LValue pooledConstant(B3::Type, int64_t bits);
+
     OrderMaker<LBasicBlock> m_blockOrder;
+    UncheckedKeyHashMap<B3::ValueKey, LValue> m_constantPool;
+    B3::InsertionSet m_constantInsertionSet;
+    B3::BasicBlock* m_constantsBlock { nullptr };
 };
 
 template<typename... Params>
