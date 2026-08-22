@@ -236,7 +236,7 @@
     </table></div>
 
     <h3>実装した修正とその効果</h3>
-    <p>8 件の変更を、それぞれ別コミットとしてブランチに入れた。検証は <code>testb3</code>（216,555 チェック、全通過）、<code>testair</code>（276、全通過）、pglite テスト（テスト自身がクエリ結果を検証）、上記 JetStream2 の実行、そして <code>JSTests/stress</code> から固定乱数で選んだ 400 本を FTL eager モードで実行し、対照ビルドと修正ビルドの結果が完全に一致することを確認した（372 通過；同じ 28 本がハーネス要因で両方不合格）。</p>
+    <p>8 件の変更を、それぞれ別コミットとしてブランチに入れ、その後に再利用・簡素化レビューに基づく整理コミットを 1 つ加えた（FTL のプールが <code>CommonValues</code> の定数も返すようにし、PC→Origin マップやダンプが origin を必要とする場合に <code>Air::validate</code> がすべての <code>Inst::origin</code> が生きた値であることを確認し、小さな未ソート挿入集合は確保なしのバブルソートのままにした）。検証は <code>testb3</code>（216,555 チェック、全通過）、<code>testair</code>（276、全通過）、pglite テスト（テスト自身がクエリ結果を検証）、上記 JetStream2 の実行、そして <code>JSTests/stress</code> から固定乱数で選んだ 400 本を FTL eager モードで実行し、対照ビルドと修正ビルドの結果が完全に一致することを確認した（372 通過；同じ 28 本がハーネス要因で両方不合格）。</p>
     <div class="tablewrap"><table>
       <thead><tr><th>修正</th><th>知見</th><th>変更内容</th><th>実測効果</th></tr></thead>
       <tbody>
@@ -246,8 +246,8 @@
         <tr><td>F4</td><td>19</td><td><code>Air::Inst/Arg/Tmp</code> に <code>VectorTraits</code> を与え memcpy で再配置</td><td>Air DCE −9.8% / −16.1%、Air Liveness −5.6% / −5.4%、greedy −4.8% / −4.9%（F2・F3 と合わせて）</td></tr>
         <tr><td>F5</td><td>1</td><td><code>buildExitArguments</code> がプルーニング済み availability map を 1 回のコピーで作る（<code>filterByLiveness</code> を const 化）</td><td><code>buildExitArguments</code> 107 → 92 ms（−14.3%）；FTL lowering −3.2%（σ 5%）</td></tr>
         <tr><td>F6</td><td>3</td><td>FTL の <code>Output</code> が OMG と同様に手続きごとの定数プールを持ち、<code>InsertionSet</code> で prologue ブロックに挿入</td><td>初期 B3 値 −19%、定数 −68%；reduceStrength −8.1%；2 回目走査の値 −18.7%；B3 合計 −6.1%</td></tr>
-        <tr><td>F7</td><td>15</td><td><code>recomputePredecessors</code> が各ブロックを 1 回だけ訪問（visited <code>BitVector</code>、連続エッジの重複排除）；Air の複数エントリポイントでは visited を共有</td><td>ノイズ内（フェーズ自体が全体の 1%）</td></tr>
-        <tr><td>F9</td><td>2</td><td><code>Procedure::setNeedsPCToOriginMap()</code> がグラフ全体の保持を強制しなくなり、Air の PC→Origin 記録は新設の <code>Code::needsPCToOriginMap()</code> を見る；<code>freeUnneededB3ValuesAfterLowering</code> は Origin ごとに既存の値を 1 つ代表として残し、他の <code>Inst::origin</code> をそれに付け替えて残りを解放する（スタブを新規確保する版も試したが走査コストは同じで確保が 41 万回増えるだけだった）。<code>forcePreservationOfB3Origins()</code> の意味は変えない——ダンプ、逆アセンブラ、<code>testb3</code> の <code>testTrappingStoreElimination</code> が依存している</td><td>Air の間保持される B3 バイト：pglite で 53.4 → 30.8 MB（−42%）、JetStream2 wasm テストで 6.3 → 1.65 MB（−74%）；コストは OMG 2,288 件あたり約 55 ms（ハッシュ表の走査；OMG B3+Air の約 1%）で、大きな関数ではデータが支持するトレードオフ、不要ならゲートしやすい</td></tr>
+        <tr><td>F7</td><td>15</td><td><code>recomputePredecessors</code> が各ブロックを 1 回だけ訪問（visited <code>BitVector</code>；同じ successor への重複エッジは「最後に自分を追加したブロック」を覚えて排除するので、同じ target を 2 回持つ <code>Switch</code> は隣接していなくても predecessor が 1 件になる）；Air の複数エントリポイントはルートとして渡す</td><td>ノイズ内（フェーズ自体が全体の 1%）</td></tr>
+        <tr><td>F9</td><td>2</td><td><code>Procedure::setNeedsPCToOriginMap()</code> がグラフ全体の保持を強制しなくなり、Air の PC→Origin 記録は <code>shouldPreserveB3Origins()</code> ではなく <code>proc().needsPCToOriginMap()</code> を見る（マップの消費側はすべて既に Procedure 側のフラグで判定している）；<code>freeUnneededB3ValuesAfterLowering</code> は Origin ごとに既存の値を 1 つ代表として残し、他の <code>Inst::origin</code> をそれに付け替えて残りを解放する（スタブを新規確保する版も試したが走査コストは同じで確保が 41 万回増えるだけだった）。<code>forcePreservationOfB3Origins()</code> の意味は変えない——ダンプ、逆アセンブラ、<code>testb3</code> の <code>testTrappingStoreElimination</code> が依存している</td><td>Air の間保持される B3 バイト：pglite で 53.4 → 30.8 MB（−42%）、JetStream2 wasm テストで 6.3 → 1.65 MB（−74%）；コストは OMG 2,288 件あたり約 55 ms（ハッシュ表の走査；OMG B3+Air の約 1%）で、大きな関数ではデータが支持するトレードオフ、不要ならゲートしやすい</td></tr>
       </tbody>
     </table></div>
     <div class="tablewrap"><table>
