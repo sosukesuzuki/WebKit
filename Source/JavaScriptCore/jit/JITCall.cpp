@@ -364,7 +364,7 @@ void JIT::emitIteratorOpenGeneric(const JSInstruction* instruction)
     GetByIdModeMetadata modeMetadata = bytecode.metadata(m_profiledCodeBlock).m_modeMetadata;
 
     CacheType cacheType = CacheType::GetByIdSelf;
-    if (modeMetadata.mode == GetByIdMode::ProtoLoad)
+    if (modeMetadata.isPrototypeLoadMode())
         cacheType = CacheType::GetByIdPrototype;
 
     JITSlowPathCall slowPathCall(this, tryFastFunction);

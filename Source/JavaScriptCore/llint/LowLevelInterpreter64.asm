@@ -1645,11 +1645,18 @@ macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slo
     bbneq t1, constexpr GetByIdMode::Default, .opGetByIdProtoLoad
     loadi JSCell::m_structureID[t3], t1
     loadi %opcodeStruct%::Metadata::%modeMetadataName%.defaultMode.structureID[t2], t0
-    bineq t0, t1, slowLabel
+    bineq t0, t1, .opGetByIdDefaultSecondEntry
     loadis %opcodeStruct%::Metadata::%modeMetadataName%.defaultMode.cachedOffset[t2], t1
+.opGetByIdDefaultLoad:
     loadPropertyAtVariableOffset(t1, t3, t0)
     valueProfile(size, opcodeStruct, valueProfileName, t0, t2)
     return(t0)
+
+.opGetByIdDefaultSecondEntry:
+    loadi %opcodeStruct%::Metadata::%modeMetadataName%.defaultMode.secondStructureID[t2], t0
+    bineq t0, t1, slowLabel
+    loadhsi %opcodeStruct%::Metadata::%modeMetadataName%.defaultMode.secondCachedOffset[t2], t1
+    jmp .opGetByIdDefaultLoad
 
 .opGetByIdProtoLoad:
     bbneq t1, constexpr GetByIdMode::ProtoLoad, .opGetByIdArrayLength
@@ -1663,7 +1670,7 @@ macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slo
     return(t0)
 
 .opGetByIdArrayLength:
-    bbneq t1, constexpr GetByIdMode::ArrayLength, .opGetByIdUnset
+    bbneq t1, constexpr GetByIdMode::ArrayLength, .opGetByIdProtoLoadChain
     loadb JSCell::m_indexingTypeAndMisc[t3], t0
     btiz t0, IsArray, slowLabel
     btiz t0, IndexingShapeMask, slowLabel
@@ -1671,6 +1678,36 @@ macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slo
     loadi -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0], t0
     bilt t0, 0, slowLabel
     orq numberTag, t0
+    valueProfile(size, opcodeStruct, valueProfileName, t0, t2)
+    return(t0)
+
+.opGetByIdProtoLoadChain:
+    bbneq t1, constexpr GetByIdMode::ProtoLoadChain, .opGetByIdUnset
+    loadi JSCell::m_structureID[t3], t1
+    loadi %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadChainMode.structureID[t2], t0
+    bieq t0, t1, .opGetByIdProtoLoadChainWalk
+    loadi %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadChainMode.secondStructureID[t2], t0
+    bineq t0, t1, slowLabel
+.opGetByIdProtoLoadChainWalk:
+    # t1 holds the receiver's structure ID. Follow Structure::m_prototype hopsToHolder times; the
+    # watchpoints behind this cache guarantee every structure on the way is the one we saw when caching.
+    loadb %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadChainMode.hopsToHolder[t2], t0
+    if ADDRESS64
+        leap _g_config, t5
+        loadp JSCConfigOffset + constexpr JSC::offsetOfJSCConfigStructureIDBase[t5], t5
+    end
+.opGetByIdProtoLoadChainLoop:
+    if ADDRESS64
+        addp t5, t1
+    end
+    loadq Structure::m_prototype[t1], t3
+    subi 1, t0
+    btiz t0, .opGetByIdProtoLoadChainDone
+    loadi JSCell::m_structureID[t3], t1
+    jmp .opGetByIdProtoLoadChainLoop
+.opGetByIdProtoLoadChainDone:
+    loadis %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadChainMode.cachedOffset[t2], t1
+    loadPropertyAtVariableOffset(t1, t3, t0)
     valueProfile(size, opcodeStruct, valueProfileName, t0, t2)
     return(t0)
 

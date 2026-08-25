@@ -791,6 +791,43 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id_with_this)
     LLINT_RETURN_PROFILED(result);
 }
 
+// Counts the prototype loads that take the LLInt from an object with this structure to the holder when it
+// follows Structure::m_prototype at each step (see GetByIdModeMetadataProtoLoadChain). Returns 0 if the chain
+// cannot be walked that way.
+static unsigned prototypeHopsToHolder(Structure* structure, JSObject* holder)
+{
+    unsigned hops = 0;
+    while (true) {
+        if (!structure->isObject() || structure->hasPolyProto())
+            return 0;
+        JSValue prototype = structure->storedPrototype();
+        if (!prototype.isObject())
+            return 0;
+        if (++hops > GetByIdModeMetadataProtoLoadChain::maxHopsToHolder)
+            return 0;
+        JSObject* object = asObject(prototype);
+        if (object == holder)
+            return hops;
+        structure = object->structure();
+    }
+}
+
+// ProtoLoad mode has no room for a miss count (the cached slot overlaps it), so on its first miss a site moves
+// to ProtoLoadChain mode, which counts misses and can hold a second structure. Structures the chain walk
+// cannot serve stay in ProtoLoad mode; their sites keep the old behavior of never caching anything else.
+static void convertProtoLoadModeToChainMode(CodeBlock* codeBlock, GetByIdModeMetadata& metadata)
+{
+    ASSERT(metadata.mode == GetByIdMode::ProtoLoad);
+    auto& protoLoad = metadata.protoLoadMode;
+    ASSERT(protoLoad.structureID);
+    JSObject* holder = std::bit_cast<JSObject*>(static_cast<uintptr_t>(protoLoad.cachedSlot));
+    unsigned hops = prototypeHopsToHolder(protoLoad.structureID.decode(), holder);
+    if (!hops)
+        return;
+    ConcurrentJSLocker locker(codeBlock->m_lock);
+    metadata.setProtoLoadChainMode(protoLoad.structureID, StructureID(), protoLoad.cachedOffset, hops, 0);
+}
+
 static void setupGetByIdPrototypeCache(JSGlobalObject* globalObject, VM& vm, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex, GetByIdModeMetadata& metadata, JSCell* baseCell, PropertySlot& slot, const Identifier& ident)
 {
     Structure* structure = baseCell->structure();
@@ -807,34 +844,74 @@ static void setupGetByIdPrototypeCache(JSGlobalObject* globalObject, VM& vm, Cod
         structure->flattenDictionaryStructure(vm, uncheckedDowncast<JSObject>(baseCell));
     }
 
-    prepareChainForCaching(globalObject, baseCell, ident.impl(), slot);
-
-    ObjectPropertyConditionSet conditions;
-    if (slot.isUnset())
-        conditions = generateConditionsForPropertyMiss(vm, codeBlock, globalObject, structure, ident.impl());
-    else
-        conditions = generateConditionsForPrototypePropertyHit(vm, codeBlock, globalObject, structure, slot.slotBase(), ident.impl());
-
-    if (!conditions.isValid())
-        return;
-
-    PropertyOffset offset = invalidOffset;
-    CodeBlock::StructureWatchpointMap& watchpointMap = codeBlock->llintGetByIdWatchpointMap();
-    FixedVector<LLIntPrototypeLoadAdaptiveStructureWatchpoint> watchpoints(conditions.size());
-    unsigned index = 0;
-    for (ObjectPropertyCondition condition : conditions) {
-        auto& watchpoint = watchpoints[index++];
-        if (!condition.isWatchable(PropertyCondition::MakeNoChanges))
+    // Only ProtoLoadChain mode needs the hop count, and it can only take structures the chain walk serves.
+    // Decide that before paying for watchpoints, so a site that keeps seeing other structures stays cheap.
+    unsigned hops = 0;
+    if (metadata.mode == GetByIdMode::ProtoLoadChain) {
+        hops = slot.isUnset() ? 0 : prototypeHopsToHolder(structure, slot.slotBase());
+        if (!hops)
             return;
-        if (condition.condition().kind() == PropertyCondition::Presence)
-            offset = condition.condition().offset();
-        watchpoint.initialize(codeBlock, condition, bytecodeIndex);
-        watchpoint.install(vm);
     }
 
-    ASSERT((offset == invalidOffset) == slot.isUnset());
-    auto result = watchpointMap.add(std::make_tuple(structure->id(), bytecodeIndex), WTF::move(watchpoints));
-    ASSERT_UNUSED(result, result.isNewEntry);
+    CodeBlock::StructureWatchpointMap& watchpointMap = codeBlock->llintGetByIdWatchpointMap();
+    auto key = std::make_tuple(structure->id(), bytecodeIndex);
+    PropertyOffset offset = invalidOffset;
+
+    // An own-property hit or an invalidation can demote this site back to Default mode without
+    // discarding the watchpoints we installed for this structure. If they are all still armed, the
+    // conditions they guard still hold, so re-arming the cache only needs the offset they recorded.
+    auto existing = watchpointMap.find(key);
+    if (existing != watchpointMap.end()) {
+        bool stillValid = true;
+        JSObject* holder = nullptr;
+        for (auto& watchpoint : existing->value) {
+            if (!watchpoint.isOnList()) {
+                stillValid = false;
+                break;
+            }
+            if (watchpoint.key().condition().kind() == PropertyCondition::Presence) {
+                offset = watchpoint.key().condition().offset();
+                holder = watchpoint.key().object();
+            }
+        }
+        bool matchesSlot = slot.isUnset() ? !holder : (holder == slot.slotBase() && offset == slot.cachedOffset());
+        if (!stillValid || !matchesSlot) {
+            // The chain changed underneath the old watchpoints (or they never described this slot);
+            // drop them and start over below.
+            watchpointMap.remove(existing);
+            existing = watchpointMap.end();
+            offset = invalidOffset;
+        }
+    }
+
+    if (existing == watchpointMap.end()) {
+        prepareChainForCaching(globalObject, baseCell, ident.impl(), slot);
+
+        ObjectPropertyConditionSet conditions;
+        if (slot.isUnset())
+            conditions = generateConditionsForPropertyMiss(vm, codeBlock, globalObject, structure, ident.impl());
+        else
+            conditions = generateConditionsForPrototypePropertyHit(vm, codeBlock, globalObject, structure, slot.slotBase(), ident.impl());
+
+        if (!conditions.isValid())
+            return;
+
+        FixedVector<LLIntPrototypeLoadAdaptiveStructureWatchpoint> watchpoints(conditions.size());
+        unsigned index = 0;
+        for (ObjectPropertyCondition condition : conditions) {
+            auto& watchpoint = watchpoints[index++];
+            if (!condition.isWatchable(PropertyCondition::MakeNoChanges))
+                return;
+            if (condition.condition().kind() == PropertyCondition::Presence)
+                offset = condition.condition().offset();
+            watchpoint.initialize(codeBlock, condition, bytecodeIndex);
+            watchpoint.install(vm);
+        }
+
+        ASSERT((offset == invalidOffset) == slot.isUnset());
+        auto result = watchpointMap.add(key, WTF::move(watchpoints));
+        ASSERT_UNUSED(result, result.isNewEntry);
+    }
 
     {
         ConcurrentJSLocker locker(codeBlock->m_lock);
@@ -842,7 +919,7 @@ static void setupGetByIdPrototypeCache(JSGlobalObject* globalObject, VM& vm, Cod
             metadata.setUnsetMode(structure);
         else {
             ASSERT(slot.isValue());
-            metadata.setProtoLoadMode(structure, offset, slot.slotBase());
+            metadata.cachePrototypeLoad(structure, offset, slot.slotBase(), hops);
         }
     }
     vm.writeBarrier(codeBlock);
@@ -873,6 +950,9 @@ static JSValue performLLIntGetByID(BytecodeIndex bytecodeIndex, CodeBlock* codeB
             case GetByIdMode::ProtoLoad:
                 oldStructureID = metadata.protoLoadMode.structureID;
                 break;
+            case GetByIdMode::ProtoLoadChain:
+                oldStructureID = metadata.protoLoadChainMode.structureID;
+                break;
             default:
                 oldStructureID = StructureID();
             }
@@ -891,21 +971,17 @@ static JSValue performLLIntGetByID(BytecodeIndex bytecodeIndex, CodeBlock* codeB
         Structure* structure = baseCell->structure();
         if (slot.isValue() && slot.slotBase() == baseValue) {
             ConcurrentJSLocker locker(codeBlock->m_lock);
-            // Start out by clearing out the old cache.
-            metadata.clearToDefaultModeWithoutCache();
-
-            // Prevent the prototype cache from ever happening.
-            metadata.hitCountForLLIntCaching = 0;
-        
             if (structure->propertyAccessesAreCacheable() && !structure->needImpurePropertyWatchpoint()) {
-                metadata.defaultMode.structureID = structure->id();
-                metadata.defaultMode.cachedOffset = slot.cachedOffset();
+                metadata.cacheOwnPropertyLoad(structure, slot.cachedOffset());
                 vm.writeBarrier(codeBlock);
-            }
-        } else if (metadata.hitCountForLLIntCaching && slot.isValue()) [[unlikely]] {
+            } else
+                metadata.clearToDefaultModeWithoutCache();
+        } else if (slot.isValue()) [[unlikely]] {
             ASSERT(slot.slotBase() != baseValue);
 
-            if (!(--metadata.hitCountForLLIntCaching))
+            if (metadata.mode == GetByIdMode::ProtoLoad)
+                convertProtoLoadModeToChainMode(codeBlock, metadata);
+            else if (metadata.hitCountForLLIntCaching && !(--metadata.hitCountForLLIntCaching))
                 setupGetByIdPrototypeCache(globalObject, vm, codeBlock, bytecodeIndex, metadata, baseCell, slot, ident);
         }
     } else if (Options::useLLIntICs() && isJSArray(baseValue) && ident == vm.propertyNames->length)

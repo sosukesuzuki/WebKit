@@ -61,15 +61,22 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
     auto instruction = profiledBlock->instructions().at(bytecodeIndex.offset());
 
     StructureID structureID;
+    StructureID secondStructureID;
     const Identifier* identifier = nullptr;
+    auto readDefaultMode = [&] (const GetByIdModeMetadata& modeMetadata) {
+        // FIXME: We should not just bail if we see a get_by_id_proto_load.
+        // https://bugs.webkit.org/show_bug.cgi?id=158039
+        if (modeMetadata.mode != GetByIdMode::Default)
+            return false;
+        structureID = modeMetadata.defaultMode.structureID;
+        secondStructureID = modeMetadata.defaultMode.secondStructureID;
+        return true;
+    };
     switch (instruction->opcodeID()) {
     case op_get_by_id: {
         auto& metadata = instruction->as<OpGetById>().metadata(profiledBlock);
-        // FIXME: We should not just bail if we see a get_by_id_proto_load.
-        // https://bugs.webkit.org/show_bug.cgi?id=158039
-        if (metadata.m_modeMetadata.mode != GetByIdMode::Default)
+        if (!readDefaultMode(metadata.m_modeMetadata))
             return GetByStatus(NoInformation, false);
-        structureID = metadata.m_modeMetadata.defaultMode.structureID;
 
         identifier = &(profiledBlock->identifier(instruction->as<OpGetById>().m_property));
         break;
@@ -77,11 +84,8 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
 
     case op_get_length: {
         auto& metadata = instruction->as<OpGetLength>().metadata(profiledBlock);
-        // FIXME: We should not just bail if we see a get_by_id_proto_load.
-        // https://bugs.webkit.org/show_bug.cgi?id=158039
-        if (metadata.m_modeMetadata.mode != GetByIdMode::Default)
+        if (!readDefaultMode(metadata.m_modeMetadata))
             return GetByStatus(NoInformation, false);
-        structureID = metadata.m_modeMetadata.defaultMode.structureID;
 
         identifier = &vm.propertyNames->length;
         break;
@@ -104,11 +108,8 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         ASSERT(bytecodeIndex.checkpoint() == OpIteratorOpen::getNext);
         auto& metadata = instruction->as<OpIteratorOpen>().metadata(profiledBlock);
 
-        // FIXME: We should not just bail if we see a get_by_id_proto_load.
-        // https://bugs.webkit.org/show_bug.cgi?id=158039
-        if (metadata.m_modeMetadata.mode != GetByIdMode::Default)
+        if (!readDefaultMode(metadata.m_modeMetadata))
             return GetByStatus(NoInformation, false);
-        structureID = metadata.m_modeMetadata.defaultMode.structureID;
         identifier = &vm.propertyNames->next;
         break;
     }
@@ -117,10 +118,8 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         ASSERT(bytecodeIndex.checkpoint() == OpAsyncIteratorOpen::getNext);
         auto& metadata = instruction->as<OpAsyncIteratorOpen>().metadata(profiledBlock);
 
-        // FIXME: We should not just bail if we see a get_by_id_proto_load.
-        if (metadata.m_modeMetadata.mode != GetByIdMode::Default)
+        if (!readDefaultMode(metadata.m_modeMetadata))
             return GetByStatus(NoInformation, false);
-        structureID = metadata.m_modeMetadata.defaultMode.structureID;
         identifier = &vm.propertyNames->next;
         break;
     }
@@ -128,15 +127,13 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
     case op_iterator_next: {
         auto& metadata = instruction->as<OpIteratorNext>().metadata(profiledBlock);
         if (bytecodeIndex.checkpoint() == OpIteratorNext::getDone) {
-            if (metadata.m_doneModeMetadata.mode != GetByIdMode::Default)
+            if (!readDefaultMode(metadata.m_doneModeMetadata))
                 return GetByStatus(NoInformation, false);
-            structureID = metadata.m_doneModeMetadata.defaultMode.structureID;
             identifier = &vm.propertyNames->done;
         } else {
             ASSERT(bytecodeIndex.checkpoint() == OpIteratorNext::getValue);
-            if (metadata.m_valueModeMetadata.mode != GetByIdMode::Default)
+            if (!readDefaultMode(metadata.m_valueModeMetadata))
                 return GetByStatus(NoInformation, false);
-            structureID = metadata.m_valueModeMetadata.defaultMode.structureID;
             identifier = &vm.propertyNames->value;
         }
         break;
@@ -146,15 +143,13 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         auto& metadata = instruction->as<OpInstanceof>().metadata(profiledBlock);
         switch (bytecodeIndex.checkpoint()) {
         case OpInstanceof::getHasInstance:
-            if (metadata.m_hasInstanceModeMetadata.mode != GetByIdMode::Default)
+            if (!readDefaultMode(metadata.m_hasInstanceModeMetadata))
                 return GetByStatus(NoInformation, false);
-            structureID = metadata.m_hasInstanceModeMetadata.defaultMode.structureID;
             identifier = &vm.propertyNames->hasInstanceSymbol;
             break;
         case OpInstanceof::getPrototype:
-            if (metadata.m_prototypeModeMetadata.mode != GetByIdMode::Default)
+            if (!readDefaultMode(metadata.m_prototypeModeMetadata))
                 return GetByStatus(NoInformation, false);
-            structureID = metadata.m_prototypeModeMetadata.defaultMode.structureID;
             identifier = &vm.propertyNames->prototype;
             break;
         default:
@@ -178,20 +173,24 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
     if (!structureID)
         return GetByStatus(NoInformation, false);
 
-    Structure* structure = structureID.decode();
-
-    if (structure->takesSlowPathInDFGForImpureProperty())
-        return GetByStatus(NoInformation, false);
-
-    unsigned attributes;
-    PropertyOffset offset = structure->getConcurrently(identifier->impl(), attributes);
-    if (!isValidOffset(offset))
-        return GetByStatus(NoInformation, false);
-    if (attributes & PropertyAttribute::CustomAccessorOrValue)
-        return GetByStatus(NoInformation, false);
-
     GetByStatus result(Simple, false);
-    result.appendVariant(GetByVariant(nullptr, StructureSet(structure), /* viaGlobalProxy */ false, offset));
+    for (StructureID candidate : { structureID, secondStructureID }) {
+        if (!candidate)
+            continue;
+        Structure* structure = candidate.decode();
+
+        if (structure->takesSlowPathInDFGForImpureProperty())
+            return GetByStatus(NoInformation, false);
+
+        unsigned attributes;
+        PropertyOffset offset = structure->getConcurrently(identifier->impl(), attributes);
+        if (!isValidOffset(offset))
+            return GetByStatus(NoInformation, false);
+        if (attributes & PropertyAttribute::CustomAccessorOrValue)
+            return GetByStatus(NoInformation, false);
+
+        result.appendVariant(GetByVariant(nullptr, StructureSet(structure), /* viaGlobalProxy */ false, offset));
+    }
     return result;
 }
 
