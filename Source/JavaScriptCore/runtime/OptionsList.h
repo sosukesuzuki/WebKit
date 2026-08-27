@@ -309,6 +309,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, breakOnThrow, false, Normal, nullptr) \
     \
     v(Unsigned, maximumOptimizationCandidateBytecodeCost, 100000, Normal, nullptr) \
+    v(Bool, useGeneratorBulkSaveRestore, true, Normal, "Save and restore generator locals with bulk bytecodes instead of per-local scope ops."_s) \
     \
     v(Unsigned, maximumFunctionForCallInlineCandidateBytecodeCostForDFG, 80, Normal, nullptr) \
     v(Unsigned, maximumFunctionForClosureCallInlineCandidateBytecodeCostForDFG, 80, Normal, nullptr) \
