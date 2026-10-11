@@ -167,6 +167,9 @@ Structure* InternalFunction::createSubclassStructure(JSGlobalObject* globalObjec
             // JSFunction as the new.target. Thus, we don't care about the cost of looking up the structure from our hash table every time.
             return baseGlobalObject->structureCache().emptyStructureForPrototypeFromBaseStructure(baseGlobalObject, prototype, baseClass);
         }
+        // GetPrototypeFromConstructor performs GetFunctionRealm after getting .prototype, which could have revoked a Proxy.
+        getFunctionRealm(globalObject, newTarget);
+        RETURN_IF_EXCEPTION(scope, nullptr);
         return baseClass;
     }
 
