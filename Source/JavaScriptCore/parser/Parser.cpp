@@ -1644,6 +1644,18 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     }
     
     if (!match(SEMICOLON)) {
+        if (isAwaitFor && matchContextualKeyword(m_vm.propertyNames->async)) {
+            // Unlike for-of, for-await-of does not have [lookahead != `async` `of`] restriction. So `async` is an IdentifierReference here.
+            SavePoint savePoint = createSavePoint(context);
+            const Identifier* ident = m_token.m_data.ident;
+            next();
+            if (matchContextualKeyword(m_vm.propertyNames->of)) {
+                constexpr bool isEval = false;
+                decls = createResolveAndUseVariable(context, ident, isEval, declsStart, declLocation);
+                goto enumerationLoop;
+            }
+            restoreSavePoint(context, savePoint);
+        }
         if (match(OPENBRACE) || match(OPENBRACKET)) {
             SavePoint savePoint = createSavePoint(context);
             pattern = tryParseDestructuringPatternExpression(context, AssignmentContext::AssignmentExpression);

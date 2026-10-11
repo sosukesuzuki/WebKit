@@ -148,9 +148,6 @@ test/language/statements/class/elements/private-class-field-on-nonextensible-obj
   strict mode: 3
 test/language/statements/class/subclass/private-class-field-on-nonextensible-return-override.js:
   strict mode: 3
-test/language/statements/for-await-of/head-lhs-async.js:
-  default: 3
-  strict mode: 3
 test/language/statements/with/get-binding-value-call-with-proxy-env.js:
   default: 3
 test/language/statements/with/get-binding-value-idref-with-proxy-env.js:
