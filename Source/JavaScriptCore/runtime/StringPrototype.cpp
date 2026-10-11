@@ -365,11 +365,23 @@ JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSStrin
             JSString* replacementVal = replaceValue.isString() ? asString(replaceValue) : nullptr;
             RELEASE_AND_RETURN(scope, replaceAllWithStringUsingRegExpSearch(vm, globalObject, string, source, regExp, replacementVal, replacementString));
         }
-        RELEASE_AND_RETURN(scope, replaceOneWithStringUsingRegExpSearch(vm, globalObject, string, source, regExp, replacementString));
+        RELEASE_AND_RETURN(scope, replaceOneWithStringUsingRegExpSearch(vm, globalObject, string, source, regExpObject, replacementString));
     }
 
     size_t lastIndex = 0;
     unsigned startPosition = 0;
+
+    // A sticky RegExp reads and writes lastIndex even if it is not global.
+    bool isStickyAndNotGlobal = !global && regExp->sticky();
+    if (isStickyAndNotGlobal) [[unlikely]] {
+        startPosition = getRegExpObjectLastIndexAsUnsigned(globalObject, regExpObject, StringView(source));
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        if (startPosition == UINT_MAX) {
+            regExpObject->setLastIndex(globalObject, 0);
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            return string;
+        }
+    }
 
     Vector<Range<int32_t>, 16> sourceRanges;
     Vector<String, 16> replacements;
@@ -484,6 +496,10 @@ JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSStrin
             int* ovector;
             MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, source, startPosition, &ovector);
             RETURN_IF_EXCEPTION(scope, nullptr);
+            if (isStickyAndNotGlobal) [[unlikely]] {
+                regExpObject->setLastIndex(globalObject, result ? result.end : 0);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+            }
             if (!result)
                 break;
 

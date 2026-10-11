@@ -34,7 +34,7 @@
 #include "StringReplaceCacheInlines.h"
 #include "RegExpGlobalData.h"
 #include "RegExpGlobalDataInlines.h"
-#include "RegExpObject.h"
+#include "RegExpObjectInlines.h"
 #include <wtf/Range.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringSearch.h>
@@ -1513,18 +1513,36 @@ ALWAYS_INLINE JSString* replaceAllWithStringUsingRegExpSearch(VM& vm, JSGlobalOb
     RELEASE_AND_RETURN(scope, jsString(vm, resultBuilder.toString()));
 }
 
-ALWAYS_INLINE JSString* replaceOneWithStringUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp, const String& replacementString)
+ALWAYS_INLINE JSString* replaceOneWithStringUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExpObject* regExpObject, const String& replacementString)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (replacementString.isEmpty()) {
+    RegExp* regExp = regExpObject->regExp();
+    ASSERT(!regExp->global());
+
+    // A sticky RegExp reads and writes lastIndex even if it is not global.
+    bool sticky = regExp->sticky();
+    unsigned startPosition = 0;
+    if (sticky) [[unlikely]] {
+        startPosition = getRegExpObjectLastIndexAsUnsigned(globalObject, regExpObject, source);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        if (startPosition == UINT_MAX) {
+            regExpObject->setLastIndex(globalObject, 0);
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            return string;
+        }
+    } else if (replacementString.isEmpty()) {
         if (auto* result = tryTrimSpaces(vm, globalObject, source, string, regExp))
             return result;
     }
 
     int* ovector;
-    MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, source, 0, &ovector);
+    MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, source, startPosition, &ovector);
     RETURN_IF_EXCEPTION(scope, nullptr);
+    if (sticky) [[unlikely]] {
+        regExpObject->setLastIndex(globalObject, result ? result.end : 0);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+    }
     if (!result)
         return string;
 

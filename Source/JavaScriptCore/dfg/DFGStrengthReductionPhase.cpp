@@ -1269,6 +1269,11 @@ private:
                 break;
             }
 
+            if (regExp->sticky() && !regExp->global()) {
+                dataLogLnIf(verbose, "Giving up because a sticky non-global regexp reads and writes lastIndex.");
+                break;
+            }
+
             StringBuilder builder;
 
             unsigned lastIndex = 0;
