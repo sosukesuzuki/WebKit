@@ -185,9 +185,6 @@ test/staging/sm/lexical-environment/block-scoped-functions-annex-b-label.js:
   default: 3
 test/staging/sm/lexical-environment/block-scoped-functions-deprecated-redecl.js:
   default: 3
-test/staging/sm/lexical-environment/for-loop.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/misc/future-reserved-words.js:
   default: 3
 test/staging/sm/module/await-restricted-nested.js:

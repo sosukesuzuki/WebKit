@@ -1031,7 +1031,8 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseVariableDecl
             }
             failIfFalse(pattern, "Cannot parse this destructuring pattern");
             hasInitializer = match(EQUAL);
-            failIfTrue(declarationListContext == VarDeclarationContext && !hasInitializer, "Expected an initializer in destructuring variable declaration");
+            // Only the ForBinding / ForDeclaration of for-in and for-of can omit the initializer.
+            failIfTrue(!hasInitializer && (declarationListContext == VarDeclarationContext || (!match(INTOKEN) && !matchContextualKeyword(m_vm.propertyNames->of))), "Expected an initializer in destructuring variable declaration");
             lastPattern = pattern;
             if (hasInitializer) {
                 next(TreeBuilder::DontBuildStrings); // consume '='
