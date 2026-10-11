@@ -3529,8 +3529,14 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExpressionOrL
     Scope* labelScope = currentScope();
     for (auto& label : labels)
         pushLabel(label.m_ident, isLoop);
-    m_immediateParentAllowsFunctionDeclarationInStatement = allowFunctionDeclarationAsStatement;
-    TreeStatement statement = parseStatement(context, unused);
+    TreeStatement statement = 0;
+    if (allowFunctionDeclarationAsStatement && match(FUNCTION) && !strictMode()) {
+        // Annex B.3.1: a labelled FunctionDeclaration is declared in the scope enclosing the LabelledStatement as if it were not labelled.
+        statement = parseFunctionDeclaration(context, FunctionDeclarationType::Statement);
+    } else {
+        m_immediateParentAllowsFunctionDeclarationInStatement = allowFunctionDeclarationAsStatement;
+        statement = parseStatement(context, unused);
+    }
     for (size_t i = 0; i < labels.size(); i++)
         popLabel(labelScope);
     failIfFalse(statement, "Cannot parse statement");
