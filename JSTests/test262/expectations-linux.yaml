@@ -61,10 +61,6 @@ test/intl402/Temporal/ZonedDateTime/prototype/monthCode/chinese-calendar-dates.j
 test/language/expressions/assignment/fn-name-lhs-cover.js:
   default: 3
   strict mode: 3
-test/language/statements/class/elements/private-class-field-on-nonextensible-objects.js:
-  strict mode: 3
-test/language/statements/class/subclass/private-class-field-on-nonextensible-return-override.js:
-  strict mode: 3
 test/staging/sm/ArrayBuffer/slice-species.js:
   default: 3
   strict mode: 3
@@ -76,8 +72,6 @@ test/staging/sm/Function/function-name-assignment.js:
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 3
   strict mode: 3
-test/staging/sm/PrivateName/modify-non-extensible.js:
-  default: 3
 test/staging/sm/RegExp/unicode-braced.js:
   default: 3
   strict mode: 3

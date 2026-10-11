@@ -340,13 +340,14 @@ load("./resources/harmony-support.js");
 }
 
 {
-  class C {
-    static #b = Object.freeze(this);
-    static getA() { return this.#a; }
-    static #a = 1;
-  }
-
-  assertEquals(1, C.getA());
+  // https://github.com/tc39/proposal-nonextensible-applies-to-private
+  assertThrows(() => {
+    class C {
+      static #b = Object.freeze(this);
+      static getA() { return this.#a; }
+      static #a = 1;
+    }
+  }, TypeError);
 }
 
 {

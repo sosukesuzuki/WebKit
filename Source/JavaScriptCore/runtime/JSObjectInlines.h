@@ -951,6 +951,14 @@ inline void JSObject::definePrivateField(JSGlobalObject* globalObject, PropertyN
         return;
     }
 
+    // https://tc39.es/proposal-nonextensible-applies-to-private/#sec-privatefieldadd
+    bool isExtensible = this->isExtensible(globalObject);
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!isExtensible) {
+        throwTypeError(globalObject, scope, "Cannot define private field on a non-extensible object"_s);
+        return;
+    }
+
     PropertySlot slot(this, PropertySlot::InternalMethodType::HasProperty);
     if (JSObject::getPrivateFieldSlot(this, globalObject, propertyName, slot)) {
         throwException(globalObject, scope, createRedefinedPrivateNameError(globalObject));
@@ -1012,17 +1020,26 @@ inline void JSObject::setPrivateBrand(JSGlobalObject* globalObject, JSValue bran
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    if (type() == WebAssemblyGCObjectType) {
+        throwTypeError(globalObject, scope, "Cannot add private method to a WebAssembly GC object"_s);
+        return;
+    }
+
+    // https://tc39.es/proposal-nonextensible-applies-to-private/#sec-initializeinstanceelements
+    // This can call the isExtensible trap of a Proxy, so the structure has to be loaded after this.
+    bool isExtensible = this->isExtensible(globalObject);
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!isExtensible) {
+        throwTypeError(globalObject, scope, "Cannot add private method to a non-extensible object"_s);
+        return;
+    }
+
     Structure* structure = this->structure();
     if (structure->isBrandedStructure() && uncheckedDowncast<BrandedStructure>(structure)->checkBrand(asSymbol(brand))) {
         throwException(globalObject, scope, createReinstallPrivateMethodError(globalObject));
         return;
     }
     EXCEPTION_ASSERT(!scope.exception());
-
-    if (type() == WebAssemblyGCObjectType) {
-        throwTypeError(globalObject, scope, "Cannot add private method to a WebAssembly GC object"_s);
-        return;
-    }
 
     scope.release();
 

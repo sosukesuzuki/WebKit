@@ -5285,7 +5285,8 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
 
     case SetPrivateBrand: {
-        clobberStructures();
+        // IsExtensible can call a trap of a Proxy.
+        clobberWorld();
         break;
     }
 

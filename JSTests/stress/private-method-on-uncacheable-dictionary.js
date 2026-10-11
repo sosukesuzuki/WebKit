@@ -35,7 +35,8 @@ assert.throws(TypeError, function () {
     c1.access.call({});
 });
 
-// Perform a set brand transition on frozen object
+// A private brand cannot be installed on a non-extensible object.
+// https://github.com/tc39/proposal-nonextensible-applies-to-private
 let frozenObject = {};
 Object.freeze(frozenObject);
 
@@ -53,9 +54,17 @@ class D extends Base {
     }
 }
 
-let d = new D();
+let threw = false;
+try {
+    new D();
+} catch (e) {
+    threw = e instanceof TypeError;
+}
+assert.sameValue(threw, true);
 
-assert.sameValue(D.access(d), 'test D');
+assert.throws(TypeError, function () {
+    D.access(frozenObject);
+});
 assert.throws(TypeError, function () {
     D.access({});
 });

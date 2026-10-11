@@ -18,8 +18,13 @@ class Base {
 }
 
 class PrivateFieldAfterPreventExtensions extends Base {
-  #i = (Object.seal(this), 42);
-  #assert = (assert(Object.isSealed(this), "Object.isSealed(this)"), this.#i + 1);
+  #i = 42;
+
+  constructor() {
+    super();
+    Object.seal(this);
+    assert(Object.isSealed(this), "Object.isSealed(this)");
+  }
 
   get() { return this.#i; }
   set(i) { this.#i = i; }
@@ -39,3 +44,28 @@ test(1);
 test(2);
 for (var i = 0; i < 200; ++i)
   test(i);
+
+// https://github.com/tc39/proposal-nonextensible-applies-to-private
+class AddsPrivateFieldToNonExtensibleObject extends Base {
+  #i = (Object.seal(this), 42);
+}
+
+class AddsPrivateMethodToNonExtensibleObject extends (class extends Base { constructor() { super(); Object.seal(this); } }) {
+  #m() { }
+}
+
+function testThrows(constructor) {
+  let error;
+  try {
+    new constructor;
+  } catch (e) {
+    error = e;
+  }
+  assert(error instanceof TypeError, "error instanceof TypeError");
+}
+noInline(testThrows);
+
+for (var i = 0; i < 200; ++i) {
+  testThrows(AddsPrivateFieldToNonExtensibleObject);
+  testThrows(AddsPrivateMethodToNonExtensibleObject);
+}

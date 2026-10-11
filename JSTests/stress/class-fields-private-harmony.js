@@ -385,14 +385,14 @@ load("./resources/harmony-support.js");
 }
 
 {
+  // https://github.com/tc39/proposal-nonextensible-applies-to-private
   class C {
     #b = Object.freeze(this);
     #a = 1;
     getA() { return this.#a; }
   }
 
-  let c = new C;
-  assertEquals(1, c.getA());
+  assertThrows(() => new C, TypeError);
 }
 
 {

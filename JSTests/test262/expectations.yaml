@@ -28,18 +28,12 @@ test/built-ins/Function/prototype/caller-arguments/accessor-properties.js:
 test/built-ins/Function/prototype/caller/prop-desc.js:
   default: 3
   strict mode: 3
-test/language/statements/class/elements/private-class-field-on-nonextensible-objects.js:
-  strict mode: 3
-test/language/statements/class/subclass/private-class-field-on-nonextensible-return-override.js:
-  strict mode: 3
 test/staging/sm/Date/two-digit-years.js:
   default: 3
   strict mode: 3
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 3
   strict mode: 3
-test/staging/sm/PrivateName/modify-non-extensible.js:
-  default: 3
 test/staging/sm/RegExp/unicode-braced.js:
   default: 3
   strict mode: 3

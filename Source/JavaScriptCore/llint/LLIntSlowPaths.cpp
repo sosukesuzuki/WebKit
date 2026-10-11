@@ -1486,7 +1486,8 @@ LLINT_SLOW_PATH_DECL(slow_path_set_private_brand)
     baseObject->setPrivateBrand(globalObject, brand);
     LLINT_CHECK_EXCEPTION();
 
-    if (Options::useLLIntICs() && !oldStructure->isDictionary()) {
+    // Extensibility of a Proxy is not determined by its structure, and its trap can change the structure.
+    if (Options::useLLIntICs() && !oldStructure->isDictionary() && oldStructure->propertyAccessesAreCacheable()) {
         GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm);
         Structure* newStructure = baseObject->structure();
 
