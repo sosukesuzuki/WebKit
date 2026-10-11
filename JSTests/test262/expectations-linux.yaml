@@ -72,12 +72,6 @@ test/staging/sm/Function/function-name-assignment.js:
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 3
   strict mode: 3
-test/staging/sm/RegExp/unicode-braced.js:
-  default: 3
-  strict mode: 3
-test/staging/sm/RegExp/unicode-class-braced.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/TypedArray/slice-memcpy.js:
   default: 3
   strict mode: 3

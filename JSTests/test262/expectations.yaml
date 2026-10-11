@@ -34,11 +34,5 @@ test/staging/sm/Date/two-digit-years.js:
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 3
   strict mode: 3
-test/staging/sm/RegExp/unicode-braced.js:
-  default: 3
-  strict mode: 3
-test/staging/sm/RegExp/unicode-class-braced.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/extensions/function-caller-skips-eval-frames.js:
   default: 3

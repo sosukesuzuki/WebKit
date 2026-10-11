@@ -104,7 +104,7 @@ public:
      */
     ErrorCode parse()
     {
-        if (m_size > maxPatternSize)
+        if (m_size > maxPatternSize && sizeWithoutLeadingZerosInBracedUnicodeEscapes() > maxPatternSize)
             return ErrorCode::PatternTooLarge;
 
         parseTokens();
@@ -119,6 +119,23 @@ public:
     }
 
 private:
+    // The limit exists to bound the compile time, to which leading zeros in \u{0...0XXXX} do not contribute.
+    size_t sizeWithoutLeadingZerosInBracedUnicodeEscapes() const
+    {
+        size_t size = m_size;
+        for (size_t index = 0; index + 1 < m_size; ++index) {
+            if (m_data[index] != '\\')
+                continue;
+            ++index;
+            if (m_data[index] != 'u' || index + 1 >= m_size || m_data[index + 1] != '{')
+                continue;
+            for (index += 2; index < m_size && m_data[index] == '0'; ++index)
+                --size;
+            --index;
+        }
+        return size;
+    }
+
     static constexpr char32_t errorCodePoint = 0xFFFFFFFFu;
 
     template<YarrSyntaxCheckable FriendDelegate>
