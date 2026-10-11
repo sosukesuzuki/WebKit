@@ -611,21 +611,29 @@ JSC_DEFINE_HOST_FUNCTION(performProxyCall, (JSGlobalObject* globalObject, CallFr
         throwStackOverflowError(globalObject, scope);
         return encodedJSValue();
     }
+    // Proxies, unlike other spec provided callable/constructable objects,
+    // don't switch the realm when called/constructed
+    // see: https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-call-thisargument-argumentslist
+    // Since finding the caller's realm requires walking the stack, we do it only when we create an object.
     ProxyObject* proxy = uncheckedDowncast<ProxyObject>(callFrame->jsCallee());
     JSValue handlerValue = proxy->handler();
     if (handlerValue.isNull())
-        return throwVMTypeError(globalObject, scope, s_proxyAlreadyRevokedErrorMessage);
+        return throwVMTypeError(CallFrame::globalObjectOfCaller(vm, callFrame), scope, s_proxyAlreadyRevokedErrorMessage);
 
     JSObject* handler = uncheckedDowncast<JSObject>(handlerValue);
-    CallData callData;
-    JSValue applyMethod = handler->getMethod(globalObject, callData, makeIdentifier(vm, "apply"_s), "'apply' property of a Proxy's handler should be callable"_s);
+    JSValue applyMethod = handler->get(globalObject, makeIdentifier(vm, "apply"_s));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     JSObject* target = proxy->target();
-    if (applyMethod.isUndefined()) {
+    if (applyMethod.isUndefinedOrNull()) {
         auto callData = JSC::getCallDataInline(target);
         RELEASE_ASSERT(callData.type != CallData::Type::None);
         RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, target, callData, callFrame->thisValue(), ArgList(callFrame))));
     }
+
+    globalObject = CallFrame::globalObjectOfCaller(vm, callFrame);
+    auto callData = JSC::getCallData(applyMethod);
+    if (callData.type == CallData::Type::None)
+        return throwVMTypeError(globalObject, scope, "'apply' property of a Proxy's handler should be callable"_s);
 
     JSArray* argArray = constructArray(globalObject, static_cast<ArrayAllocationProfile*>(nullptr), ArgList(callFrame));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -660,24 +668,29 @@ JSC_DEFINE_HOST_FUNCTION(performProxyConstruct, (JSGlobalObject* globalObject, C
         throwStackOverflowError(globalObject, scope);
         return encodedJSValue();
     }
+    // Proxies, unlike other spec provided callable/constructable objects,
+    // don't switch the realm when called/constructed
+    // see: https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-construct-argumentslist-newtarget
+    // Since finding the caller's realm requires walking the stack, we do it only when we create an object.
     ProxyObject* proxy = uncheckedDowncast<ProxyObject>(callFrame->jsCallee());
     JSValue handlerValue = proxy->handler();
     if (handlerValue.isNull())
-        // Proxies, unlike other spec provided callable/constructable objects,
-        // don't switch the realm when called/constructed
-        // see: https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-construct-argumentslist-newtarget
-        return throwVMTypeError(CallFrame::globalObjectOfClosestCodeBlock(vm, callFrame), scope, s_proxyAlreadyRevokedErrorMessage);
+        return throwVMTypeError(CallFrame::globalObjectOfCaller(vm, callFrame), scope, s_proxyAlreadyRevokedErrorMessage);
 
     JSObject* handler = uncheckedDowncast<JSObject>(handlerValue);
-    CallData callData;
-    JSValue constructMethod = handler->getMethod(globalObject, callData, makeIdentifier(vm, "construct"_s), "'construct' property of a Proxy's handler should be callable"_s);
+    JSValue constructMethod = handler->get(globalObject, makeIdentifier(vm, "construct"_s));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     JSObject* target = proxy->target();
-    if (constructMethod.isUndefined()) {
+    if (constructMethod.isUndefinedOrNull()) {
         auto constructData = JSC::getConstructDataInline(target);
         RELEASE_ASSERT(constructData.type != CallData::Type::None);
         RELEASE_AND_RETURN(scope, JSValue::encode(construct(globalObject, target, constructData, ArgList(callFrame), callFrame->newTarget())));
     }
+
+    globalObject = CallFrame::globalObjectOfCaller(vm, callFrame);
+    auto callData = JSC::getCallData(constructMethod);
+    if (callData.type == CallData::Type::None)
+        return throwVMTypeError(globalObject, scope, "'construct' property of a Proxy's handler should be callable"_s);
 
     JSArray* argArray = constructArray(globalObject, static_cast<ArrayAllocationProfile*>(nullptr), ArgList(callFrame));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -689,10 +702,7 @@ JSC_DEFINE_HOST_FUNCTION(performProxyConstruct, (JSGlobalObject* globalObject, C
     JSValue result = call(globalObject, constructMethod, callData, handler, ArgList { arguments.data(), arguments.size() });
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (!result.isObject())
-        // Proxies, unlike other spec provided callable/constructable objects,
-        // don't switch the realm when called/constructed
-        // see: https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-construct-argumentslist-newtarget
-        return throwVMTypeError(CallFrame::globalObjectOfClosestCodeBlock(vm, callFrame), scope, "Result from Proxy handler's 'construct' method should be an object"_s);
+        return throwVMTypeError(globalObject, scope, "Result from Proxy handler's 'construct' method should be an object"_s);
     return JSValue::encode(result);
 }
 

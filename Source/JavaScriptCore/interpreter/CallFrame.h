@@ -334,7 +334,8 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         inline void setCodeBlock(CodeBlock*);
         void setReturnPC(void* value) { callerFrameAndPC().returnPC = value; }
 
-        JS_EXPORT_PRIVATE static JSGlobalObject* globalObjectOfClosestCodeBlock(VM&, CallFrame*);
+        // Returns the realm of the (possibly inlined or native) frame which called the top-most logical frame of the given CallFrame.
+        JS_EXPORT_PRIVATE static JSGlobalObject* globalObjectOfCaller(VM&, CallFrame*);
         String friendlyFunctionName();
 
         void dump(PrintStream&) const;

@@ -30,7 +30,9 @@
 #include "DebuggerCallFrame.h"
 #include "ExecutableAllocator.h"
 #include "InlineCallFrame.h"
+#include "JSBoundFunction.h"
 #include "JSCInlines.h"
+#include "JSRemoteFunction.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyModule.h"
 #include "LLIntPCRanges.h"
@@ -228,25 +230,31 @@ SourceOrigin CallFrame::callerSourceOrigin(VM& vm)
     return sourceOrigin;
 }
 
-JSGlobalObject* CallFrame::globalObjectOfClosestCodeBlock(VM& vm, CallFrame* callFrame)
+JSGlobalObject* CallFrame::globalObjectOfCaller(VM& vm, CallFrame* callFrame)
 {
     // FIXME: We need to handle JSONP interpretation case in ProgramExecutable since it does not have vm.topCallFrame.
     // rdar://83691438
     JSGlobalObject* globalObject = nullptr;
+    bool hasSkippedCallee = false;
     StackVisitor::visit(callFrame, vm, [&](StackVisitor& visitor) {
+        if (!hasSkippedCallee) {
+            hasSkippedCallee = true;
+            return IterationStatus::Continue;
+        }
         // Note that this is OK for InlineCache Callee.
-        if (visitor->isNativeCalleeFrame()) {
+        if (visitor->isNativeCalleeFrame())
             globalObject = visitor->callFrame()->lexicalGlobalObject(vm);
-            return IterationStatus::Done;
-        }
-        if (auto* codeBlock = visitor->codeBlock()) {
-            if (codeBlock->codeType() == CodeType::FunctionCode && static_cast<FunctionExecutable*>(codeBlock->ownerExecutable())->isBuiltinFunction())
-                return IterationStatus::Continue;
+        else if (auto* codeBlock = visitor->codeBlock())
             globalObject = codeBlock->globalObject();
-            return IterationStatus::Done;
+        else {
+            ASSERT(visitor->codeType() == StackVisitor::Frame::CodeType::Native);
+            auto* callee = uncheckedDowncast<JSObject>(visitor->callee().asCell());
+            // [[Call]] and [[Construct]] of these exotic objects do not push execution contexts.
+            if (callee->type() == ProxyObjectType || callee->inherits<JSBoundFunction>() || callee->inherits<JSRemoteFunction>())
+                return IterationStatus::Continue;
+            globalObject = callee->realm();
         }
-        ASSERT(visitor->codeType() == StackVisitor::Frame::CodeType::Native);
-        return IterationStatus::Continue;
+        return IterationStatus::Done;
     });
     if (globalObject)
         return globalObject;
