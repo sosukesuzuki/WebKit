@@ -28,7 +28,7 @@ EXPRESSION: function myTarget(a, b) { console.log(a, b); }; myTarget.bind(null)
 {
   "_type": "function",
   "_objectId": "<filtered>",
-  "_description": "function myTarget() {\n    [native code]\n}"
+  "_description": "function () {\n    [native code]\n}"
 }
 
 -----------------------------------------------------

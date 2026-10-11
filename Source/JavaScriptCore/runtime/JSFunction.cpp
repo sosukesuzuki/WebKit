@@ -244,19 +244,9 @@ const String JSFunction::calculatedDisplayName(VM& vm)
 JSString* JSFunction::toString(JSGlobalObject* globalObject)
 {
     VM& vm = getVM(globalObject);
-    if (inherits<JSBoundFunction>()) {
-        JSBoundFunction* function = uncheckedDowncast<JSBoundFunction>(this);
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        JSValue string = jsMakeNontrivialString(globalObject, "function "_s, function->nameString(vm), "() {\n    [native code]\n}"_s);
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        return asString(string);
-    } else if (inherits<JSRemoteFunction>()) {
-        JSRemoteFunction* function = uncheckedDowncast<JSRemoteFunction>(this);
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        JSValue string = jsMakeNontrivialString(globalObject, "function "_s, function->nameString(), "() {\n    [native code]\n}"_s);
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        return asString(string);
-    }
+    // Since the name of the target function can be an arbitrary string, including it can violate NativeFunction syntax.
+    if (inherits<JSBoundFunction>() || inherits<JSRemoteFunction>())
+        return jsNontrivialString(vm, "function () {\n    [native code]\n}"_s);
 
     if (isHostFunction())
         return static_cast<NativeExecutable*>(executable())->toString(globalObject);

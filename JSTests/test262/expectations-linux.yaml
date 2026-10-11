@@ -66,9 +66,6 @@ test/staging/sm/ArrayBuffer/slice-species.js:
   strict mode: 3
 test/staging/sm/Function/function-name-assignment.js:
   default: 3
-test/staging/sm/Function/function-toString-builtin-name.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/TypedArray/slice-memcpy.js:
   default: 3
   strict mode: 3

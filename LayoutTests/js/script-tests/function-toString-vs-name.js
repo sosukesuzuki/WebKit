@@ -106,9 +106,9 @@ section = "builtin function";
     {
         let o = {}
         let boundEvery = Array.prototype.every.bind(o);
-        test(boundEvery, "bound every", "function every() { [native code] }");
+        test(boundEvery, "bound every", "function () { [native code] }");
         let boundForEach = Array.prototype.forEach.bind(o);
-        test(boundForEach, "bound forEach", "function forEach() { [native code] }");
+        test(boundForEach, "bound forEach", "function () { [native code] }");
     }
 }
 
@@ -122,9 +122,9 @@ section = "native function";
     {
         let o = {}
         let boundSplice = Array.prototype.splice.bind(o);
-        test(boundSplice, "bound splice", "function splice() { [native code] }");
+        test(boundSplice, "bound splice", "function () { [native code] }");
         let boundUnshift = Array.prototype.unshift.bind(o);
-        test(boundUnshift, "bound unshift", "function unshift() { [native code] }");
+        test(boundUnshift, "bound unshift", "function () { [native code] }");
     }
 }
 
@@ -137,9 +137,9 @@ section = "InternalFunction";
     {
         let o = {}
         let boundArray = Array.bind(o);
-        test(boundArray, "bound Array", "function Array() { [native code] }");
+        test(boundArray, "bound Array", "function () { [native code] }");
         let boundBoolean = Boolean.bind(o);
-        test(boundBoolean, "bound Boolean", "function Boolean() { [native code] }");
+        test(boundBoolean, "bound Boolean", "function () { [native code] }");
     }
 }
 
@@ -166,11 +166,11 @@ section = "JS function";
     {
         let o = {}
         let boundFoo1 = foo1.bind(o);
-        test(boundFoo1, "bound foo1", "function foo1() { [native code] }");
+        test(boundFoo1, "bound foo1", "function () { [native code] }");
         let boundFoo2 = foo2.bind(o);
-        test(boundFoo2, "bound foo2", "function foo2() { [native code] }");
+        test(boundFoo2, "bound foo2", "function () { [native code] }");
         let boundFoo3 = foo3.bind(o);
-        test(boundFoo3, "bound goo3", "function goo3() { [native code] }");
+        test(boundFoo3, "bound goo3", "function () { [native code] }");
         let boundFoo4 = foo4.bind(o);
         test(boundFoo4, "bound ", "function () { [native code] }");
 
@@ -194,13 +194,13 @@ section = "Object property";
     section = "bound Object property";
     {
         let boundProp1 = o.prop1.bind({});
-        test(boundProp1, "bound prop1", "function prop1() { [native code] }");
+        test(boundProp1, "bound prop1", "function () { [native code] }");
         let boundFoo2 = o.prop2.bind({});
-        test(boundFoo2, "bound namedProp2", "function namedProp2() { [native code] }");
+        test(boundFoo2, "bound namedProp2", "function () { [native code] }");
         let boundFoo3 = o.prop3.bind({});
         test(boundFoo3, "bound ", "function() { [native code] }");
         let boundFoo4 = o.prop4.bind({});
-        test(boundFoo4, "bound namedProp4", "function namedProp4() { [native code] }");
+        test(boundFoo4, "bound namedProp4", "function () { [native code] }");
     }
 }
 
@@ -216,9 +216,9 @@ section = "object shorthand method";
     section = "bound object shorthand method";
     {
         let boundProp1 = o.prop1.bind(o);
-        test(boundProp1, "bound prop1", "function prop1() { [native code] }");
+        test(boundProp1, "bound prop1", "function () { [native code] }");
         let boundProp2 = o.prop2.bind(o);
-        test(boundProp2, "bound prop2", "function prop2() { [native code] }");
+        test(boundProp2, "bound prop2", "function () { [native code] }");
     }
 }
 
@@ -240,15 +240,15 @@ section = "class from statement";
     section = "bound class from statement";
     {
         let bound1 = foo.bind({});
-        test(bound1, "bound foo", "function foo() { [native code] }");
+        test(bound1, "bound foo", "function () { [native code] }");
         let bound2 = bar.bind({});
-        test(bound2, "bound bar", "function bar() { [native code] }");
+        test(bound2, "bound bar", "function () { [native code] }");
         let bound3 = bax.bind({});
         test(bound3, "bound ", "function() { [native code] }"); // bax.name is not a string.
         let bound4 = baz.bind({});
-        test(bound4, "bound bar", "function bar() { [native code] }");
+        test(bound4, "bound bar", "function () { [native code] }");
         let bound5 = goo.bind({});
-        test(bound5, "bound goo", "function goo() { [native code] }");
+        test(bound5, "bound goo", "function () { [native code] }");
     }
 })();
 
@@ -270,15 +270,15 @@ section = "class with constructor from statement";
     section = "bound class with constructor from statement";
     {
         let bound1 = foo.bind({});
-        test(bound1, "bound foo", "function foo() { [native code] }");
+        test(bound1, "bound foo", "function () { [native code] }");
         let bound2 = bar.bind({});
-        test(bound2, "bound bar", "function bar() { [native code] }");
+        test(bound2, "bound bar", "function () { [native code] }");
         let bound3 = bax.bind({});
         test(bound3, "bound ", "function() { [native code] }"); // bax.name is not a string.
         let bound4 = baz.bind({});
-        test(bound4, "bound bar", "function bar() { [native code] }");
+        test(bound4, "bound bar", "function () { [native code] }");
         let bound5 = goo.bind({});
-        test(bound5, "bound goo", "function goo() { [native code] }");
+        test(bound5, "bound goo", "function () { [native code] }");
     }
 })();
 
@@ -300,15 +300,15 @@ section = "class from expression";
     section = "bound class from expression";
     {
         let bound1 = foo.bind({});
-        test(bound1, "bound namedFoo", "function namedFoo() { [native code] }");
+        test(bound1, "bound namedFoo", "function () { [native code] }");
         let bound2 = bar.bind({});
-        test(bound2, "bound bar", "function bar() { [native code] }");
+        test(bound2, "bound bar", "function () { [native code] }");
         let bound3 = bax.bind({});
         test(bound3, "bound ", "function() { [native code] }"); // bax.name is not a string.
         let bound4 = baz.bind({});
-        test(bound4, "bound bar", "function bar() { [native code] }");
+        test(bound4, "bound bar", "function () { [native code] }");
         let bound5 = goo.bind({});
-        test(bound5, "bound goo", "function goo() { [native code] }");
+        test(bound5, "bound goo", "function () { [native code] }");
     }
 })();
 
@@ -330,15 +330,15 @@ section = "class with constructor from expression";
     section = "bound class with constructor from expression";
     {
         let bound1 = foo.bind({});
-        test(bound1, "bound namedFoo", "function namedFoo() { [native code] }");
+        test(bound1, "bound namedFoo", "function () { [native code] }");
         let bound2 = bar.bind({});
-        test(bound2, "bound bar", "function bar() { [native code] }");
+        test(bound2, "bound bar", "function () { [native code] }");
         let bound3 = bax.bind({});
         test(bound3, "bound ", "function() { [native code] }"); // bax.name is not a string.
         let bound4 = baz.bind({});
-        test(bound4, "bound bar", "function bar() { [native code] }");
+        test(bound4, "bound bar", "function () { [native code] }");
         let bound5 = goo.bind({});
-        test(bound5, "bound goo", "function goo() { [native code] }");
+        test(bound5, "bound goo", "function () { [native code] }");
     }
 })();
 
@@ -365,17 +365,17 @@ section = "class in object property";
     section = "bound class in object property";
     {
         let bound1 = o.foo.bind({});
-        test(bound1, "bound foo", "function foo() { [native code] }");
+        test(bound1, "bound foo", "function () { [native code] }");
         let bound2 = o.bar.bind({});
-        test(bound2, "bound bar", "function bar() { [native code] }");
+        test(bound2, "bound bar", "function () { [native code] }");
         let bound3 = o.bax.bind({});
         test(bound3, "bound ", "function() { [native code] }"); // bax.name is not a string.
         let bound4 = o.bay.bind({});
-        test(bound4, "bound bar", "function bar() { [native code] }");
+        test(bound4, "bound bar", "function () { [native code] }");
         let bound5 = o.baz.bind({});
         test(bound5, "bound ", "function() { [native code] }");
         let bound6 = o.goo.bind({});
-        test(bound6, "bound goo", "function goo() { [native code] }");
+        test(bound6, "bound goo", "function () { [native code] }");
     }
 })();
 
@@ -402,17 +402,17 @@ section = "class with constructor in object property";
     section = "bound class with constructor in object property";
     {
         let bound1 = o.foo.bind({});
-        test(bound1, "bound foo", "function foo() { [native code] }");
+        test(bound1, "bound foo", "function () { [native code] }");
         let bound2 = o.bar.bind({});
-        test(bound2, "bound bar", "function bar() { [native code] }");
+        test(bound2, "bound bar", "function () { [native code] }");
         let bound3 = o.bax.bind({});
         test(bound3, "bound ", "function() { [native code] }"); // bax.name is not a string.
         let bound4 = o.bay.bind({});
-        test(bound4, "bound bar", "function bar() { [native code] }");
+        test(bound4, "bound bar", "function () { [native code] }");
         let bound5 = o.baz.bind({});
         test(bound5, "bound ", "function() { [native code] }");
         let bound6 = o.goo.bind({});
-        test(bound6, "bound goo", "function goo() { [native code] }");
+        test(bound6, "bound goo", "function () { [native code] }");
     }
 })();
 
@@ -532,7 +532,7 @@ section = "Object computed non-symbol anonymous function property";
         test(o[value], toString(value), "function() {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound " + toString(value), "function " + toString(value) + "() { [native code] }");
+        test(bound, "bound " + toString(value), "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i]);
@@ -548,7 +548,7 @@ section = "Object computed non-symbol named function property";
         test(o[value], "bar", "function bar() {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound bar", "function bar() { [native code] }");
+        test(bound, "bound bar", "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i]);
@@ -564,7 +564,7 @@ section = "Object computed non-symbol property with shorthand function";
         test(o[value], toString(value), "[value]() {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound " + toString(value), "function " + toString(value) + "() { [native code] }");
+        test(bound, "bound " + toString(value), "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i]);
@@ -584,9 +584,9 @@ section = "Object computed non-symbol property with get/set function";
         test(desc.set, "set " + value, "set [value](x) {}");
 
         let bound = desc.get.bind({});
-        test(bound, "bound get " + toString(value), "function get " + toString(value) + "() { [native code] }");
+        test(bound, "bound get " + toString(value), "function () { [native code] }");
         bound = desc.set.bind({});
-        test(bound, "bound set " + toString(value), "function set " + toString(value) + "() { [native code] }");
+        test(bound, "bound set " + toString(value), "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i]);
@@ -602,7 +602,7 @@ section = "Object computed symbol anonymous function property";
         test(o[value], expectedName, "function() {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound " + expectedName, "function " + expectedName + "() { [native code] }");
+        test(bound, "bound " + expectedName, "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i].v, values[i].name);
@@ -618,7 +618,7 @@ section = "Object computed symbol named function property";
         test(o[value], "bar", "function bar() {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound bar", "function bar() { [native code] }");
+        test(bound, "bound bar", "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i].v);
@@ -634,7 +634,7 @@ section = "Object computed symbol property with shorthand function";
         test(o[value], expectedName, "[value]() {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound " + expectedName, "function " + expectedName + "() { [native code] }");
+        test(bound, "bound " + expectedName, "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i].v, values[i].name);
@@ -654,9 +654,9 @@ section = "Object computed symbol property with get/set function";
         test(desc.set, "set " + expectedName, "set [value](x) {}");
 
         let bound = desc.get.bind({});
-        test(bound, "bound get " + expectedName, "function get " + expectedName + "() { [native code] }");
+        test(bound, "bound get " + expectedName, "function () { [native code] }");
         bound = desc.set.bind({});
-        test(bound, "bound set " + expectedName, "function set " + expectedName + "() { [native code] }");
+        test(bound, "bound set " + expectedName, "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i].v, values[i].name);
@@ -675,10 +675,10 @@ section = "destructuring assignment";
     {
         let o = {}
         let bound1 = prop1.bind(o);
-        test(bound1, "bound prop1", "function prop1() { [native code] }");
+        test(bound1, "bound prop1", "function () { [native code] }");
 
         let bound2 = prop2.bind(o);
-        test(bound2, "bound namedProp2", "function namedProp2() { [native code] }");
+        test(bound2, "bound namedProp2", "function () { [native code] }");
     }
 }
 
@@ -695,10 +695,10 @@ section = "dynamically created function";
     {
         let o = {}
         let bound1 = dynamic1.bind(o);
-        test(bound1, "bound anonymous", "function anonymous() { [native code] }");
+        test(bound1, "bound anonymous", "function () { [native code] }");
 
         let bound2 = dynamic2.bind(o);
-        test(bound2, "bound anonymous", "function anonymous() { [native code] }");
+        test(bound2, "bound anonymous", "function () { [native code] }");
     }
 }
 
@@ -713,10 +713,10 @@ section = "JSBoundSlotBaseFunction";
         {
             let o = {}
             let bound1 = desc.get.bind(o);
-            test(bound1, "bound get location", "function get location() { [native code] }");
+            test(bound1, "bound get location", "function () { [native code] }");
 
             let bound2 = desc.set.bind(o);
-            test(bound2, "bound set location", "function set location() { [native code] }");
+            test(bound2, "bound set location", "function () { [native code] }");
         }
     }
 }
@@ -749,24 +749,24 @@ section = "get/set function";
         let bound2;
 
         bound1 = desc.get.bind(o);
-        test(bound1, "bound get foo", "function get foo() { [native code] }");
+        test(bound1, "bound get foo", "function () { [native code] }");
         bound2 = desc.set.bind(o);
-        test(bound2, "bound set foo", "function set foo() { [native code] }");
+        test(bound2, "bound set foo", "function () { [native code] }");
 
         bound1 = desc1.get.bind(o);
-        test(bound1, "bound get bar", "function get bar() { [native code] }");
+        test(bound1, "bound get bar", "function () { [native code] }");
         bound2 = desc1.set.bind(o);
-        test(bound2, "bound set bar", "function set bar() { [native code] }");
+        test(bound2, "bound set bar", "function () { [native code] }");
 
         bound1 = desc2.get.bind(o);
-        test(bound1, "bound get 100", "function get 100() { [native code] }");
+        test(bound1, "bound get 100", "function () { [native code] }");
         bound2 = desc2.set.bind(o);
-        test(bound2, "bound set 100", "function set 100() { [native code] }");
+        test(bound2, "bound set 100", "function () { [native code] }");
 
         bound1 = desc3.get.bind(o);
-        test(bound1, "bound get 100", "function get 100() { [native code] }");
+        test(bound1, "bound get 100", "function () { [native code] }");
         bound2 = desc3.set.bind(o);
-        test(bound2, "bound set 100", "function set 100() { [native code] }");
+        test(bound2, "bound set 100", "function () { [native code] }");
     }
 }
 
@@ -833,7 +833,7 @@ section = "Object computed non-symbol anonymous class property";
         test(o[value], toString(value), "class {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound " + toString(value), "function " + toString(value) + "() { [native code] }");
+        test(bound, "bound " + toString(value), "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i]);
@@ -849,7 +849,7 @@ section = "Object computed non-symbol named class property";
         test(o[value], "bar", "class bar {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound bar", "function bar() { [native code] }");
+        test(bound, "bound bar", "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i]);
@@ -865,7 +865,7 @@ section = "Object computed symbol anonymous class property";
         test(o[value], expectedName, "class {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound " + expectedName, "function " + expectedName + "() { [native code] }");
+        test(bound, "bound " + expectedName, "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i].v, values[i].name);
@@ -881,7 +881,7 @@ section = "Object computed symbol named class property";
         test(o[value], "bar", "class bar {}");
 
         let bound = o[value].bind({});
-        test(bound, "bound bar", "function bar() { [native code] }");
+        test(bound, "bound bar", "function () { [native code] }");
     }
     for (var i = 0; i < values.length; i++)
         runTest(values[i].v);

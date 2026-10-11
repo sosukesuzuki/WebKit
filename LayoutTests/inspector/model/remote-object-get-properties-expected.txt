@@ -429,7 +429,7 @@ ALL PROPERTIES:
 -----------------------------------------------------
 EXPRESSION: window.boundFunction
 type: function
-description: function unboundFunction() {
+description: function () {
     [native code]
 }
 
