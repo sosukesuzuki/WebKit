@@ -28,9 +28,6 @@ test/built-ins/Function/prototype/caller-arguments/accessor-properties.js:
 test/built-ins/Function/prototype/caller/prop-desc.js:
   default: 3
   strict mode: 3
-test/staging/sm/Date/two-digit-years.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 3
   strict mode: 3

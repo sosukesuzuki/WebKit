@@ -741,8 +741,25 @@ double parseDate(std::span<const Latin1Character> dateString, bool& isLocalTime)
     if (day < 0)
         return std::numeric_limits<double>::quiet_NaN();
 
+    auto skipMonthName = [&] {
+        month = findMonth(dateString);
+        skipWhile<isASCIIAlpha>(dateString);
+    };
+
     std::optional<int> year;
-    if (day > 31) {
+    if (day > 31 && day < std::numeric_limits<int>::max() && !dateString.empty() && isUnicodeCompatibleASCIIWhitespace(dateString.front())) {
+        // The number too large for a day is a year: 'May 1999 1', '1999 May 1' or '1999 1 May'.
+        year = static_cast<int>(day);
+        skipSpacesAndComments(dateString);
+        if (month == -1 && !dateString.empty() && !isASCIIDigit(dateString.front()))
+            skipMonthName();
+        if (!parseLong(dateString, 10, &day))
+            return std::numeric_limits<double>::quiet_NaN();
+        if (month == -1) {
+            skipSpacesAndComments(dateString);
+            skipMonthName();
+        }
+    } else if (day > 31) {
         // ### where is the boundary and what happens below?
         if (!skipExactly(dateString, '/'))
             return std::numeric_limits<double>::quiet_NaN();
@@ -780,6 +797,15 @@ double parseDate(std::span<const Latin1Character> dateString, bool& isLocalTime)
         skipExactly(dateString, ',');
 
         if (month == -1) { // not found yet
+            // '1 1999 May'
+            if (!dateString.empty() && isASCIIDigit(dateString.front())) {
+                int result = 0;
+                if (!parseInt(dateString, 10, &result))
+                    return std::numeric_limits<double>::quiet_NaN();
+                year = result;
+                skipSpacesAndComments(dateString);
+            }
+
             month = findMonth(dateString);
             if (month == -1)
                 return std::numeric_limits<double>::quiet_NaN();
@@ -787,13 +813,17 @@ double parseDate(std::span<const Latin1Character> dateString, bool& isLocalTime)
             while (!dateString.empty() && dateString.front() != '-' && dateString.front() != ',' && !isUnicodeCompatibleASCIIWhitespace(dateString.front()))
                 skip(dateString, 1);
 
-            if (dateString.empty())
-                return std::numeric_limits<double>::quiet_NaN();
-
-            // '-99 23:12:40 GMT'
-            if (dateString.front() != '-' && dateString.front() != '/' && dateString.front() != ',' && !isUnicodeCompatibleASCIIWhitespace(dateString.front()))
-                return std::numeric_limits<double>::quiet_NaN();
-            skip(dateString, 1);
+            if (dateString.empty()) {
+                if (!year)
+                    return std::numeric_limits<double>::quiet_NaN();
+            } else {
+                // '-99 23:12:40 GMT'
+                if (dateString.front() != '-' && dateString.front() != '/' && dateString.front() != ',' && !isUnicodeCompatibleASCIIWhitespace(dateString.front()))
+                    return std::numeric_limits<double>::quiet_NaN();
+                // When we already have the year, the delimiter is the one before the time.
+                if (!year)
+                    skip(dateString, 1);
+            }
         }
     }
 

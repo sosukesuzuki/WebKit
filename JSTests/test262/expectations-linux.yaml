@@ -64,9 +64,6 @@ test/language/expressions/assignment/fn-name-lhs-cover.js:
 test/staging/sm/ArrayBuffer/slice-species.js:
   default: 3
   strict mode: 3
-test/staging/sm/Date/two-digit-years.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/Function/function-name-assignment.js:
   default: 3
 test/staging/sm/Function/function-toString-builtin-name.js:
