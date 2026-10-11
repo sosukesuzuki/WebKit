@@ -79,9 +79,6 @@ test/intl402/Temporal/ZonedDateTime/prototype/monthCode/chinese-calendar-dates.j
 test/language/expressions/assignment/fn-name-lhs-cover.js:
   default: 3
   strict mode: 3
-test/language/expressions/new/non-ctor-err-realm.js:
-  default: 3
-  strict mode: 3
 test/language/expressions/yield/star-iterable.js:
   default: 3
   strict mode: 3
@@ -125,9 +122,6 @@ test/staging/sm/expressions/short-circuit-compound-assignment-anon-fns.js:
   strict mode: 3
 test/staging/sm/extensions/function-caller-skips-eval-frames.js:
   default: 3
-test/staging/sm/extensions/new-cross-compartment.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/generators/delegating-yield-1.js:
   default: 3
   strict mode: 3

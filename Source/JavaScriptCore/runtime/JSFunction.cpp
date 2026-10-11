@@ -53,6 +53,8 @@ JSC_DEFINE_HOST_FUNCTION(callHostFunctionAsConstructor, (JSGlobalObject* globalO
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+    // IsConstructor is checked by the caller before switching the realm, so the error belongs to the caller's realm.
+    globalObject = CallFrame::globalObjectOfCaller(vm, callFrame);
     return throwVMError(globalObject, scope, createNotAConstructorError(globalObject, callFrame->jsCallee()));
 }
 

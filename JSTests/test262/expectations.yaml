@@ -46,9 +46,6 @@ test/intl402/Locale/prototype/getHourCycles/region-priority.js:
 test/intl402/Locale/prototype/getHourCycles/subdivision-region.js:
   default: 3
   strict mode: 3
-test/language/expressions/new/non-ctor-err-realm.js:
-  default: 3
-  strict mode: 3
 test/language/expressions/yield/star-iterable.js:
   default: 3
   strict mode: 3
@@ -81,9 +78,6 @@ test/staging/sm/RegExp/unicode-class-braced.js:
   strict mode: 3
 test/staging/sm/extensions/function-caller-skips-eval-frames.js:
   default: 3
-test/staging/sm/extensions/new-cross-compartment.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/generators/delegating-yield-1.js:
   default: 3
   strict mode: 3
