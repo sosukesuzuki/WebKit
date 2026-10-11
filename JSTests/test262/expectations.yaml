@@ -111,8 +111,6 @@ test/language/statements/with/set-mutable-binding-idref-compound-assign-with-pro
 test/staging/sm/Date/two-digit-years.js:
   default: 3
   strict mode: 3
-test/staging/sm/Function/arguments-parameter-shadowing.js:
-  default: 3
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 3
   strict mode: 3

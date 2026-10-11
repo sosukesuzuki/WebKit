@@ -34,7 +34,9 @@ function assert(b) {
         }
     }
     assert(z !== originalArguments);
-    assert(x() === z);
+    // The function is hoisted to the "var" environment, which is separate from the parameter environment.
+    assert(arguments === z);
+    assert(x() === originalArguments);
     assert(typeof z === "function");
     assert(z() === 25);
 }());

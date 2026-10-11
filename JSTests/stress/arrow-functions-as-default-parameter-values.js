@@ -65,7 +65,9 @@ test(function() {
 test(function() {
     function foo(x = ()=>arguments) {
         var arguments = 25;
-        assert(x() === arguments);
+        assert(arguments === 25);
+        assert(x() !== arguments);
+        assert(x().length === 1);
     }
     foo(undefined);
 });
