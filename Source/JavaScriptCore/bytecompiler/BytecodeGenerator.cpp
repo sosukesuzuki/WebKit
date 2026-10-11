@@ -1231,6 +1231,23 @@ void BytecodeGenerator::initializeDefaultParameterValuesAndSetupFunctionScopeSta
     Vector<std::pair<Identifier, RefPtr<RegisterID>>> valuesToMoveIntoVars;
     ASSERT(!(isSimpleParameterList && shouldCreateArgumentsVariableInParameterScope));
     if (!isSimpleParameterList) {
+        if (m_usesSloppyEval) {
+            // Bindings created by sloppy direct eval calls in the parameter expressions must live in an environment of this function,
+            // which is outside the environment where the parameters are declared.
+            // https://tc39.es/ecma262/#sec-functiondeclarationinstantiation (step 20)
+            SymbolTable* symbolTable = SymbolTable::create(m_vm);
+            ASSERT(symbolTable->scopeType() == SymbolTable::ScopeType::VarScope);
+            symbolTable->setUsesSloppyEval(true);
+            int parameterEvalSymbolTableConstantIndex = addConstantValue(symbolTable)->index();
+            RegisterID* parameterEvalScope = newBlockScopeVariable();
+            parameterEvalScope->ref();
+            OpCreateLexicalEnvironment::emit(this, parameterEvalScope, scopeRegister(), VirtualRegister { parameterEvalSymbolTableConstantIndex }, addConstantValue(jsUndefined()));
+            move(scopeRegister(), parameterEvalScope);
+            pushLocalControlFlowScope();
+            bool isWithScope = false;
+            m_lexicalScopeStack.append({ symbolTable, parameterEvalScope, isWithScope, parameterEvalSymbolTableConstantIndex });
+        }
+
         // Refer to the ES6 spec section 9.2.12: http://www.ecma-international.org/ecma-262/6.0/index.html#sec-functiondeclarationinstantiation
         // This implements step 21.
         VariableEnvironment environment;
