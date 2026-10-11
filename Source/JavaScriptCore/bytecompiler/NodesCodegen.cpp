@@ -225,6 +225,9 @@ static RegisterID* emitGetSuperFunctionForConstruct(BytecodeGenerator& generator
 
 RegisterID* SuperNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+    // https://tc39.es/ecma262/#sec-super-keyword-runtime-semantics-evaluation
+    // GetThisBinding() is performed before anything else in a SuperProperty is evaluated.
+    generator.ensureThis();
     RegisterID* result = emitSuperBaseForCallee(generator);
     return generator.move(generator.finalDestination(dst), result);
 }
@@ -1049,14 +1052,16 @@ RegisterID* BracketAccessorNode::emitBytecode(BytecodeGenerator& generator, Regi
     if (m_base->isSuperNode()) {
         RefPtr<RegisterID> finalDest = generator.finalDestination(dst);
         RefPtr<RegisterID> thisValue = generator.ensureThis();
-        RefPtr<RegisterID> superBase = emitSuperBaseForCallee(generator);
 
         if (isNonIndexStringElement(*m_subscript)) {
+            RefPtr<RegisterID> superBase = emitSuperBaseForCallee(generator);
             const Identifier& id = static_cast<StringNode*>(m_subscript)->value();
             generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
             generator.emitGetById(finalDest.get(), superBase.get(), thisValue.get(), id);
         } else  {
+            // GetSuperBase() is performed after evaluating the subscript expression.
             RefPtr<RegisterID> subscript = generator.emitNodeForProperty(m_subscript);
+            RefPtr<RegisterID> superBase = emitSuperBaseForCallee(generator);
             generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
             generator.emitGetByVal(finalDest.get(), superBase.get(), thisValue.get(), subscript.get());
         }
@@ -2202,9 +2207,7 @@ RegisterID* FunctionCallBracketNode::emitBytecode(BytecodeGenerator& generator, 
     bool subscriptIsNonIndexString = isNonIndexStringElement(*m_subscript);
 
     RefPtr<RegisterID> base;
-    if (baseIsSuper)
-        base = emitSuperBaseForCallee(generator);
-    else {
+    if (!baseIsSuper) {
         if (subscriptIsNonIndexString)
             base = generator.emitNode(m_base);
         else
@@ -2220,6 +2223,8 @@ RegisterID* FunctionCallBracketNode::emitBytecode(BytecodeGenerator& generator, 
         thisRegister = generator.ensureThis();
     }
     if (subscriptIsNonIndexString) {
+        if (baseIsSuper)
+            base = emitSuperBaseForCallee(generator);
         generator.emitExpressionInfo(subexpressionDivot(), subexpressionStart(), subexpressionEnd());
         if (baseIsSuper)
             generator.emitGetById(function.get(), base.get(), thisRegister.get(), static_cast<StringNode*>(m_subscript)->value());
@@ -2227,6 +2232,9 @@ RegisterID* FunctionCallBracketNode::emitBytecode(BytecodeGenerator& generator, 
             generator.emitGetById(function.get(), base.get(), static_cast<StringNode*>(m_subscript)->value());
     } else {
         RefPtr<RegisterID> property = generator.emitNodeForProperty(m_subscript);
+        // GetSuperBase() is performed after evaluating the subscript expression.
+        if (baseIsSuper)
+            base = emitSuperBaseForCallee(generator);
         generator.emitExpressionInfo(subexpressionDivot(), subexpressionStart(), subexpressionEnd());
         if (baseIsSuper)
             generator.emitGetByVal(function.get(), base.get(), thisRegister.get(), property.get());
