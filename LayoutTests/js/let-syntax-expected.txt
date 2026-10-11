@@ -166,24 +166,21 @@ PASS Has syntax error: 'let {x: xx,  foo: {y: xx}} = {foo:[12]};'
 SyntaxError: Unexpected identifier 'xx'. Cannot declare a lexical variable twice: 'xx'.
 SyntaxError: Unexpected identifier 'xx'. Cannot declare a lexical variable twice: 'xx'.
 PASS Has syntax error: ''use strict'; let {x: xx,  foo: {y: xx}} = {foo:[12]};'
+ReferenceError: Can't find variable: let
+PASS Does not have syntax error: 'for (let; false; ) {}'
 SyntaxError: Unexpected token ';'. Expected a parameter pattern or a ')' in parameter list.
 SyntaxError: Unexpected token ';'. Expected a parameter pattern or a ')' in parameter list.
-PASS Has syntax error: 'for (let; ; ) {}'
-SyntaxError: Unexpected token ';'. Expected a parameter pattern or a ')' in parameter list.
-SyntaxError: Unexpected token ';'. Expected a parameter pattern or a ')' in parameter list.
-PASS Has syntax error: ''use strict'; for (let; ; ) {}'
+PASS Has syntax error: ''use strict'; for (let; false; ) {}'
 SyntaxError: Unexpected identifier 'arr'. Expected either 'in' or 'of' in enumeration syntax.
 SyntaxError: Unexpected identifier 'arr'. Expected either 'in' or 'of' in enumeration syntax.
 PASS Has syntax error: 'let arr = []; for (let    of arr) {}'
 SyntaxError: Unexpected identifier 'arr'. Expected either 'in' or 'of' in enumeration syntax.
 SyntaxError: Unexpected identifier 'arr'. Expected either 'in' or 'of' in enumeration syntax.
 PASS Has syntax error: ''use strict'; let arr = []; for (let    of arr) {}'
-SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
-SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
-PASS Has syntax error: 'let obj = {}; for (let    in arr) {}'
-SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
-SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
-PASS Has syntax error: ''use strict'; let obj = {}; for (let    in arr) {}'
+PASS Does not have syntax error: 'var let; var obj = {}; for (let    in obj) {}'
+SyntaxError: Cannot use 'let' as a variable name in strict mode.
+SyntaxError: Cannot use 'let' as a variable name in strict mode.
+PASS Has syntax error: ''use strict'; var let; var obj = {}; for (let    in obj) {}'
 SyntaxError: Cannot declare a let variable twice: 'i'.
 SyntaxError: Cannot declare a let variable twice: 'i'.
 PASS Has syntax error: 'for (let i = 20, j = 40, i = 10; i < 10; i++) {}'
@@ -250,9 +247,7 @@ PASS Has syntax error: 'for (let of []) {}'
 SyntaxError: Unexpected token '['. Expected either 'in' or 'of' in enumeration syntax.
 SyntaxError: Unexpected token '['. Expected either 'in' or 'of' in enumeration syntax.
 PASS Has syntax error: ''use strict'; for (let of []) {}'
-SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
-SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
-PASS Has syntax error: 'for (let in {}) {}'
+PASS Does not have syntax error: 'for (let in {}) {}'
 SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
 SyntaxError: Cannot use the keyword 'in' as a lexical variable name.
 PASS Has syntax error: ''use strict'; for (let in {}) {}'
