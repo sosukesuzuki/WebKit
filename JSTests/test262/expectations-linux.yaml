@@ -115,9 +115,6 @@ test/language/expressions/assignment/fn-name-lhs-cover.js:
 test/language/expressions/new/non-ctor-err-realm.js:
   default: 3
   strict mode: 3
-test/language/expressions/object/computed-property-name-topropertykey-before-value-evaluation.js:
-  default: 3
-  strict mode: 3
 test/language/expressions/yield/star-iterable.js:
   default: 3
   strict mode: 3
@@ -179,9 +176,6 @@ test/staging/sm/TypedArray/slice-memcpy.js:
   strict mode: 3
 test/staging/sm/eval/redeclared-arguments-in-param-expression-eval.js:
   default: 3
-test/staging/sm/expressions/object-literal-computed-property-evaluation.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/expressions/short-circuit-compound-assignment-anon-fns.js:
   default: 3
   strict mode: 3

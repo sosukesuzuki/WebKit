@@ -969,8 +969,13 @@ void PropertyListNode::emitPutConstantProperty(BytecodeGenerator& generator, Reg
         propertyName = generator.newTemporary();
         if (shouldSetFunctionName)
             generator.emitToPropertyKey(propertyName.get(), generator.emitNode(node.m_expression));
-        else
+        else {
             generator.emitNode(propertyName.get(), node.m_expression);
+            // ToPropertyKey, which is observable, must be performed before evaluating the value unless evaluating the value is not observable.
+            bool valueIsUnobservable = node.m_assign->isPure(generator) && !(node.m_assign->isResolveNode() && static_cast<ResolveNode*>(node.m_assign)->getFromScopeCanThrow(generator));
+            if (!node.m_expression->isNumber() && !node.m_expression->isString() && !valueIsUnobservable)
+                generator.emitToPropertyKeyOrNumber(propertyName.get(), propertyName.get());
+        }
     }
 
     RefPtr<RegisterID> value = generator.emitNode(node.m_assign);

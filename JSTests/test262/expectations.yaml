@@ -82,9 +82,6 @@ test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-p
 test/language/expressions/new/non-ctor-err-realm.js:
   default: 3
   strict mode: 3
-test/language/expressions/object/computed-property-name-topropertykey-before-value-evaluation.js:
-  default: 3
-  strict mode: 3
 test/language/expressions/yield/star-iterable.js:
   default: 3
   strict mode: 3
@@ -138,9 +135,6 @@ test/staging/sm/RegExp/unicode-class-braced.js:
   strict mode: 3
 test/staging/sm/eval/redeclared-arguments-in-param-expression-eval.js:
   default: 3
-test/staging/sm/expressions/object-literal-computed-property-evaluation.js:
-  default: 3
-  strict mode: 3
 test/staging/sm/extensions/function-caller-skips-eval-frames.js:
   default: 3
 test/staging/sm/extensions/new-cross-compartment.js:
