@@ -142,6 +142,9 @@ JSC_DEFINE_JIT_OPERATION(operationGetFromScopeForLOL, EncodedJSValue, (CallFrame
     // ModuleVar is always converted to ClosureVar for get_from_scope.
     ASSERT(getPutInfo.resolveType() != ModuleVar);
 
+    if (CommonSlowPaths::isObjectEnvironmentBindingObject(environment)) [[unlikely]]
+        OPERATION_RETURN(scope, JSValue::encode(CommonSlowPaths::getBindingValueFromObjectEnvironment(globalObject, environment, ident, getPutInfo.ecmaMode())));
+
     OPERATION_RETURN(scope, JSValue::encode(environment->getPropertySlot(globalObject, ident, [&] (bool found, PropertySlot& slot) -> JSValue {
         if (!found) {
             if (getPutInfo.resolveMode() == ThrowIfNotFound)

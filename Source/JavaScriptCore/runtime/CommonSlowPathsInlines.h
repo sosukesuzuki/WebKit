@@ -119,6 +119,28 @@ inline void tryCachePutToScopeGlobal(
     }
 }
 
+// op_resolve_scope yields the binding object itself for a with statement's Object Environment Record.
+inline bool isObjectEnvironmentBindingObject(JSObject* scope)
+{
+    return !scope->inherits<JSScope>();
+}
+
+// https://tc39.es/ecma262/#sec-object-environment-records-getbindingvalue-n-s
+inline JSValue getBindingValueFromObjectEnvironment(JSGlobalObject* globalObject, JSObject* bindingObject, const Identifier& ident, ECMAMode ecmaMode)
+{
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    bool hasProperty = bindingObject->hasProperty(globalObject, ident);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!hasProperty) {
+        if (ecmaMode.isStrict())
+            throwException(globalObject, scope, createUndefinedVariableError(globalObject, ident));
+        return jsUndefined();
+    }
+    RELEASE_AND_RETURN(scope, bindingObject->get(globalObject, ident));
+}
+
 inline void tryCacheGetFromScopeGlobal(
     JSGlobalObject* globalObject, CodeBlock* codeBlock, VM& vm, OpGetFromScope& bytecode, JSObject* scope, PropertySlot& slot, const Identifier& ident)
 {

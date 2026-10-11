@@ -2364,6 +2364,9 @@ LLINT_SLOW_PATH_DECL(slow_path_get_from_scope)
     // ModuleVar is always converted to ClosureVar for get_from_scope.
     ASSERT(metadata.m_getPutInfo.resolveType() != ModuleVar);
 
+    if (CommonSlowPaths::isObjectEnvironmentBindingObject(scope)) [[unlikely]]
+        LLINT_RETURN(CommonSlowPaths::getBindingValueFromObjectEnvironment(globalObject, scope, ident, metadata.m_getPutInfo.ecmaMode()));
+
     LLINT_RETURN(scope->getPropertySlot(globalObject, ident, [&] (bool found, PropertySlot& slot) -> JSValue {
         if (!found) {
             if (metadata.m_getPutInfo.resolveMode() == ThrowIfNotFound)
