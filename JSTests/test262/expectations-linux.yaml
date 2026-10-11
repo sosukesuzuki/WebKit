@@ -19,15 +19,6 @@
 ---
 test/annexB/language/function-code/block-decl-func-skip-arguments.js:
   default: 3
-test/built-ins/Function/prototype/arguments/prop-desc.js:
-  default: 3
-  strict mode: 3
-test/built-ins/Function/prototype/caller-arguments/accessor-properties.js:
-  default: 3
-  strict mode: 3
-test/built-ins/Function/prototype/caller/prop-desc.js:
-  default: 3
-  strict mode: 3
 test/built-ins/TypedArray/prototype/slice/speciesctor-return-same-buffer-with-offset.js:
   default: 3
   strict mode: 3

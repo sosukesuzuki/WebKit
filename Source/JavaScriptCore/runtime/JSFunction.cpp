@@ -31,6 +31,7 @@
 #include "CallFrame.h"
 #include "CommonIdentifiers.h"
 #include "FunctionExecutableInlines.h"
+#include "FunctionPrototype.h"
 #include "GeneratorPrototype.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
@@ -349,6 +350,13 @@ void JSFunction::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* gl
             propertyNames.add(vm.propertyNames->name);
         if (!thisObject->isHostOrBuiltinFunction() && thisObject->jsExecutable()->hasPrototypeProperty())
             propertyNames.add(vm.propertyNames->prototype);
+        if (hasLegacyArgumentsAndCallerProperties(thisObject)) {
+            bool hasReified = thisObject->rareData() && thisObject->rareData()->hasReifiedArgumentsAndCaller();
+            if (!hasReified || isValidOffset(thisObject->getDirectOffset(vm, vm.propertyNames->arguments)))
+                propertyNames.add(vm.propertyNames->arguments);
+            if (!hasReified || isValidOffset(thisObject->getDirectOffset(vm, vm.propertyNames->caller)))
+                propertyNames.add(vm.propertyNames->caller);
+        }
     } else if (mode == DontEnumPropertiesMode::Exclude) {
         PropertyDescriptor descriptor;
 
@@ -561,6 +569,8 @@ JSFunction::PropertyStatus JSFunction::reifyLazyPropertyIfNeeded(VM& vm, JSGloba
         status = reifyLazyPropertyForHostOrBuiltinIfNeeded(vm, globalObject, propertyName);
     else if (PropertyStatus lazyPrototype = reifyLazyPrototypeIfNeeded(vm, globalObject, propertyName); isLazy(lazyPrototype))
         status = lazyPrototype;
+    else if (PropertyStatus lazyArgumentsOrCaller = reifyLazyArgumentsAndCallerIfNeeded(vm, propertyName); isLazy(lazyArgumentsOrCaller))
+        status = lazyArgumentsOrCaller;
     else if (PropertyStatus lazyLength = reifyLazyLengthIfNeeded(vm, globalObject, propertyName); isLazy(lazyLength))
         status = lazyLength;
     else if (PropertyStatus lazyName = reifyLazyNameIfNeeded(vm, globalObject, propertyName); isLazy(lazyName))
@@ -604,6 +614,23 @@ JSFunction::PropertyStatus JSFunction::reifyLazyPrototypeIfNeeded(VM& vm, JSGlob
             // For class constructors, prototype object is initialized from bytecode via defineOwnProperty().
             ASSERT(!jsExecutable()->isClassConstructorFunction());
             putDirect(vm, propertyName, constructPrototypeObject(globalObject, this), prototypeAttributesForNonClass);
+            return PropertyStatus::Reified;
+        }
+        return PropertyStatus::Lazy;
+    }
+    return PropertyStatus::Eager;
+}
+
+JSFunction::PropertyStatus JSFunction::reifyLazyArgumentsAndCallerIfNeeded(VM& vm, PropertyName propertyName)
+{
+    if ((propertyName == vm.propertyNames->arguments || propertyName == vm.propertyNames->caller) && hasLegacyArgumentsAndCallerProperties(this)) {
+        FunctionRareData* rareData = ensureRareData(vm);
+        if (!rareData->hasReifiedArgumentsAndCaller()) {
+            // Since their values change over time, they have to be configurable not to violate the invariants of the essential internal methods.
+            constexpr unsigned attributes = PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomValue;
+            putDirectCustomAccessor(vm, vm.propertyNames->arguments, CustomGetterSetter::create(vm, functionArgumentsGetter, nullptr), attributes);
+            putDirectCustomAccessor(vm, vm.propertyNames->caller, CustomGetterSetter::create(vm, functionCallerGetter, nullptr), attributes);
+            rareData->setHasReifiedArgumentsAndCaller();
             return PropertyStatus::Reified;
         }
         return PropertyStatus::Lazy;

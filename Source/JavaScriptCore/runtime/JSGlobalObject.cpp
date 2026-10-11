@@ -1078,6 +1078,11 @@ void JSGlobalObject::init(VM& vm)
         [] (const Initializer<Structure>& init) {
             init.set(JSRemoteFunction::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
         });
+    {
+        JSFunction* thrower = JSFunction::create(vm, this, 0, emptyString(), globalFuncThrowTypeErrorArgumentsCalleeAndCaller, ImplementationVisibility::Public);
+        thrower->freeze(vm);
+        m_throwTypeErrorArgumentsCalleeGetterSetter.set(vm, this, GetterSetter::create(vm, this, thrower, thrower));
+    }
     JSFunction* callFunction = nullptr;
     JSFunction* applyFunction = nullptr;
     JSFunction* hasInstanceSymbolFunction = nullptr;
@@ -1149,12 +1154,6 @@ void JSGlobalObject::init(VM& vm)
     m_sharedArrayBufferSpeciesGetterSetter.set(vm, this, GetterSetter::create(vm, this, JSFunction::create(vm, this, 0, "get [Symbol.species]"_s, globalFuncSpeciesGetter, ImplementationVisibility::Public, SpeciesGetterIntrinsic), nullptr));
     m_promiseSpeciesGetterSetter.set(vm, this, GetterSetter::create(vm, this, JSFunction::create(vm, this, 0, "get [Symbol.species]"_s, globalFuncSpeciesGetter, ImplementationVisibility::Public, SpeciesGetterIntrinsic), nullptr));
 
-    m_throwTypeErrorArgumentsCalleeGetterSetter.initLater(
-        [] (const Initializer<GetterSetter>& init) {
-            JSFunction* thrower = JSFunction::create(init.vm, init.owner, 0, emptyString(), globalFuncThrowTypeErrorArgumentsCalleeAndCaller, ImplementationVisibility::Public);
-            thrower->freeze(init.vm);
-            init.set(GetterSetter::create(init.vm, init.owner, thrower, thrower));
-        });
     m_typedArrayProto.initLater(
         [] (const Initializer<JSTypedArrayViewPrototype>& init) {
             init.set(JSTypedArrayViewPrototype::create(init.vm, init.owner, JSTypedArrayViewPrototype::createStructure(init.vm, init.owner, init.owner->m_objectPrototype.get())));
@@ -2999,7 +2998,7 @@ void JSGlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_performProxyObjectSetByValStrictFunction);
     visitor.append(thisObject->m_performProxyObjectSetByValSloppyFunction);
     visitor.append(thisObject->m_regExpProtoSymbolReplace);
-    thisObject->m_throwTypeErrorArgumentsCalleeGetterSetter.visit(visitor);
+    visitor.append(thisObject->m_throwTypeErrorArgumentsCalleeGetterSetter);
     thisObject->m_moduleLoader.visit(visitor);
 
     visitor.append(thisObject->m_objectPrototype);

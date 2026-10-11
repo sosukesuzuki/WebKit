@@ -226,6 +226,7 @@ private:
 
     PropertyStatus reifyLazyPropertyForHostOrBuiltinIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyPrototypeIfNeeded(VM&, JSGlobalObject*, PropertyName);
+    PropertyStatus reifyLazyArgumentsAndCallerIfNeeded(VM&, PropertyName);
     PropertyStatus reifyLazyLengthIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyNameIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyBoundNameIfNeeded(VM&, JSGlobalObject*, PropertyName);

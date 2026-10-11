@@ -3,13 +3,11 @@ function shouldBe(actual, expected, testInfo) {
         throw new Error(`Bad value: ${actual} (${testInfo})`);
 }
 
-const functionPrototypeCallerGetter = Object.getOwnPropertyDescriptor(Function.prototype, "caller").get;
-
 let callerViaGet;
 let callerViaGetOwnProperty;
 function updateCaller() {
     callerViaGet = updateCaller.caller;
-    callerViaGetOwnProperty = functionPrototypeCallerGetter.call(updateCaller);
+    callerViaGetOwnProperty = Object.getOwnPropertyDescriptor(updateCaller, "caller").value;
 }
 noInline(updateCaller);
 

@@ -340,7 +340,7 @@ public:
     WriteBarrier<JSFunction> m_performProxyObjectSetByValStrictFunction;
     WriteBarrier<JSFunction> m_performProxyObjectSetByValSloppyFunction;
     WriteBarrier<JSObject> m_regExpProtoSymbolReplace;
-    LazyProperty<JSGlobalObject, GetterSetter> m_throwTypeErrorArgumentsCalleeGetterSetter;
+    WriteBarrier<GetterSetter> m_throwTypeErrorArgumentsCalleeGetterSetter;
 
     LazyProperty<JSGlobalObject, JSModuleLoader> m_moduleLoader;
 
@@ -854,7 +854,7 @@ public:
     GetterSetter* regExpProtoStickyGetter() const;
     GetterSetter* regExpProtoUnicodeGetter() const;
     GetterSetter* regExpProtoUnicodeSetsGetter() const;
-    GetterSetter* throwTypeErrorArgumentsCalleeGetterSetter() const LIFETIME_BOUND { return m_throwTypeErrorArgumentsCalleeGetterSetter.get(this); }
+    GetterSetter* throwTypeErrorArgumentsCalleeGetterSetter() const LIFETIME_BOUND { return m_throwTypeErrorArgumentsCalleeGetterSetter.get(); }
     
     JSModuleLoader* moduleLoader() const LIFETIME_BOUND { return m_moduleLoader.get(this); }
 

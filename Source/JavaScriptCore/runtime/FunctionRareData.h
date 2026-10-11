@@ -120,6 +120,8 @@ public:
     void setHasReifiedLength() { m_hasReifiedLength = true; }
     bool hasReifiedName() const { return m_hasReifiedName; }
     void setHasReifiedName() { m_hasReifiedName = true; }
+    bool hasReifiedArgumentsAndCaller() const { return m_hasReifiedArgumentsAndCaller; }
+    void setHasReifiedArgumentsAndCaller() { m_hasReifiedArgumentsAndCaller = true; }
 
     bool hasModifiedLengthForBoundOrNonHostFunction() const { return m_hasModifiedLengthForBoundOrNonHostFunction; }
     void setHasModifiedLengthForBoundOrNonHostFunction()
@@ -163,6 +165,7 @@ private:
     std::unique_ptr<AllocationProfileClearingWatchpoint> m_allocationProfileClearingWatchpoint;
     bool m_hasReifiedLength : 1;
     bool m_hasReifiedName : 1;
+    bool m_hasReifiedArgumentsAndCaller : 1;
     bool m_hasModifiedLengthForBoundOrNonHostFunction : 1;
     bool m_hasModifiedNameForBoundOrNonHostFunction : 1;
 };

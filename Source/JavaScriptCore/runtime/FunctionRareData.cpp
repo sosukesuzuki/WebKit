@@ -78,6 +78,7 @@ FunctionRareData::FunctionRareData(VM& vm, ExecutableBase* executable)
     , m_executable(executable, WriteBarrierEarlyInit)
     , m_hasReifiedLength(false)
     , m_hasReifiedName(false)
+    , m_hasReifiedArgumentsAndCaller(false)
     , m_hasModifiedLengthForBoundOrNonHostFunction(false)
     , m_hasModifiedNameForBoundOrNonHostFunction(false)
 {

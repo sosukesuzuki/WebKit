@@ -1,6 +1,6 @@
 function abc() {}
 let s = JSON.stringify(Object.keys(Object.getOwnPropertyDescriptors(abc)));
-if (s !== `["length","name","prototype"]`) {
+if (s !== `["length","name","prototype","arguments","caller"]`) {
     throw Error("wrong");
 }
 

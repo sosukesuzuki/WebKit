@@ -47,4 +47,9 @@ private:
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(FunctionPrototype, InternalFunction);
 
+// Non-strict ordinary functions have legacy "arguments" and "caller" own properties.
+bool NODELETE hasLegacyArgumentsAndCallerProperties(JSFunction*);
+JSC_DECLARE_CUSTOM_GETTER(functionArgumentsGetter);
+JSC_DECLARE_CUSTOM_GETTER(functionCallerGetter);
+
 } // namespace JSC

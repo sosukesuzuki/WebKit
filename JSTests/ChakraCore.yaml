@@ -2201,7 +2201,7 @@
 - path: ChakraCore/test/strict/18.formal_sm.js
   cmd: runChakra :baseline, "NoException", "18.formal_sm.baseline", []
 - path: ChakraCore/test/strict/19.function.js
-  cmd: runChakra :baseline, "NoException", "19.function.baseline", []
+  cmd: runChakra :baseline, "NoException", "19.function.baseline-jsc", []
 - path: ChakraCore/test/strict/19.function_sm.js
   # Different behavior.
   cmd: runChakra :skip, "NoException", "19.function_sm.baseline", []

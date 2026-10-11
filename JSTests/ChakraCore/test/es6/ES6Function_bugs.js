@@ -65,8 +65,9 @@ var tests = [
                     });
             }
             assert.doesNotThrow(function () { g('length') }, "assertion failure on defineProperty 'length' with {writable: false, configurable:true} after defineProperty with getter on a function object");
-            assert.throws(function () { g('arguments') }, TypeError, "Cannot redefine non-configurable property 'arguments'");
-            assert.throws(function () { g('caller') }, TypeError, "Cannot redefine non-configurable property 'caller'");
+            // 'arguments' and 'caller' of non-strict functions are configurable in JSC.
+            assert.doesNotThrow(function () { g('arguments') }, "assertion failure on defineProperty 'arguments' with {writable: false, configurable:true} after defineProperty with getter on a function object");
+            assert.doesNotThrow(function () { g('caller') }, "assertion failure on defineProperty 'caller' with {writable: false, configurable:true} after defineProperty with getter on a function object");
          }
     },
 ];

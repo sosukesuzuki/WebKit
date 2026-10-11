@@ -41,10 +41,6 @@ static JSC_DECLARE_HOST_FUNCTION(functionProtoFuncBind);
 static JSC_DECLARE_HOST_FUNCTION(functionProtoFuncSymbolHasInstance);
 static JSC_DECLARE_HOST_FUNCTION(callFunctionPrototype);
 
-static JSC_DECLARE_CUSTOM_GETTER(argumentsGetter);
-static JSC_DECLARE_CUSTOM_GETTER(callerGetter);
-static JSC_DECLARE_CUSTOM_SETTER(callerAndArgumentsSetter);
-
 // https://tc39.es/ecma262/#sec-properties-of-the-function-prototype-object
 JSC_DEFINE_HOST_FUNCTION(callFunctionPrototype, (JSGlobalObject*, CallFrame*))
 {
@@ -70,8 +66,10 @@ void FunctionPrototype::addFunctionProperties(VM& vm, JSGlobalObject* globalObje
     *callFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().callPublicName(), functionPrototypeCallCodeGenerator(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->bind, functionProtoFuncBind, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, FunctionBindIntrinsic);
 
-    putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->arguments, CustomGetterSetter::create(vm, argumentsGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
-    putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->caller, CustomGetterSetter::create(vm, callerGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
+    // https://tc39.es/ecma262/#sec-addrestrictedfunctionproperties
+    GetterSetter* thrower = globalObject->throwTypeErrorArgumentsCalleeGetterSetter();
+    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->arguments, thrower, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->caller, thrower, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
 
     *hasInstanceSymbolFunction = JSFunction::create(vm, globalObject, 1, "[Symbol.hasInstance]"_s, functionProtoFuncSymbolHasInstance, ImplementationVisibility::Public);
     putDirectWithoutTransition(vm, vm.propertyNames->hasInstanceSymbol, *hasInstanceSymbolFunction, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
@@ -196,8 +194,7 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncBind, (JSGlobalObject* globalObject, C
     RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs, length, name, source)));
 }
 
-// https://github.com/claudepache/es-legacy-function-reflection/blob/master/spec.md#isallowedreceiverfunctionforcallerandargumentsfunc-expectedrealm (except step 3)
-static ALWAYS_INLINE bool NODELETE isAllowedReceiverFunctionForCallerAndArguments(JSFunction* function)
+bool hasLegacyArgumentsAndCallerProperties(JSFunction* function)
 {
     if (function->isHostOrBuiltinFunction())
         return false;
@@ -246,15 +243,13 @@ static JSValue retrieveArguments(VM& vm, CallFrame* callFrame, JSFunction* funct
     return functor.result();
 }
 
-// https://github.com/claudepache/es-legacy-function-reflection/blob/master/spec.md#get-functionprototypearguments
-JSC_DEFINE_CUSTOM_GETTER(argumentsGetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
+JSC_DEFINE_CUSTOM_GETTER(functionArgumentsGetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSFunction* thisObj = dynamicDowncast<JSFunction>(JSValue::decode(thisValue));
-    if (!thisObj || !isAllowedReceiverFunctionForCallerAndArguments(thisObj))
-        return throwVMTypeError(globalObject, scope, RestrictedPropertyAccessError);
+    JSFunction* thisObj = uncheckedDowncast<JSFunction>(JSValue::decode(thisValue));
+    ASSERT(hasLegacyArgumentsAndCallerProperties(thisObj));
 
     JSValue result = retrieveArguments(vm, vm.topCallFrame, thisObj);
     EXCEPTION_ASSERT(scope.exception() || result);
@@ -322,15 +317,12 @@ static JSValue retrieveCallerFunction(VM& vm, CallFrame* callFrame, JSFunction* 
     return functor.result();
 }
 
-// https://github.com/claudepache/es-legacy-function-reflection/blob/master/spec.md#get-functionprototypecaller
-JSC_DEFINE_CUSTOM_GETTER(callerGetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
+JSC_DEFINE_CUSTOM_GETTER(functionCallerGetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSFunction* thisObj = dynamicDowncast<JSFunction>(JSValue::decode(thisValue));
-    if (!thisObj || !isAllowedReceiverFunctionForCallerAndArguments(thisObj))
-        return throwVMTypeError(globalObject, scope, RestrictedPropertyAccessError);
+    JSFunction* thisObj = uncheckedDowncast<JSFunction>(JSValue::decode(thisValue));
+    ASSERT(hasLegacyArgumentsAndCallerProperties(thisObj));
 
     JSValue caller = retrieveCallerFunction(vm, vm.topCallFrame, thisObj);
     if (caller.isNull())
@@ -353,18 +345,6 @@ JSC_DEFINE_CUSTOM_GETTER(callerGetter, (JSGlobalObject* globalObject, EncodedJSV
         return JSValue::encode(jsNull());
 
     return JSValue::encode(caller);
-}
-
-JSC_DEFINE_CUSTOM_SETTER(callerAndArgumentsSetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue, PropertyName))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSFunction* thisObj = dynamicDowncast<JSFunction>(JSValue::decode(thisValue));
-    if (!thisObj || !isAllowedReceiverFunctionForCallerAndArguments(thisObj))
-        throwTypeError(globalObject, scope, RestrictedPropertyAccessError);
-
-    return true;
 }
 
 } // namespace JSC

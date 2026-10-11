@@ -16,10 +16,10 @@ function mf(a,b) {
 mf(99);
 shouldBe("mf.arguments", "expected[expno++]");
 
-// Check that sloppy mode ES5 function doesn't have own 'arguments' and 'caller' properties
+// Check that sloppy mode ES5 function has own 'arguments' and 'caller' properties
 function f(a,b,c) {
-  shouldBeFalse("f.hasOwnProperty('arguments')");
-  shouldBeFalse("f.hasOwnProperty('caller')");
+  shouldBeTrue("f.hasOwnProperty('arguments')");
+  shouldBeTrue("f.hasOwnProperty('caller')");
 }
 f(1,2,3);
 
