@@ -205,8 +205,6 @@ test/staging/sm/extensions/function-caller-skips-eval-frames.js:
 test/staging/sm/extensions/new-cross-compartment.js:
   default: 3
   strict mode: 3
-test/staging/sm/fields/await-identifier-module-2.js:
-  module: 3
 test/staging/sm/generators/delegating-yield-1.js:
   default: 3
   strict mode: 3
@@ -228,5 +226,3 @@ test/staging/sm/lexical-environment/block-scoped-functions-deprecated-redecl.js:
   default: 3
 test/staging/sm/misc/future-reserved-words.js:
   default: 3
-test/staging/sm/module/await-restricted-nested.js:
-  module: 3
