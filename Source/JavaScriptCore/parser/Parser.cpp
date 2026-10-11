@@ -4461,6 +4461,8 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseAwaitExpress
     JSTextPosition argumentStart = tokenStartPosition();
     TreeExpression argument = parseUnaryExpression(context);
     failIfFalse(argument, "Failed to parse await expression");
+    // AwaitExpression is an UnaryExpression, which cannot be the left hand side of the exponentiation expression.
+    failIfTrue(match(POW), "Ambiguous unary expression in the left hand side of the exponentiation expression; parentheses must be used to disambiguate the expression");
     currentFunctionScope()->setUsesAwait();
     return context.createAwait(location, argument, divotStart, argumentStart, lastTokenEndPosition());
 }
