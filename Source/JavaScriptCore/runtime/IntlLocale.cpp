@@ -882,8 +882,22 @@ JSArray* IntlLocale::hourCycles(JSGlobalObject* globalObject)
         RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTF::move(elements)));
     }
 
+    // https://tc39.es/ecma402/#sec-regionpreference
+    // When the locale does not have a region subtag, the region of "sd" subdivision takes precedence over the likely region. ICU does not know this.
+    ASCIICString localeID = m_localeID;
+    if (region().isEmpty()) {
+        String subdivision = keywordValue("sd"_s);
+        unsigned regionLength = subdivision.length() > 3 && isASCIIDigit(subdivision[0]) ? 3 : 2;
+        LocaleIDBuilder builder;
+        if (subdivision.length() > regionLength && builder.initialize(toString())) {
+            builder.overrideLanguageScriptRegionVariants({ }, { }, subdivision.left(regionLength).convertToASCIIUppercase());
+            if (auto localeIDWithRegion = builder.toCanonical(); !localeIDWithRegion.isNull())
+                localeID = WTF::move(localeIDWithRegion);
+        }
+    }
+
     UErrorCode status = U_ZERO_ERROR;
-    auto generator = std::unique_ptr<UDateTimePatternGenerator, ICUDeleter<udatpg_close>>(udatpg_open(m_localeID.data(), &status));
+    auto generator = std::unique_ptr<UDateTimePatternGenerator, ICUDeleter<udatpg_close>>(udatpg_open(localeID.data(), &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "invalid locale"_s);
         return nullptr;
