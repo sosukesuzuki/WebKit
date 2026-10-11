@@ -28,9 +28,6 @@ test/built-ins/Function/prototype/caller-arguments/accessor-properties.js:
 test/built-ins/Function/prototype/caller/prop-desc.js:
   default: 3
   strict mode: 3
-test/built-ins/Uint8Array/prototype/setFromBase64/trailing-garbage.js:
-  default: 3
-  strict mode: 3
 test/intl402/Locale/prototype/getHourCycles/region-priority.js:
   default: 3
   strict mode: 3

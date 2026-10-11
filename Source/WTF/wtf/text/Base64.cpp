@@ -353,6 +353,16 @@ static std::tuple<FromBase64ShouldThrowError, size_t, size_t> fromBase64Impl(std
         return { FromBase64ShouldThrowError::No, result.count, outputLength };
 
     default:
+        // Step 10.l.v of https://tc39.es/proposal-arraybuffer-base64/spec/#sec-frombase64 returns as soon as complete chunks
+        // fill maxLength bytes, so whatever follows them, even invalid characters, is never looked at.
+        if (outputSizeIsMaxLength == OutputSizeIsMaxLength::Yes && outputLength == output.size() && !(outputLength % 3)) {
+            size_t read = 0;
+            for (size_t remainingCharacters = outputLength / 3 * 4; remainingCharacters; ++read) {
+                if (!isASCIIWhitespace(span[read]))
+                    --remainingCharacters;
+            }
+            return { FromBase64ShouldThrowError::No, read, outputLength };
+        }
         return { FromBase64ShouldThrowError::Yes, result.count, outputLength };
     }
 }
