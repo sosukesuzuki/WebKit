@@ -13176,7 +13176,8 @@ void SpeculativeJIT::compileResolveScope(Node* node)
     GPRFlushedCallResult result(this);
     GPRReg resultGPR = result.gpr();
     flushRegisters();
-    callOperation(operationResolveScope, resultGPR, LinkableConstant::globalObject(*this, node), scopeGPR, TrustedImmPtr(identifierUID(node->identifierNumber())));
+    bool isStrictMode = m_graph.baselineCodeBlockFor(node->origin.semantic)->ownerExecutable()->isInStrictContext();
+    callOperation(operationResolveScope, resultGPR, LinkableConstant::globalObject(*this, node), scopeGPR, TrustedImmPtr(identifierUID(node->identifierNumber())), TrustedImm32(isStrictMode));
     cellResult(resultGPR, node);
 }
 

@@ -33,6 +33,7 @@
 #include "JSModuleEnvironment.h"
 #include "JSScopeInlines.h"
 #include "JSWithScope.h"
+#include "StrictEvalActivation.h"
 #include "TopExceptionScope.h"
 #include "VMTrapsInlines.h"
 #include "VariableEnvironment.h"
@@ -296,15 +297,30 @@ JSValue JSScope::resolveScopeForHoistingFuncDeclInEval(JSGlobalObject* globalObj
     return result ? JSValue(object) : jsUndefined();
 }
 
-JSObject* JSScope::resolve(JSGlobalObject* globalObject, JSScope* scope, const Identifier& ident)
+JSObject* JSScope::resolve(JSGlobalObject* globalObject, JSScope* scope, const Identifier& ident, ECMAMode ecmaMode)
 {
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
     auto predicate1 = [&] (JSScope*) -> bool {
         return false;
     };
     auto predicate2 = [&] (JSScope*) -> bool {
         return false;
     };
-    return resolve(globalObject, scope, ident, predicate1, predicate2);
+    JSObject* object = resolve(globalObject, scope, ident, predicate1, predicate2);
+    RETURN_IF_EXCEPTION(throwScope, nullptr);
+
+    // While PutValue to an unresolvable Reference creates a property of the global object in sloppy mode, it must throw a ReferenceError
+    // in strict mode even if the binding gets created after the Reference is resolved (e.g. `undeclared = (globalThis.undeclared = 0)`).
+    // We represent such a Reference with an empty scope so that the subsequent op_get_from_scope / op_put_to_scope cannot find the binding.
+    if (ecmaMode.isStrict() && object->isGlobalObject()) {
+        bool hasProperty = object->hasProperty(globalObject, ident);
+        RETURN_IF_EXCEPTION(throwScope, nullptr);
+        if (!hasProperty)
+            return StrictEvalActivation::create(vm, globalObject->strictEvalActivationStructure(), scope);
+    }
+    return object;
 }
 
 ResolveOp JSScope::abstractResolve(JSGlobalObject* globalObject, size_t depthOffset, JSScope* scope, const Identifier& ident, GetOrPut getOrPut, ResolveType unlinkedType, InitializationMode initializationMode)

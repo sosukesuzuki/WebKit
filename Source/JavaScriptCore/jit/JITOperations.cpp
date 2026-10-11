@@ -4539,7 +4539,7 @@ JSC_DEFINE_JIT_OPERATION(operationResolveScopeForBaseline, EncodedJSValue, (JSGl
     auto bytecode = pc->as<OpResolveScope>();
     const Identifier& ident = codeBlock->identifier(bytecode.m_var);
     JSScope* environment = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
-    JSObject* resolvedScope = JSScope::resolve(globalObject, environment, ident);
+    JSObject* resolvedScope = JSScope::resolve(globalObject, environment, ident, ECMAMode::fromBool(codeBlock->ownerExecutable()->isInStrictContext()));
     // Proxy can throw an error here, e.g. Proxy in with statement's @unscopables.
     OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
 

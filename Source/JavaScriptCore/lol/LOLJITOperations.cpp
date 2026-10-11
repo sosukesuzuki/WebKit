@@ -86,7 +86,7 @@ JSC_DEFINE_JIT_OPERATION(operationResolveScopeForLOL, EncodedJSValue, (CallFrame
     const JSInstruction* pc = codeBlock->instructionAt(BytecodeIndex(bytecodeOffset));
     auto bytecode = pc->as<OpResolveScope>();
     const Identifier& ident = codeBlock->identifier(bytecode.m_var);
-    JSObject* resolvedScope = JSScope::resolve(globalObject, environment, ident);
+    JSObject* resolvedScope = JSScope::resolve(globalObject, environment, ident, ECMAMode::fromBool(codeBlock->ownerExecutable()->isInStrictContext()));
     // Proxy can throw an error here, e.g. Proxy in with statement's @unscopables.
     OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
 

@@ -5964,14 +5964,14 @@ JSC_DEFINE_JIT_OPERATION(operationResolveScopeForHoistingFuncDeclInEval, Encoded
     OPERATION_RETURN(scope, JSValue::encode(resolvedScope));
 }
     
-JSC_DEFINE_JIT_OPERATION(operationResolveScope, JSCell*, (JSGlobalObject* globalObject, JSScope* jsScope, UniquedStringImpl* impl))
+JSC_DEFINE_JIT_OPERATION(operationResolveScope, JSCell*, (JSGlobalObject* globalObject, JSScope* jsScope, UniquedStringImpl* impl, uint32_t isStrictMode))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* resolvedScope = JSScope::resolve(globalObject, jsScope, Identifier::fromUid(vm, impl));
+    JSObject* resolvedScope = JSScope::resolve(globalObject, jsScope, Identifier::fromUid(vm, impl), ECMAMode::fromBool(isStrictMode));
     OPERATION_RETURN(scope, resolvedScope);
 }
 

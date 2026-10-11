@@ -21580,8 +21580,9 @@ IGNORE_CLANG_WARNINGS_END
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
         UniquedStringImpl* uid = m_graph.identifiers()[m_node->identifierNumber()];
+        bool isStrictMode = m_graph.baselineCodeBlockFor(m_origin.semantic)->ownerExecutable()->isInStrictContext();
         setJSValue(vmCall(pointerType(), operationResolveScope,
-            weakPointer(globalObject), lowCell(m_node->child1()), m_out.constIntPtr(uid)));
+            weakPointer(globalObject), lowCell(m_node->child1()), m_out.constIntPtr(uid), m_out.constInt32(isStrictMode)));
     }
 
     void compileGetDynamicVar()

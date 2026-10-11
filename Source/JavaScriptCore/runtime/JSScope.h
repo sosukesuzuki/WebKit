@@ -55,7 +55,7 @@ public:
 
     static JSObject* NODELETE objectAtScope(JSScope*);
 
-    static JSObject* resolve(JSGlobalObject*, JSScope*, const Identifier&);
+    static JSObject* resolve(JSGlobalObject*, JSScope*, const Identifier&, ECMAMode);
     static JSValue resolveScopeForHoistingFuncDeclInEval(JSGlobalObject*, JSScope*, const Identifier&);
     static ResolveOp abstractResolve(JSGlobalObject*, size_t depthOffset, JSScope*, const Identifier&, GetOrPut, ResolveType, InitializationMode);
 
