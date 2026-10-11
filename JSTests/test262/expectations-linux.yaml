@@ -91,8 +91,6 @@ test/intl402/Temporal/ZonedDateTime/prototype/daysInYear/basic-chinese.js:
 test/intl402/Temporal/ZonedDateTime/prototype/monthCode/chinese-calendar-dates.js:
   default: 3
   strict mode: 3
-test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js:
-  default: 3
 test/language/expressions/assignment/fn-name-lhs-cover.js:
   default: 3
   strict mode: 3

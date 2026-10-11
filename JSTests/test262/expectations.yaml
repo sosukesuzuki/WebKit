@@ -61,8 +61,6 @@ test/intl402/Locale/prototype/getHourCycles/region-priority.js:
 test/intl402/Locale/prototype/getHourCycles/subdivision-region.js:
   default: 3
   strict mode: 3
-test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js:
-  default: 3
 test/language/expressions/new/non-ctor-err-realm.js:
   default: 3
   strict mode: 3

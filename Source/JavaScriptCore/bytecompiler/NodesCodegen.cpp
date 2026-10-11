@@ -6025,6 +6025,11 @@ void ArrayPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs) 
             if (target.pattern && target.pattern->isAssignmentElementNode())
                 targetBaseAndPropertyName = static_cast<AssignmentElementNode*>(target.pattern)->emitNodesForDestructuring(generator);
 
+            // The binding is resolved before stepping the iterator.
+            RefPtr<RegisterID> targetScope;
+            if (target.pattern && target.pattern->isBindingNode())
+                targetScope = static_cast<BindingNode*>(target.pattern)->emitResolveScopeForDestructuring(generator);
+
             switch (target.bindingType) {
             case BindingType::Elision:
             case BindingType::Element: {
@@ -6057,6 +6062,8 @@ void ArrayPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs) 
 
                     if (targetBaseAndPropertyName)
                         static_cast<AssignmentElementNode*>(target.pattern)->bindValueWithEmittedNodes(generator, targetBaseAndPropertyName.value(), value.get());
+                    else if (targetScope)
+                        static_cast<BindingNode*>(target.pattern)->bindValueWithResolvedScope(generator, targetScope.get(), value.get());
                     else
                         target.pattern->bindValue(generator, value.get());
                 }
@@ -6097,6 +6104,8 @@ void ArrayPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs) 
                 generator.emitLabel(iterationDone.get());
                 if (targetBaseAndPropertyName)
                     static_cast<AssignmentElementNode*>(target.pattern)->bindValueWithEmittedNodes(generator, targetBaseAndPropertyName.value(), array.get());
+                else if (targetScope)
+                    static_cast<BindingNode*>(target.pattern)->bindValueWithResolvedScope(generator, targetScope.get(), array.get());
                 else
                     target.pattern->bindValue(generator, array.get());
                 break;
@@ -6192,6 +6201,7 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
     {
         RefPtr<RegisterID> restElementBase;
         RefPtr<RegisterID> restElementPropertyName;
+        RefPtr<RegisterID> restElementScope;
         RefPtr<RegisterID> newObject;
         IdentifierSet excludedSet;
         std::optional<CallArguments> args;
@@ -6208,6 +6218,7 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
             }
             restElementBase = generator.newTemporary();
             restElementPropertyName = generator.newTemporary();
+            restElementScope = generator.newTemporary();
             newObject = generator.newTemporary();
             args.emplace(generator, nullptr, indexInArguments + numberOfComputedProperties);
         }
@@ -6248,10 +6259,18 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
                 else
                     temp = generator.newTemporary();
 
+                // The binding is resolved after evaluating the property name and before getting the property value.
+                RefPtr<RegisterID> targetScope;
+                auto resolveTargetScopeIfNeeded = [&] {
+                    if (!directBinding && target.pattern->isBindingNode())
+                        targetScope = static_cast<BindingNode*>(target.pattern)->emitResolveScopeForDestructuring(generator);
+                };
+
                 std::optional<BaseAndPropertyName> targetBaseAndPropertyName;
                 if (!target.propertyExpression) {
                     if (target.pattern->isAssignmentElementNode())
                         targetBaseAndPropertyName = static_cast<AssignmentElementNode*>(target.pattern)->emitNodesForDestructuring(generator);
+                    resolveTargetScopeIfNeeded();
                     std::optional<uint32_t> optionalIndex = parseIndex(target.propertyName);
                     if (!optionalIndex)
                         generator.emitGetById(temp.get(), rhs, target.propertyName);
@@ -6276,6 +6295,7 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
                         indexInArguments++;
                     if (target.pattern->isAssignmentElementNode())
                         targetBaseAndPropertyName = static_cast<AssignmentElementNode*>(target.pattern)->emitNodesForDestructuring(generator);
+                    resolveTargetScopeIfNeeded();
                     generator.emitGetByVal(temp.get(), rhs, propertyName.get());
                 }
 
@@ -6287,6 +6307,8 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
                     finishDirectBindingAssignment();
                 } else if (targetBaseAndPropertyName)
                     static_cast<AssignmentElementNode*>(target.pattern)->bindValueWithEmittedNodes(generator, targetBaseAndPropertyName.value(), temp.get());
+                else if (targetScope)
+                    static_cast<BindingNode*>(target.pattern)->bindValueWithResolvedScope(generator, targetScope.get(), temp.get());
                 else
                     target.pattern->bindValue(generator, temp.get());
             } else {
@@ -6296,6 +6318,10 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
                 std::optional<BaseAndPropertyName> targetBaseAndPropertyName;
                 if (target.pattern->isAssignmentElementNode())
                     targetBaseAndPropertyName = static_cast<AssignmentElementNode*>(target.pattern)->emitNodesForDestructuring(generator, restElementBase.get(), restElementPropertyName.get());
+
+                RefPtr<RegisterID> targetScope;
+                if (target.pattern->isBindingNode())
+                    targetScope = static_cast<BindingNode*>(target.pattern)->emitResolveScopeForDestructuring(generator, restElementScope.get());
 
                 generator.emitNewObject(newObject.get());
 
@@ -6310,6 +6336,8 @@ void ObjectPatternNode::bindValue(BytecodeGenerator& generator, RegisterID* rhs)
 
                 if (targetBaseAndPropertyName)
                     static_cast<AssignmentElementNode*>(target.pattern)->bindValueWithEmittedNodes(generator, targetBaseAndPropertyName.value(), newObject.get());
+                else if (targetScope)
+                    static_cast<BindingNode*>(target.pattern)->bindValueWithResolvedScope(generator, targetScope.get(), newObject.get());
                 else
                     target.pattern->bindValue(generator, newObject.get());
             }
@@ -6366,7 +6394,20 @@ void BindingNode::finishDirectBindingAssignment(BytecodeGenerator& generator) co
         generator.liftTDZCheckIfPossible(var);
 }
 
+RegisterID* BindingNode::emitResolveScopeForDestructuring(BytecodeGenerator& generator, RegisterID* dst) const
+{
+    Variable var = generator.variable(m_boundProperty);
+    if (var.local())
+        return nullptr;
+    return generator.emitResolveScope(dst, var);
+}
+
 void BindingNode::bindValue(BytecodeGenerator& generator, RegisterID* value) const
+{
+    bindValueWithResolvedScope(generator, nullptr, value);
+}
+
+void BindingNode::bindValueWithResolvedScope(BytecodeGenerator& generator, RegisterID* resolvedScope, RegisterID* value) const
 {
     Variable var = generator.variable(m_boundProperty);
     bool isReadOnly = var.isReadOnly() && m_bindingContext != AssignmentContext::ConstDeclarationStatement && !isUsingOrAwaitUsingAssignmentContext(m_bindingContext);
@@ -6387,7 +6428,7 @@ void BindingNode::bindValue(BytecodeGenerator& generator, RegisterID* value) con
     }
     if (generator.ecmaMode().isStrict())
         generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
-    RefPtr<RegisterID> scope = generator.emitResolveScope(nullptr, var);
+    RefPtr<RegisterID> scope = resolvedScope ? resolvedScope : generator.emitResolveScope(nullptr, var);
     generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
     if (m_bindingContext == AssignmentContext::AssignmentExpression)
         generator.emitTDZCheckIfNecessary(var, nullptr, scope.get());
@@ -6416,6 +6457,15 @@ void BindingNode::collectBoundIdentifiers(Vector<Identifier>& identifiers) const
 
 std::optional<AssignmentElementNode::BaseAndPropertyName> AssignmentElementNode::emitNodesForDestructuring(BytecodeGenerator& generator, RefPtr<RegisterID> base, RefPtr<RegisterID> propertyName) const
 {
+    if (m_assignmentTarget->isResolveNode()) {
+        Variable var = generator.variable(static_cast<ResolveNode*>(m_assignmentTarget)->identifier());
+        if (var.local())
+            return std::nullopt;
+        if (generator.ecmaMode().isStrict())
+            generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
+        return std::pair { RefPtr { generator.emitResolveScope(base.get(), var) }, nullptr };
+    }
+
     if (m_assignmentTarget->isDotAccessorNode()) {
         if (!base)
             base = generator.newTemporary();
@@ -6446,7 +6496,25 @@ std::optional<AssignmentElementNode::BaseAndPropertyName> AssignmentElementNode:
 
 void AssignmentElementNode::bindValueWithEmittedNodes(BytecodeGenerator& generator, BaseAndPropertyName pair, RegisterID* value) const
 {
-    if (m_assignmentTarget->isDotAccessorNode()) {
+    if (m_assignmentTarget->isResolveNode()) {
+        Variable var = generator.variable(static_cast<ResolveNode*>(m_assignmentTarget)->identifier());
+        ASSERT(!var.local());
+        RegisterID* scope = pair.first.get();
+        bool isReadOnly = var.isReadOnly();
+        if (generator.ecmaMode().isStrict())
+            generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
+        generator.emitTDZCheckIfNecessary(var, nullptr, scope);
+        if (isReadOnly) {
+            bool threwException = generator.emitReadOnlyExceptionIfNeeded(var);
+            if (threwException)
+                return;
+        }
+        generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
+        if (!isReadOnly) {
+            generator.emitPutToScope(scope, var, value, generator.ecmaMode().isStrict() ? ThrowIfNotFound : DoNotThrowIfNotFound, InitializationMode::NotInitialization);
+            generator.emitProfileType(value, var, divotStart(), divotEnd());
+        }
+    } else if (m_assignmentTarget->isDotAccessorNode()) {
         DotAccessorNode* node = static_cast<DotAccessorNode*>(m_assignmentTarget);
         node->emitPutProperty(generator, pair.first.get(), value);
         generator.emitProfileType(value, divotStart(), divotEnd());
@@ -6520,20 +6588,7 @@ void AssignmentElementNode::bindValue(BytecodeGenerator& generator, RegisterID* 
             }
             return;
         }
-        if (generator.ecmaMode().isStrict())
-            generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
-        RefPtr<RegisterID> scope = generator.emitResolveScope(nullptr, var);
-        generator.emitTDZCheckIfNecessary(var, nullptr, scope.get());
-        if (isReadOnly) {
-            bool threwException = generator.emitReadOnlyExceptionIfNeeded(var);
-            if (threwException)
-                return;
-        }
-        generator.emitExpressionInfo(divotEnd(), divotStart(), divotEnd());
-        if (!isReadOnly) {
-            generator.emitPutToScope(scope.get(), var, value, generator.ecmaMode().isStrict() ? ThrowIfNotFound : DoNotThrowIfNotFound, InitializationMode::NotInitialization);
-            generator.emitProfileType(value, var, divotStart(), divotEnd());
-        }
+        bindValueWithEmittedNodes(generator, emitNodesForDestructuring(generator).value(), value);
     } else if (m_assignmentTarget->isDotAccessorNode()) {
         DotAccessorNode* lhs = static_cast<DotAccessorNode*>(m_assignmentTarget);
         RefPtr<RegisterID> base = generator.emitNodeForLeftHandSide(lhs->base(), true, false);

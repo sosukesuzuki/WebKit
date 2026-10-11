@@ -2515,7 +2515,10 @@ namespace JSC {
         bool bindValueCanThrow(BytecodeGenerator&) const final;
         RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
         void finishDirectBindingAssignment(BytecodeGenerator&) const;
-        
+
+        RegisterID* emitResolveScopeForDestructuring(BytecodeGenerator&, RegisterID* dst = nullptr) const;
+        void bindValueWithResolvedScope(BytecodeGenerator&, RegisterID* resolvedScope, RegisterID* value) const;
+
     private:
         void collectBoundIdentifiers(Vector<Identifier>&) const final;
         void bindValue(BytecodeGenerator&, RegisterID*) const final;
