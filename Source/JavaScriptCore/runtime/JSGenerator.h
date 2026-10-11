@@ -52,6 +52,14 @@ public:
         Init = 0,
     };
 
+    // The state of a suspended generator is ((index of the yield point + 1) << suspendReasonShift) | SuspendReason.
+    enum class SuspendReason : int32_t {
+        Yield = 0,
+        // `yield*` hands the inner iterator's result object to the caller as is, without reading its "value" and re-wrapping it.
+        DelegatedYield = 1,
+    };
+    static constexpr int32_t suspendReasonShift = 1;
+
     // [this], @generator, @generatorState, @generatorValue, @generatorResumeMode, @generatorFrame.
     enum class Argument : int32_t {
         ThisValue = 0,

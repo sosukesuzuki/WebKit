@@ -5361,6 +5361,10 @@ void BytecodeGenerator::emitYieldPoint(RegisterID* argument, JSAsyncGenerator::A
     auto state = Checked<int32_t>(yieldPointIndex) + 1;
     if (parseMode() == SourceParseMode::AsyncGeneratorBodyMode)
         state = (state << JSAsyncGenerator::reasonShift) | static_cast<unsigned>(result);
+    else if (parseMode() == SourceParseMode::GeneratorBodyMode) {
+        auto reason = result == JSAsyncGenerator::AsyncGeneratorSuspendReason::YieldNoAwait ? JSGenerator::SuspendReason::DelegatedYield : JSGenerator::SuspendReason::Yield;
+        state = (state << JSGenerator::suspendReasonShift) | static_cast<unsigned>(reason);
+    }
 
     emitGeneratorStateChange(state.value());
 
@@ -5574,7 +5578,8 @@ RegisterID* BytecodeGenerator::emitDelegateYield(RegisterID* argument, Throwable
             {
                 // `yield*` delegates the inner iterator's value without an enclosing Await (for the async
                 // case, the iterator result is already Awaited below). YieldNoAwait tells the async driver
-                // not to await it again.
+                // not to await it again. For the sync case, it tells @generatorResume to return the inner
+                // iterator's result object as is.
                 emitYieldPoint(value.get(), JSAsyncGenerator::AsyncGeneratorSuspendReason::YieldNoAwait);
                 move(value.get(), generatorValueRegister());
 
@@ -5635,7 +5640,8 @@ RegisterID* BytecodeGenerator::emitDelegateYield(RegisterID* argument, Throwable
                     Ref<Label> returnFromGenerator = newLabel();
                     emitJumpIfTrue(emitGetById(newTemporary(), value.get(), propertyNames().done), returnFromGenerator.get());
 
-                    emitGetById(value.get(), value.get(), propertyNames().value);
+                    if (isAsync)
+                        emitGetById(value.get(), value.get(), propertyNames().value);
                     emitJump(loopStart.get());
 
                     emitLabel(returnFromGenerator.get());
@@ -5668,7 +5674,8 @@ RegisterID* BytecodeGenerator::emitDelegateYield(RegisterID* argument, Throwable
             emitLabel(iteratorValueIsObject.get());
 
             emitJumpIfTrue(emitGetById(newTemporary(), value.get(), propertyNames().done), loopDone.get());
-            emitGetById(value.get(), value.get(), propertyNames().value);
+            if (isAsync)
+                emitGetById(value.get(), value.get(), propertyNames().value);
 
             emitJump(loopStart.get());
         }

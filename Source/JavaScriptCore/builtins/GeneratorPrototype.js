@@ -36,15 +36,22 @@ function generatorResume(generator, state, value, resumeMode)
         @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateExecuting);
 
         try {
-            var value = @getGeneratorInternalField(generator, @generatorFieldNext).@call(@getGeneratorInternalField(generator, @generatorFieldThis), generator, state, value, resumeMode, @getGeneratorInternalField(generator, @generatorFieldFrame));
+            var value = @getGeneratorInternalField(generator, @generatorFieldNext).@call(@getGeneratorInternalField(generator, @generatorFieldThis), generator, state >> @GeneratorSuspendReasonShift, value, resumeMode, @getGeneratorInternalField(generator, @generatorFieldFrame));
         } catch (error) {
             @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateCompleted);
             throw error;
         }
 
-        done = @getGeneratorInternalField(generator, @generatorFieldState) === @GeneratorStateExecuting;
+        state = @getGeneratorInternalField(generator, @generatorFieldState);
+        done = state === @GeneratorStateExecuting;
         if (done)
             @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateCompleted);
+        else if (state & @GeneratorSuspendReasonDelegatedYield) {
+            // yield* performs GeneratorYield(innerResult), so we return the inner iterator's result object as is.
+            // @toObject is a no-op here. But since it is value-profiled, DFG turns this path into ForceOSRExit until yield* is actually used.
+            // This prevents this path from disturbing allocation sinking of the result object below.
+            return @toObject(value, "");
+        }
     }
     return { value, done };
 }

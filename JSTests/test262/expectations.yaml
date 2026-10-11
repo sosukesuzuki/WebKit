@@ -28,18 +28,6 @@ test/built-ins/Function/prototype/caller-arguments/accessor-properties.js:
 test/built-ins/Function/prototype/caller/prop-desc.js:
   default: 3
   strict mode: 3
-test/language/expressions/yield/star-iterable.js:
-  default: 3
-  strict mode: 3
-test/language/expressions/yield/star-rhs-iter-nrml-res-done-no-value.js:
-  default: 3
-  strict mode: 3
-test/language/expressions/yield/star-rhs-iter-rtrn-res-done-no-value.js:
-  default: 3
-  strict mode: 3
-test/language/expressions/yield/star-rhs-iter-thrw-res-done-no-value.js:
-  default: 3
-  strict mode: 3
 test/language/statements/class/elements/private-class-field-on-nonextensible-objects.js:
   strict mode: 3
 test/language/statements/class/subclass/private-class-field-on-nonextensible-return-override.js:
@@ -60,18 +48,3 @@ test/staging/sm/RegExp/unicode-class-braced.js:
   strict mode: 3
 test/staging/sm/extensions/function-caller-skips-eval-frames.js:
   default: 3
-test/staging/sm/generators/delegating-yield-1.js:
-  default: 3
-  strict mode: 3
-test/staging/sm/generators/delegating-yield-3.js:
-  default: 3
-  strict mode: 3
-test/staging/sm/generators/delegating-yield-5.js:
-  default: 3
-  strict mode: 3
-test/staging/sm/generators/delegating-yield-6.js:
-  default: 3
-  strict mode: 3
-test/staging/sm/generators/delegating-yield-7.js:
-  default: 3
-  strict mode: 3
