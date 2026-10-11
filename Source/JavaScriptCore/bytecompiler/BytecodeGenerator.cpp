@@ -4022,20 +4022,17 @@ RegisterID* BytecodeGenerator::emitReturn(RegisterID* src)
 
                 ASSERT(m_scopeNode->isFunctionNode());
                 String className = static_cast<FunctionNode*>(m_scopeNode)->ident().string();
-                if (!className || className.isEmpty())
-                    emitThrowTypeError("Cannot return a non-object type in the constructor of a derived class."_s);
-                else {
-                    auto errorMessageStr = tryMakeString("Cannot return a non-object type in the constructor of a derived class "_s, className, "."_s);
-                    if (!errorMessageStr) [[unlikely]]
-                        emitThrowTypeError("Cannot return a non-object type in the constructor of a derived class."_s);
-                    else
-                        emitThrowTypeError(Identifier::fromString(m_vm, errorMessageStr));
-                }
+                String errorMessageStr;
+                if (!!className && !className.isEmpty())
+                    errorMessageStr = tryMakeString("Cannot return a non-object type in the constructor of a derived class "_s, className, "."_s);
+                if (!errorMessageStr)
+                    errorMessageStr = "Cannot return a non-object type in the constructor of a derived class."_s;
+                emitThrowStaticError(ErrorTypeWithExtension::TypeErrorInCallerRealm, Identifier::fromString(m_vm, errorMessageStr));
 
                 emitLabel(isUndefinedLabel.get());
             }
 
-            OpRet::emit(this, ensureThis());
+            OpRet::emit(this, ensureThis(ThisBindingCheck::ForConstructorReturn));
             emitLabel(isObjectLabel.get());
         }
     }
@@ -5232,13 +5229,19 @@ RegisterID* BytecodeGenerator::emitLoadDerivedConstructor()
     return emitLoadDerivedConstructorFromArrowFunctionLexicalEnvironment();
 }
 
-RegisterID* BytecodeGenerator::ensureThis()
+RegisterID* BytecodeGenerator::ensureThis(ThisBindingCheck check)
 {
     if (constructorKind() == ConstructorKind::Extends || isDerivedConstructorContext()) {
         if ((needsToUpdateArrowFunctionContext() && isSuperCallUsedInInnerArrowFunction()) || m_codeBlock->parseMode() == SourceParseMode::AsyncArrowFunctionBodyMode)
             emitLoadThisFromArrowFunctionLexicalEnvironment();
 
-        emitTDZCheck(thisRegister());
+        if (check == ThisBindingCheck::ForConstructorReturn) {
+            Ref<Label> initialized = newLabel();
+            emitJumpIfFalse(emitIsEmpty(newTemporary(), thisRegister()), initialized.get());
+            emitThrowStaticError(ErrorTypeWithExtension::ReferenceErrorInCallerRealm, Identifier::fromString(m_vm, "'super()' must be called in derived constructor before accessing |this| or returning non-object."_s));
+            emitLabel(initialized.get());
+        } else
+            emitTDZCheck(thisRegister());
     }
 
     return thisRegister();

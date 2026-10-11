@@ -5659,7 +5659,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
         if (!returnNode) {
             RegisterID* r0 = nullptr;
             if (generator.isConstructor() && generator.constructorKind() != ConstructorKind::Naked)
-                r0 = generator.ensureThis();
+                r0 = generator.ensureThis(BytecodeGenerator::ThisBindingCheck::ForConstructorReturn);
             else
                 r0 = generator.emitLoad(nullptr, jsUndefined());
             generator.emitProfileType(r0, ProfileTypeBytecodeFunctionReturnStatement); // Do not emit expression info for this profile because it's not in the user's source code.

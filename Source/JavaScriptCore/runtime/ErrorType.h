@@ -43,6 +43,8 @@ namespace JSC {
 #define JSC_ERROR_TYPES_WITH_EXTENSION(macro) \
     JSC_ERROR_TYPES(macro) \
     macro(OutOfMemoryError) \
+    macro(ReferenceErrorInCallerRealm) \
+    macro(TypeErrorInCallerRealm) \
 
 enum class ErrorType : uint8_t {
 #define DECLARE_ERROR_TYPES_ENUM(name) name,

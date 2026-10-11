@@ -19,12 +19,6 @@
 ---
 test/annexB/language/function-code/block-decl-func-skip-arguments.js:
   default: 3
-test/built-ins/Function/internals/Construct/derived-return-val-realm.js:
-  default: 3
-  strict mode: 3
-test/built-ins/Function/internals/Construct/derived-this-uninitialized-realm.js:
-  default: 3
-  strict mode: 3
 test/built-ins/Function/prototype/arguments/prop-desc.js:
   default: 3
   strict mode: 3

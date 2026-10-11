@@ -689,7 +689,8 @@ namespace JSC {
         void emitProfileControlFlow(int);
         
         RegisterID* emitLoadArrowFunctionLexicalEnvironment(const Identifier&);
-        RegisterID* ensureThis();
+        enum class ThisBindingCheck : bool { ForAccess, ForConstructorReturn };
+        RegisterID* ensureThis(ThisBindingCheck = ThisBindingCheck::ForAccess);
         void emitLoadThisFromArrowFunctionLexicalEnvironment();
         RegisterID* emitLoadNewTargetFromArrowFunctionLexicalEnvironment();
 

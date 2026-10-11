@@ -111,6 +111,17 @@ JSObject* createError(JSGlobalObject* globalObject, ErrorTypeWithExtension error
         break;
     case ErrorTypeWithExtension::OutOfMemoryError:
         return createOutOfMemoryError(globalObject, message);
+    case ErrorTypeWithExtension::ReferenceErrorInCallerRealm:
+    case ErrorTypeWithExtension::TypeErrorInCallerRealm: {
+        // These are thrown by [[Construct]] of a derived constructor after its execution context is popped.
+        // https://tc39.es/ecma262/#sec-ecmascript-function-objects-construct-argumentslist-newtarget
+        VM& vm = globalObject->vm();
+        if (auto* callerGlobalObject = CallFrame::globalObjectOfCaller(vm, vm.topCallFrame))
+            globalObject = callerGlobalObject;
+        if (errorType == ErrorTypeWithExtension::ReferenceErrorInCallerRealm)
+            return createReferenceError(globalObject, message);
+        return createTypeError(globalObject, message);
+    }
     }
     ASSERT_NOT_REACHED();
     return nullptr;
