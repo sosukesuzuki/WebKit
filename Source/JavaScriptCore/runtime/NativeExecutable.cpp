@@ -108,7 +108,12 @@ JSString* NativeExecutable::toStringSlow(JSGlobalObject *globalObject)
 
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue value = jsMakeNontrivialString(globalObject, "function "_s, name(), "() {\n    [native code]\n}"_s);
+    // https://tc39.es/ecma262/#prod-NativeFunction
+    // The name must be a PropertyName optionally prefixed with `get` or `set`. We omit names like "$*" and "$&" (legacy RegExp accessors), which are not.
+    bool nameConformsToNativeFunctionSyntax = name().find([](char16_t character) {
+        return isASCII(character) && !isASCIIAlphanumeric(character) && character != '_' && character != '$' && character != ' ' && character != '[' && character != '.' && character != ']';
+    }) == notFound;
+    JSValue value = jsMakeNontrivialString(globalObject, "function "_s, nameConformsToNativeFunctionSyntax ? name() : emptyString(), "() {\n    [native code]\n}"_s);
 
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
