@@ -10,13 +10,13 @@ PASS nonStrictCaller(nonStrictCallee) is nonStrictCaller
 PASS nonStrictCaller(strictCallee) threw exception TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context..
 PASS strictCaller(nonStrictCallee) is null
 PASS strictCaller(strictCallee) threw exception TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context..
-PASS strictTailCaller(nonStrictCallee) is null
+PASS nonStrictCallerOfStrictTailCaller(nonStrictCallee) is nonStrictCallerOfStrictTailCaller
 PASS strictTailCaller(strictCallee) threw exception TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context..
 PASS nonStrictCaller(boundNonStrictCallee) is nonStrictCaller
 PASS nonStrictCaller(boundStrictCallee) threw exception TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context..
 PASS strictCaller(boundNonStrictCallee) is null
 PASS strictCaller(boundStrictCallee) threw exception TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context..
-PASS strictTailCaller(boundNonStrictCallee) is null
+PASS nonStrictCallerOfStrictTailCaller(boundNonStrictCallee) is nonStrictCallerOfStrictTailCaller
 PASS strictTailCaller(boundStrictCallee) threw exception TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context..
 PASS nonStrictCaller(new Proxy(nonStrictCallee, {})) is nonStrictCaller
 PASS nonStrictCaller(new Proxy(nonStrictCallee, {}).bind()) is nonStrictCaller

@@ -23,14 +23,15 @@ shouldBe('childHasCallerWhenCalledFromWithinParent', 'true')
 function nonStrictCallee() { return nonStrictCallee.caller; }
 function strictCallee() { "use strict"; return strictCallee.caller; }
 function nonStrictCaller(x) { return x(); }
-// Tail calls leak and show our caller's caller, which is null here
+// Tail calls leak and show our caller's caller.
 function strictCaller(x) { "use strict"; var result = x(); return result; }
 function strictTailCaller(x) { "use strict"; return x(); }
+function nonStrictCallerOfStrictTailCaller(x) { return strictTailCaller(x); }
 shouldBe("nonStrictCaller(nonStrictCallee)", "nonStrictCaller");
 shouldThrow("nonStrictCaller(strictCallee)", '"TypeError: \'arguments\', \'callee\', and \'caller\' cannot be accessed in this context."');
 shouldBe("strictCaller(nonStrictCallee)", "null");
 shouldThrow("strictCaller(strictCallee)", '"TypeError: \'arguments\', \'callee\', and \'caller\' cannot be accessed in this context."');
-shouldBe("strictTailCaller(nonStrictCallee)", "null");
+shouldBe("nonStrictCallerOfStrictTailCaller(nonStrictCallee)", "nonStrictCallerOfStrictTailCaller");
 shouldThrow("strictTailCaller(strictCallee)");
 
 // .caller within a bound function reaches the caller, ignoring the binding.
@@ -40,7 +41,7 @@ shouldBe("nonStrictCaller(boundNonStrictCallee)", "nonStrictCaller");
 shouldThrow("nonStrictCaller(boundStrictCallee)");
 shouldBe("strictCaller(boundNonStrictCallee)", "null");
 shouldThrow("strictCaller(boundStrictCallee)");
-shouldBe("strictTailCaller(boundNonStrictCallee)", "null");
+shouldBe("nonStrictCallerOfStrictTailCaller(boundNonStrictCallee)", "nonStrictCallerOfStrictTailCaller");
 shouldThrow("strictTailCaller(boundStrictCallee)");
 
 shouldBe("nonStrictCaller(new Proxy(nonStrictCallee, {}))", "nonStrictCaller");

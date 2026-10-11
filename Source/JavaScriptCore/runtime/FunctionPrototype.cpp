@@ -28,6 +28,7 @@
 #include "IntegrityInlines.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
+#include "JSGlobalObjectFunctions.h"
 
 namespace JSC {
 
@@ -288,11 +289,16 @@ public:
             return IterationStatus::Continue;
         }
 
+        if (visitor->codeType() == StackVisitor::Frame::CodeType::Eval)
+            return IterationStatus::Continue;
+
         if (callee) {
             if (callee->inherits<JSBoundFunction>() || callee->inherits<JSRemoteFunction>() || callee->type() == ProxyObjectType)
                 return IterationStatus::Continue;
-            if (callee->inherits<JSFunction>()) {
-                if (uncheckedDowncast<JSFunction>(callee)->executable()->implementationVisibility() != ImplementationVisibility::Public)
+            if (auto* function = dynamicDowncast<JSFunction>(callee)) {
+                if (function->executable()->implementationVisibility() != ImplementationVisibility::Public)
+                    return IterationStatus::Continue;
+                if (function->isHostFunction() && function->nativeFunction() == globalFuncEval)
                     return IterationStatus::Continue;
             }
 

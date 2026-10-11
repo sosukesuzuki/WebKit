@@ -72,5 +72,3 @@ test/staging/sm/TypedArray/slice-memcpy.js:
 test/staging/sm/expressions/short-circuit-compound-assignment-anon-fns.js:
   default: 3
   strict mode: 3
-test/staging/sm/extensions/function-caller-skips-eval-frames.js:
-  default: 3

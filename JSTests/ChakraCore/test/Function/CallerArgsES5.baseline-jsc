@@ -29,7 +29,9 @@ func.arguments.caller undefined
 function callerA() {
         AA(null);
 }
-null
+function callerB() {
+        eval("AB(null)");
+}
 undefined
 true
 undefined
