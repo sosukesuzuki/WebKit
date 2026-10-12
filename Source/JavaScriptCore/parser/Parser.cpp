@@ -1489,6 +1489,16 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     TreeDestructuringPattern pattern = 0;
     bool isVarDeclaration = match(VAR);
     bool isLetDeclaration = match(LET);
+    bool isLetIdentifier = false;
+    if (isLetDeclaration && !strictMode()) {
+        SavePoint savePoint = createSavePoint(context);
+        next();
+        if (!matchIdentifierOrPossiblyEscapedContextualKeyword() && !match(OPENBRACE) && !match(OPENBRACKET)) {
+            isLetDeclaration = false;
+            isLetIdentifier = true;
+        }
+        restoreSavePoint(context, savePoint);
+    }
     bool isConstDeclaration = match(CONSTTOKEN);
     bool isUsingDeclaration = false;
     bool isAwaitUsingDeclaration = false;
@@ -1691,6 +1701,7 @@ enumerationLoop:
     JSTextPosition inLocation = tokenStartPosition();
     if (!match(INTOKEN)) {
         failIfFalse(matchContextualKeyword(m_vm.propertyNames->of), "Expected either 'in' or 'of' in enumeration syntax");
+        failIfTrue(isLetIdentifier, "The left hand side of a for-of statement cannot start with 'let'");
         isOfEnumeration = true;
         next();
     } else {
