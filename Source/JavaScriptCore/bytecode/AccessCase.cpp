@@ -246,7 +246,7 @@ RefPtr<AccessCase> AccessCase::createTransition(
             return nullptr;
 
         // If we are (re)allocating inline, jsc needs two extra scratchGPRs
-        if (!oldStructure->couldHaveIndexingHeader() && GPRInfo::numberOfRegisters < (requiredRegisters + 2))
+        if (!oldStructure->hijacksIndexingHeader() && !hasAnyArrayStorage(oldStructure->indexingType()) && GPRInfo::numberOfRegisters < (requiredRegisters + 2))
             return nullptr;
     }
 
@@ -991,7 +991,7 @@ bool AccessCase::doesCalls(VM&) const
     case IndexedNullKeyTransition:
     case IndexedTrueKeyTransition:
     case IndexedFalseKeyTransition:
-        doesCalls = newStructure()->outOfLineCapacity() != structure()->outOfLineCapacity() && structure()->couldHaveIndexingHeader();
+        doesCalls = newStructure()->outOfLineCapacity() != structure()->outOfLineCapacity() && (structure()->hijacksIndexingHeader() || hasAnyArrayStorage(structure()->indexingType()));
         break;
     case Getter:
     case Setter:
