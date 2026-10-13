@@ -1031,7 +1031,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseVariableDecl
             }
             failIfFalse(pattern, "Cannot parse this destructuring pattern");
             hasInitializer = match(EQUAL);
-            failIfTrue(declarationListContext == VarDeclarationContext && !hasInitializer, "Expected an initializer in destructuring variable declaration");
+            failIfTrue(!hasInitializer && (declarationListContext == VarDeclarationContext || (!match(INTOKEN) && !matchContextualKeyword(m_vm.propertyNames->of))), "Expected an initializer in destructuring variable declaration");
             lastPattern = pattern;
             if (hasInitializer) {
                 next(TreeBuilder::DontBuildStrings); // consume '='
@@ -1488,8 +1488,22 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     TreeExpression decls = 0;
     TreeDestructuringPattern pattern = 0;
     bool isVarDeclaration = match(VAR);
-    bool isLetDeclaration = match(LET);
+    bool isLetIdentifier = false;
+    if (match(LET) && !strictMode()) {
+        SavePoint savePoint = createSavePoint(context);
+        next();
+        isLetIdentifier = !matchIdentifierOrPossiblyEscapedContextualKeyword() && !match(OPENBRACE) && !match(OPENBRACKET);
+        restoreSavePoint(context, savePoint);
+    }
+    bool isLetDeclaration = match(LET) && !isLetIdentifier;
     bool isConstDeclaration = match(CONSTTOKEN);
+    bool isAsyncOf = false;
+    if (matchContextualKeyword(m_vm.propertyNames->async)) {
+        SavePoint savePoint = createSavePoint(context);
+        next();
+        isAsyncOf = matchContextualKeyword(m_vm.propertyNames->of);
+        restoreSavePoint(context, savePoint);
+    }
     bool isUsingDeclaration = false;
     bool isAwaitUsingDeclaration = false;
     if (Options::useExplicitResourceManagement() && match(IDENT)
@@ -1644,7 +1658,11 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
             restoreSavePoint(context, savePoint);
         }
         m_allowsIn = false;
-        decls = parseExpression(context);
+        if (isAsyncOf && isAwaitFor) {
+            next();
+            decls = createResolveAndUseVariable(context, &m_vm.propertyNames->async, false, declsStart, declLocation);
+        } else
+            decls = parseExpression(context);
         m_allowsIn = true;
         failIfFalse(decls, "Cannot parse for loop declarations");
         recordPauseLocation(context.breakpointLocation(decls));
@@ -1691,6 +1709,8 @@ enumerationLoop:
     JSTextPosition inLocation = tokenStartPosition();
     if (!match(INTOKEN)) {
         failIfFalse(matchContextualKeyword(m_vm.propertyNames->of), "Expected either 'in' or 'of' in enumeration syntax");
+        failIfTrue(isLetIdentifier, "The left hand side of a for-of statement cannot start with 'let'");
+        failIfTrue(isAsyncOf && !isAwaitFor, "The left hand side of a for-of statement cannot be 'async'");
         isOfEnumeration = true;
         next();
     } else {
