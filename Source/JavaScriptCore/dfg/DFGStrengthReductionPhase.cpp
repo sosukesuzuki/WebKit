@@ -560,10 +560,10 @@ private:
                     if (!string2)
                         break;
 
-                    StringBuilder builder;
+                    StringBuilder builder(OverflowPolicy::RecordOverflow);
                     builder.append(string1);
                     builder.append(string2);
-                    if (!builder.hasOverflowed()) {
+                    if (!builder.hasOverflowed()) [[likely]] {
                         LazyJSValue value = LazyJSValue::newString(m_graph, builder.toString());
                         auto* constant = m_insertionSet.insertNode(m_nodeIndex, SpecNone, LazyJSConstant, m_node->origin, OpInfo(m_graph.m_lazyJSValues.add(value)));
                         m_node->child2().setNode(constant);
@@ -585,11 +585,11 @@ private:
             if (!string1)
                 break;
 
-            StringBuilder builder;
+            StringBuilder builder(OverflowPolicy::RecordOverflow);
             builder.append(string0);
             builder.append(string1);
             if (!m_node->child3()) {
-                if (!builder.hasOverflowed()) {
+                if (!builder.hasOverflowed()) [[likely]] {
                     convertToLazyJSValue(m_node, LazyJSValue::newString(m_graph, builder.toString()));
                     m_changed = true;
                 }
@@ -598,7 +598,7 @@ private:
 
             String string2 = m_node->child3()->tryGetString(m_graph);
             if (!string2) {
-                if (!builder.hasOverflowed()) {
+                if (!builder.hasOverflowed()) [[likely]] {
                     LazyJSValue value = LazyJSValue::newString(m_graph, builder.toString());
                     auto* constant = m_insertionSet.insertNode(m_nodeIndex, SpecNone, LazyJSConstant, m_node->origin, OpInfo(m_graph.m_lazyJSValues.add(value)));
                     m_node->child1().setNode(constant);
@@ -610,7 +610,7 @@ private:
             }
 
             builder.append(string2);
-            if (!builder.hasOverflowed()) {
+            if (!builder.hasOverflowed()) [[likely]] {
                 convertToLazyJSValue(m_node, LazyJSValue::newString(m_graph, builder.toString()));
                 m_changed = true;
             }
@@ -1291,7 +1291,7 @@ private:
                 break;
             }
 
-            StringBuilder builder;
+            StringBuilder builder(OverflowPolicy::RecordOverflow);
 
             unsigned lastIndex = 0;
             unsigned startPosition = 0;
@@ -1322,11 +1322,8 @@ private:
                 unsigned replLen = replace.length();
                 if (lastIndex < result.start || replLen) {
                     builder.appendSubstring(string, lastIndex, result.start - lastIndex);
-                    if (replLen) {
-                        StringBuilder replacement;
-                        substituteBackreferences(replacement, replace, string, ovector.span().data(), regExp);
-                        builder.append(replacement);
-                    }
+                    if (replLen)
+                        substituteBackreferences(builder, replace, string, ovector.span().data(), regExp);
                 }
 
                 lastIndex = result.end;
@@ -1347,6 +1344,13 @@ private:
             if (!ok)
                 break;
 
+            bool isUnchanged = !lastIndex && builder.isEmpty();
+            if (!isUnchanged) {
+                builder.appendSubstring(string, lastIndex);
+                if (builder.hasOverflowed()) [[unlikely]]
+                    break;
+            }
+
             // We are committed at this point.
             m_changed = true;
 
@@ -1366,12 +1370,10 @@ private:
                 origin = origin.withInvalidExit();
             }
 
-            if (!lastIndex && builder.isEmpty())
+            if (isUnchanged)
                 m_node->convertToIdentityOn(stringNode);
-            else {
-                builder.appendSubstring(string, lastIndex);
+            else
                 m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, builder.toString()));
-            }
 
             m_node->origin = origin;
             break;
