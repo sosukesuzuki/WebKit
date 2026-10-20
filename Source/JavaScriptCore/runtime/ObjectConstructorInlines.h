@@ -60,7 +60,7 @@ ALWAYS_INLINE void objectAssignIndexedPropertiesFast(JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    source->forEachOwnIndexedProperty<>(globalObject, [&](unsigned index, JSValue value) {
+    source->forEachOwnIndexedProperty<>([&](unsigned index, JSValue value) {
         target->putDirectIndex(globalObject, index, value);
         RETURN_IF_EXCEPTION(scope, IterationStatus::Done);
         return IterationStatus::Continue;
