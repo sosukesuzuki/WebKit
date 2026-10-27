@@ -25195,7 +25195,7 @@ IGNORE_CLANG_WARNINGS_END
             simulatedTypeCheck(edge, SpecInt32Only);
             if (!value.isInt32()) {
                 if (mayHaveTypeCheck(edge.useKind()))
-                    terminate(Uncountable);
+                    terminate(BadType);
                 return m_out.int32Zero;
             }
             LValue result = m_out.constInt32(value.asInt32());
@@ -25236,7 +25236,7 @@ IGNORE_CLANG_WARNINGS_END
         }
 
         if (mayHaveTypeCheck(edge.useKind()))
-            terminate(Uncountable);
+            terminate(BadType);
         return m_out.int32Zero;
     }
 
@@ -25270,7 +25270,7 @@ IGNORE_CLANG_WARNINGS_END
         }
 
         if (mayHaveTypeCheck(edge.useKind()))
-            terminate(Uncountable);
+            terminate(BadType);
         return m_out.int64Zero;
     }
 
@@ -25324,7 +25324,7 @@ IGNORE_CLANG_WARNINGS_END
             simulatedTypeCheck(edge, SpecCellCheck);
             if (!value->value().isCell()) {
                 if (mayHaveTypeCheck(edge.useKind()))
-                    terminate(Uncountable);
+                    terminate(BadType);
                 return m_out.intPtrZero;
             }
             LValue result = frozenPointer(value);
@@ -25341,7 +25341,7 @@ IGNORE_CLANG_WARNINGS_END
         }
 
         if (mayHaveTypeCheck(edge.useKind()))
-            terminate(Uncountable);
+            terminate(BadType);
         return m_out.intPtrZero;
     }
 
@@ -25566,7 +25566,7 @@ IGNORE_CLANG_WARNINGS_END
             simulatedTypeCheck(edge, SpecBoolean);
             if (!value.isBoolean()) {
                 if (mayHaveTypeCheck(edge.useKind()))
-                    terminate(Uncountable);
+                    terminate(BadType);
                 return m_out.booleanFalse;
             }
             LValue result = m_out.constBool(value.asBoolean());
@@ -25591,7 +25591,7 @@ IGNORE_CLANG_WARNINGS_END
         }
 
         if (mayHaveTypeCheck(edge.useKind()))
-            terminate(Uncountable);
+            terminate(BadType);
         return m_out.booleanFalse;
     }
 
@@ -25603,7 +25603,7 @@ IGNORE_CLANG_WARNINGS_END
         if (isValid(value))
             return value.value();
         if (mayHaveTypeCheck(edge.useKind()))
-            terminate(Uncountable);
+            terminate(BadType);
         return m_out.doubleZero;
     }
 
