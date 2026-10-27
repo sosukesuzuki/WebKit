@@ -2951,7 +2951,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
     UNUSED_PARAM(callOp);
     UNUSED_PARAM(specializationKind);
 
-    if (!isOpcodeShape<OpCallShape>(m_currentInstruction)) {
+    if (!isOpcodeShape<OpCallShape>(m_currentInstruction) && !(intrinsic == BoundFunctionCallIntrinsic && (kind == InlineCallFrame::GetterCall || kind == InlineCallFrame::SetterCall))) {
         VERBOSE_LOG("    Failing because instruction is not OpCallShape.\n");
         return CallOptimizationResult::DidNothing;
     }
