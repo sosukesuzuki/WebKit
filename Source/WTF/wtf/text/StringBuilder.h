@@ -75,6 +75,7 @@ public:
     WTF_EXPORT_PRIVATE void appendQuotedJSONString(const String&);
 
     const String& toString() LIFETIME_BOUND;
+    String releaseString();
     const String& toStringPreserveCapacity() const LIFETIME_BOUND;
     AtomString toAtomString() const;
 
@@ -240,6 +241,14 @@ inline const String& StringBuilder::toString() LIFETIME_BOUND
         reifyString();
     }
     return m_string;
+}
+
+inline String StringBuilder::releaseString()
+{
+    toString();
+    auto string = WTF::move(m_string);
+    clear();
+    return string;
 }
 
 inline const String& StringBuilder::toStringPreserveCapacity() const LIFETIME_BOUND

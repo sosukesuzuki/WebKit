@@ -196,7 +196,7 @@ String notAFunctionSourceAppender(const String& originalMessage, StringView sour
     if (builder.hasOverflowed())
         return "object is not a function."_s;
 
-    return builder.toString();
+    return builder.releaseString();
 }
 
 static String invalidParameterInSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType type, ErrorInstance::SourceTextWhereErrorOccurred occurrence)

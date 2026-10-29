@@ -764,7 +764,7 @@ static inline String escapePattern(const String& pattern, std::span<const Charac
             previousCharacterWasBackslash = ch == '\\';
     }
 
-    return result.toString();
+    return result.releaseString();
 }
 
 String RegExp::escapedPattern() const
