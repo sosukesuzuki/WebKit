@@ -719,7 +719,7 @@ private:
                 
                 // We have something like @a < @b + 2. We can't represent this under the
                 // -1,0,1 rule.
-                if (isGeneralOffset(bestOffset))
+                if (bestOffset <= 1)
                     return Relationship(m_left, m_right, LessThan, WTF::max(bestOffset, -1));
                 
                 return Relationship();
@@ -747,7 +747,7 @@ private:
             int bestOffset = WTF::max(m_offset, other.m_offset + 1);
             
             // We have something like @a < @b + 2. We can't do it.
-            if (isGeneralOffset(bestOffset))
+            if (bestOffset <= 1)
                 return Relationship(m_left, m_right, LessThan, WTF::max(bestOffset, -1));
 
             return Relationship();
