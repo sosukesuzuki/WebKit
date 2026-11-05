@@ -108,6 +108,15 @@ public:
         return entry.value;
     }
 
+    // The strings for the integers in [0, cacheSize) are never evicted, so they live as long as the VM does.
+    // This returns nullptr for the other integers. Their strings can be released by any later call to add().
+    ALWAYS_INLINE const String* tryAddImmortal(int i)
+    {
+        if (static_cast<unsigned>(i) < cacheSize)
+            return &lookupSmallString(static_cast<unsigned>(i)).value;
+        return nullptr;
+    }
+
     JSString* addJSString(VM&, int);
     JSString* addJSString(VM&, double);
 

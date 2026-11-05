@@ -59,6 +59,8 @@ private:
     bool appendWithoutSideEffects(JSGlobalObject*, JSValue);
     void append(JSString*, StringViewWithUnderlyingString&&);
     void append8Bit(const String&);
+    void append8Bit(StringView, String&& underlyingString);
+    void appendImmortal8Bit(const String&);
     unsigned joinedLength(JSGlobalObject*) const;
     JSString* joinImpl(JSGlobalObject*);
 
@@ -69,6 +71,8 @@ private:
     bool m_hasOverflowed { false };
     bool m_isAll8Bit { true };
     JSString* m_lastString { nullptr };
+    // This is set only when the first entry is for an immortal string. The VM keeps it alive.
+    SUPPRESS_UNCOUNTED_MEMBER StringImpl* m_firstImmortalString { nullptr };
 };
 
 inline JSStringJoiner::JSStringJoiner(StringView separator)
@@ -93,6 +97,9 @@ inline JSString* JSStringJoiner::join(JSGlobalObject* globalObject)
         ASSERT(!m_hasOverflowed);
         if (m_lastString)
             return m_lastString;
+        // The entry for an immortal string does not have the underlying string to return.
+        if (m_firstImmortalString)
+            return jsString(globalObject->vm(), String { m_firstImmortalString });
         return jsString(globalObject->vm(), m_strings[0].m_view.toString());
     }
     return joinImpl(globalObject);
@@ -115,13 +122,27 @@ ALWAYS_INLINE void JSStringJoiner::append(JSString* jsString, StringViewWithUnde
     m_lastString = jsString;
 }
 
+ALWAYS_INLINE void JSStringJoiner::append8Bit(StringView view, String&& underlyingString)
+{
+    ASSERT(view.is8Bit());
+    ++m_stringsCount;
+    m_accumulatedStringsLength += view.length();
+    m_hasOverflowed |= !m_strings.tryAppend({ { view, WTF::move(underlyingString) }, 0 });
+    m_lastString = nullptr;
+}
+
 ALWAYS_INLINE void JSStringJoiner::append8Bit(const String& string)
 {
-    ASSERT(string.is8Bit());
-    ++m_stringsCount;
-    m_accumulatedStringsLength += string.length();
-    m_hasOverflowed |= !m_strings.tryAppend({ { string, string }, 0 });
-    m_lastString = nullptr;
+    append8Bit(string, String { string });
+}
+
+// The VM must keep the string alive for as long as the VM itself lives. Then the entry does not have to retain it,
+// which saves an atomic ref and deref for each element.
+ALWAYS_INLINE void JSStringJoiner::appendImmortal8Bit(const String& string)
+{
+    if (m_strings.isEmpty())
+        m_firstImmortalString = string.impl();
+    append8Bit(string, { });
 }
 
 ALWAYS_INLINE void JSStringJoiner::appendEmptyString()
@@ -168,11 +189,11 @@ ALWAYS_INLINE bool JSStringJoiner::appendWithoutSideEffects(JSGlobalObject* glob
         return true;
     }
     if (value.isTrue()) {
-        append8Bit(globalObject->vm().propertyNames->trueKeyword.string());
+        appendImmortal8Bit(globalObject->vm().propertyNames->trueKeyword.string());
         return true;
     }
     if (value.isFalse()) {
-        append8Bit(globalObject->vm().propertyNames->falseKeyword.string());
+        appendImmortal8Bit(globalObject->vm().propertyNames->falseKeyword.string());
         return true;
     }
 
@@ -204,7 +225,10 @@ ALWAYS_INLINE bool JSStringJoiner::append(JSGlobalObject* globalObject, JSValue 
 
 ALWAYS_INLINE void JSStringJoiner::appendNumber(VM& vm, int32_t value)
 {
-    append8Bit(vm.numericStrings.add(value));
+    if (auto* string = vm.numericStrings.tryAddImmortal(value))
+        appendImmortal8Bit(*string);
+    else
+        append8Bit(vm.numericStrings.add(value));
 }
 
 ALWAYS_INLINE void JSStringJoiner::appendNumber(VM& vm, double value)
