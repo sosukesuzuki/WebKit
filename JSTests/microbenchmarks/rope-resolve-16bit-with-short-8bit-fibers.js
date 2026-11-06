@@ -1,0 +1,44 @@
+// Resolves 16-bit ropes whose fibers are mostly short 8-bit strings.
+function build(wide, fibers)
+{
+    let string = wide;
+    for (let i = 0; i < fibers.length; ++i)
+        string += fibers[i];
+    return string;
+}
+noInline(build);
+
+function resolve(string)
+{
+    return string.charCodeAt(string.length - 1);
+}
+noInline(resolve);
+
+const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\xe9\xff";
+const fibers = [];
+for (let i = 0; i < 40; ++i)
+    fibers.push(alphabet.slice(0, 1 + (i * 7) % 40), ",", "\"", "\xe9:");
+
+// Compares with the 8-bit fibers character by character, as anything that builds a whole 16-bit
+// string to compare with would go through the same copy.
+function check(string)
+{
+    let index = 0;
+    if (string.charCodeAt(index++) !== 0x3042)
+        throw new Error("Bad first character");
+    for (const fiber of fibers) {
+        for (let i = 0; i < fiber.length; ++i) {
+            if (string.charCodeAt(index++) !== fiber.charCodeAt(i))
+                throw new Error("Bad character at " + (index - 1));
+        }
+    }
+    if (index !== string.length)
+        throw new Error("Bad length: " + string.length);
+}
+check(build("\u3042", fibers));
+
+let last = 0;
+for (let i = 0; i < 5e3; ++i)
+    last += resolve(build("\u3042", fibers));
+if (last !== 5e3 * ":".charCodeAt(0))
+    throw new Error("Bad result: " + last);
