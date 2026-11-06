@@ -37,6 +37,7 @@
 #include <wtf/BitSet.h>
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/SIMDHelpers.h>
 #include <wtf/StackCheck.h>
 #include <wtf/TriState.h>
 #include <wtf/Vector.h>
@@ -3673,6 +3674,128 @@ bool CharacterClass::hasOnlyNonSurrogateBMPCharacters() const
     return true;
 }
 
+std::unique_ptr<CodeUnitRanges> YarrPattern::tryCreateCodeUnitRanges() const
+{
+    if (sticky() || m_numSubpatterns)
+        return nullptr;
+
+    const auto& alternatives = m_body->m_alternatives;
+    if (alternatives.size() != 1 || alternatives[0]->m_terms.size() != 1)
+        return nullptr;
+
+    const auto& term = alternatives[0]->m_terms[0];
+    if (term.type != PatternTerm::Type::CharacterClass)
+        return nullptr;
+    if (term.quantityType != QuantifierType::FixedCount || term.quantityMaxCount != 1)
+        return nullptr;
+    ASSERT(term.m_matchDirection == Forward);
+    ASSERT(!term.inputPosition);
+
+    // We do not need to care about ignoreCase here: the parser has already put all the case variants into the class.
+    const auto& characterClass = *term.characterClass;
+    if (characterClass.m_anyCharacter || characterClass.hasStrings() || !characterClass.hasSingleCharacters())
+        return nullptr;
+
+    // With the u or v flag, a surrogate pair needs to be handled as one character. This can be ignored only when the pattern never
+    // matches a surrogate code unit, regardless of whether it is paired.
+    if (eitherUnicode() && (term.invert() || !characterClass.hasOnlyNonSurrogateBMPCharacters()))
+        return nullptr;
+
+    constexpr char32_t maxCodeUnit = 0xffff;
+    Vector<CharacterRange, 16> sorted;
+    characterClass.forEachRange([&](char32_t begin, char32_t end) {
+        if (begin <= maxCodeUnit)
+            sorted.append({ begin, std::min(end, maxCodeUnit) });
+    });
+    std::ranges::sort(sorted, { }, &CharacterRange::begin);
+
+    auto result = makeUnique<CodeUnitRanges>();
+    auto tryAdd = [&](char32_t begin, char32_t end) {
+        if (result->m_size == CodeUnitRanges::maxRanges)
+            return false;
+        result->m_ranges[result->m_size++] = { static_cast<char16_t>(begin), static_cast<char16_t>(end - begin) };
+        return true;
+    };
+
+    // Walk the ranges after coalescing the adjacent ones. If the term is inverted, the gaps between them are what we want.
+    char32_t gapBegin = 0;
+    for (size_t i = 0; i < sorted.size();) {
+        char32_t begin = sorted[i].begin;
+        char32_t end = sorted[i].end;
+        for (++i; i < sorted.size() && sorted[i].begin <= end + 1; ++i)
+            end = std::max(end, sorted[i].end);
+        if (!term.invert()) {
+            if (!tryAdd(begin, end))
+                return nullptr;
+        } else if (gapBegin < begin && !tryAdd(gapBegin, begin - 1))
+            return nullptr;
+        gapBegin = end + 1;
+    }
+    if (term.invert() && gapBegin <= maxCodeUnit && !tryAdd(gapBegin, maxCodeUnit))
+        return nullptr;
+
+    if (!result->m_size)
+        return nullptr;
+
+    // If the class excludes only a handful of code units (e.g. /./, /\D/), the first code unit almost always matches and there is
+    // nothing to scan. Yarr is cheaper since it does not need to set up the vectors.
+    constexpr unsigned minExcludedCodeUnits = 64;
+    unsigned excludedCodeUnits = maxCodeUnit + 1;
+    for (size_t i = 0; i < result->m_size; ++i)
+        excludedCodeUnits -= result->m_ranges[i].length + 1;
+    if (excludedCodeUnits < minExcludedCodeUnits)
+        return nullptr;
+
+    return result;
+}
+
+template<size_t rangeCount>
+size_t CodeUnitRanges::findImpl(std::span<const char16_t> span) const
+{
+    auto scalarMatch = [&](char16_t codeUnit) ALWAYS_INLINE_LAMBDA {
+        bool matched = false;
+        for (size_t i = 0; i < rangeCount; ++i)
+            matched |= static_cast<char16_t>(codeUnit - m_ranges[i].begin) <= m_ranges[i].length;
+        return matched;
+    };
+
+    std::array<SIMD::VectorType<uint16_t>, rangeCount> begins;
+    std::array<SIMD::VectorType<uint16_t>, rangeCount> lengths;
+    for (size_t i = 0; i < rangeCount; ++i) {
+        begins[i] = SIMD::splat<uint16_t>(m_ranges[i].begin);
+        lengths[i] = SIMD::splat<uint16_t>(m_ranges[i].length);
+    }
+
+    auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+        auto mask = SIMD::lessThanOrEqual(SIMD::sub(input, begins[0]), lengths[0]);
+        for (size_t i = 1; i < rangeCount; ++i)
+            mask = SIMD::bitOr(mask, SIMD::lessThanOrEqual(SIMD::sub(input, begins[i]), lengths[i]));
+        return SIMD::findFirstNonZeroIndex(mask);
+    };
+
+    const auto* found = SIMD::find(span, vectorMatch, scalarMatch);
+    if (found == std::to_address(span.end()))
+        return notFound;
+    return found - span.data();
+}
+
+size_t CodeUnitRanges::find(std::span<const char16_t> span) const
+{
+    static_assert(maxRanges == 4);
+    static_assert(minProfitableLength == SIMD::stride<char16_t>);
+    switch (m_size) {
+    case 1:
+        return findImpl<1>(span);
+    case 2:
+        return findImpl<2>(span);
+    case 3:
+        return findImpl<3>(span);
+    case 4:
+        return findImpl<4>(span);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 std::optional<char16_t> CharacterClass::hasSharedLeadSurrogate() const
 {
     if (!hasOnlyNonBMPCharacters())
@@ -3732,14 +3855,7 @@ CharacterClassBitTable::CharacterClassBitTable(const CharacterClass& characterCl
             bits[word] |= mask;
         }
     };
-    for (auto character : characterClass.m_matches8)
-        addRange(character, character);
-    for (auto range : characterClass.m_ranges8)
-        addRange(range.begin, range.end);
-    for (auto character : characterClass.m_matches32)
-        addRange(character, character);
-    for (auto range : characterClass.m_ranges32)
-        addRange(range.begin, range.end);
+    characterClass.forEachRange(addRange);
     while (!bits.isEmpty() && !bits.last())
         bits.removeLast();
 

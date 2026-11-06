@@ -40,6 +40,7 @@
 namespace JSC {
 
 namespace Yarr {
+class CodeUnitRanges;
 struct YarrPattern;
 }
 
@@ -211,6 +212,10 @@ private:
     void finishCreation(VM&);
 
     void updateMetadataFromPattern(Yarr::YarrPattern&);
+    void updateCodeUnitRangesFromPattern(const Yarr::YarrPattern&);
+
+    bool canUseCodeUnitRanges(StringView, unsigned startOffset) const;
+    MatchResult matchCodeUnitRanges(StringView, unsigned startOffset) const;
 
     static RegExp* createWithoutCaching(VM&, const String&, OptionSet<Yarr::Flags>);
 
@@ -239,7 +244,7 @@ private:
 
     struct RareData {
         WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(RareData);
-        unsigned m_numDuplicateNamedCaptureGroups;
+        unsigned m_numDuplicateNamedCaptureGroups { 0 };
         FixedVector<AtomString> m_captureGroupNames;
 
         // This first element of the RHS vector is the subpatternId in the non-duplicate case.
@@ -247,6 +252,9 @@ private:
         // The remaining elements are the subpatternIds for each of the duplicate groups.
         UncheckedKeyHashMap<String, Vector<unsigned>> m_namedGroupToParenIndices;
         WriteBarrierStructureID m_cachedGroupsStructureID;
+
+        // Never changes once it is set.
+        std::unique_ptr<const Yarr::CodeUnitRanges> m_codeUnitRanges;
     };
 
     String m_patternString;

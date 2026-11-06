@@ -196,6 +196,21 @@ void RegExp::updateMetadataFromPattern(Yarr::YarrPattern& pattern)
     }
 }
 
+void RegExp::updateCodeUnitRangesFromPattern(const Yarr::YarrPattern& pattern)
+{
+    // The pattern is always the same, and the other users of RareData have named groups, which make the pattern ineligible.
+    if (m_rareData)
+        return;
+    auto codeUnitRanges = pattern.tryCreateCodeUnitRanges();
+    if (!codeUnitRanges)
+        return;
+    auto rareData = makeUnique<RareData>();
+    rareData->m_codeUnitRanges = WTF::move(codeUnitRanges);
+    // The concurrent GC thread reads m_rareData in visitChildren, so it must observe a fully initialized RareData.
+    WTF::storeStoreFence();
+    m_rareData = WTF::move(rareData);
+}
+
 void RegExp::destroy(JSCell* cell)
 {
     RegExp* thisObject = static_cast<RegExp*>(cell);
@@ -214,6 +229,8 @@ size_t RegExp::estimatedSize(JSCell* cell, VM& vm)
         regexDataSize += jitCode->size();
 #endif
     regexDataSize += thisObject->m_ovector.byteSize();
+    if (thisObject->m_rareData && thisObject->m_rareData->m_codeUnitRanges)
+        regexDataSize += sizeof(Yarr::CodeUnitRanges);
     if (thisObject->m_firstCharacterBitmap.get())
         regexDataSize += sizeof(WTF::BitSet<256>);
     return Base::estimatedSize(cell, vm) + regexDataSize;
@@ -309,6 +326,7 @@ void RegExp::compile(VM* vm, Yarr::CharSize charSize, std::optional<StringView> 
         return;
     }
     updateMetadataFromPattern(pattern);
+    updateCodeUnitRangesFromPattern(pattern);
 
     if (!hasCode()) {
         ASSERT(m_state == NotCompiled);
@@ -391,6 +409,7 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::CharSize charSize, std::optional<Str
         return;
     }
     updateMetadataFromPattern(pattern);
+    updateCodeUnitRangesFromPattern(pattern);
 
     if (!hasCode()) {
         ASSERT(m_state == NotCompiled);

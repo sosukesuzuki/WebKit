@@ -111,6 +111,25 @@ ALWAYS_INLINE void RegExp::compileIfNecessary(VM& vm, Yarr::CharSize charSize, s
     compile(&vm, charSize, sampleString);
 }
 
+ALWAYS_INLINE bool RegExp::canUseCodeUnitRanges(StringView string, unsigned startOffset) const
+{
+    // This is in the hot path of every RegExp, and most of them are not eligible.
+    if (!m_rareData) [[likely]]
+        return false;
+    if (string.is8Bit() || !m_rareData->m_codeUnitRanges)
+        return false;
+    return startOffset < string.length() && string.length() - startOffset >= Yarr::CodeUnitRanges::minProfitableLength;
+}
+
+ALWAYS_INLINE MatchResult RegExp::matchCodeUnitRanges(StringView string, unsigned startOffset) const
+{
+    ASSERT(canUseCodeUnitRanges(string, startOffset));
+    size_t found = m_rareData->m_codeUnitRanges->find(string.span16().subspan(startOffset));
+    if (found == notFound)
+        return MatchResult::failed();
+    return MatchResult { startOffset + found, startOffset + found + 1 };
+}
+
 template<Yarr::MatchFrom matchFrom>
 ALWAYS_INLINE int RegExp::matchInline(JSGlobalObject* nullOrGlobalObject, VM& vm, StringView s, unsigned startOffset, std::span<int> ovector)
 {
@@ -151,6 +170,15 @@ ALWAYS_INLINE int RegExp::matchInline(JSGlobalObject* nullOrGlobalObject, VM& vm
             offsetVector[1] = found + atom().length();
             return found;
         }
+    }
+
+    if (canUseCodeUnitRanges(s, startOffset)) {
+        auto result = matchCodeUnitRanges(s, startOffset);
+        if (!result)
+            return -1;
+        offsetVector[0] = result.start;
+        offsetVector[1] = result.end;
+        return result.start;
     }
 
     int result;
@@ -281,6 +309,9 @@ ALWAYS_INLINE MatchResult RegExp::matchInline(JSGlobalObject* nullOrGlobalObject
             return MatchResult { found, found + atom().length() };
         }
     }
+
+    if (canUseCodeUnitRanges(s, startOffset))
+        return matchCodeUnitRanges(s, startOffset);
 
 #if ENABLE(YARR_JIT)
     if (m_state == JITCode) {
