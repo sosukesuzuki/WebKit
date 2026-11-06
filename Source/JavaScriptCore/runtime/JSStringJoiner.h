@@ -308,6 +308,10 @@ JSString* joinIntegerTypedArray(JSGlobalObject*, std::span<const ElementType> el
 template<typename ElementType>
 JSString* joinTypedArray(JSGlobalObject*, std::span<const ElementType> elements, size_t length, StringView separator);
 
+// Joins numbers, so the elements must not include the holes of a DoubleShape butterfly. Returns null
+// without throwing when the separator or the result could be too long for a growing buffer to be worthwhile.
+JSString* tryJoinDoubleArray(JSGlobalObject*, std::span<const double> elements, StringView separator);
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace JSC

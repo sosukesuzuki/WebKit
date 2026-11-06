@@ -107,16 +107,23 @@ template<std::integral IntegerType>
 static constexpr size_t maxIntegerStringLength = std::max(lengthOfIntegerAsString(std::numeric_limits<IntegerType>::min()), lengthOfIntegerAsString(std::numeric_limits<IntegerType>::max()));
 
 // Requires numberToShortestStringBufferSize characters of room even though fewer are consumed.
+// Returns whether a cached string was used. Null means to not look for one.
 template<typename CharacterType>
-static inline void appendStringToData(std::span<CharacterType>& data, double value)
+static inline bool appendStringToData(NumericStrings* numericStrings, std::span<CharacterType>& data, double value)
 {
     if (auto int32Value = tryConvertToStrictInt32(value)) {
         appendStringToData(data, *int32Value);
-        return;
+        return false;
     }
     if (isSafeInteger(value)) {
         appendStringToData(data, static_cast<int64_t>(value));
-        return;
+        return false;
+    }
+    if (numericStrings) {
+        if (auto* string = numericStrings->addIfRepeated(value)) {
+            appendStringToData(data, string->span8());
+            return true;
+        }
     }
     if constexpr (std::is_same_v<CharacterType, Latin1Character>) {
         size_t length = numberToShortestString(value, std::span<char, numberToShortestStringBufferSize> { std::bit_cast<char*>(data.data()), numberToShortestStringBufferSize });
@@ -127,6 +134,7 @@ static inline void appendStringToData(std::span<CharacterType>& data, double val
         StringImpl::copyCharacters(data, byteCast<Latin1Character>(std::span { buffer }.first(length)));
         skip(data, length);
     }
+    return false;
 }
 
 template<typename CharacterType>
@@ -474,11 +482,12 @@ template JSString* joinIntegerTypedArray<int64_t>(JSGlobalObject*, std::span<con
 template JSString* joinIntegerTypedArray<uint64_t>(JSGlobalObject*, std::span<const uint64_t>, size_t, StringView);
 
 template<typename ElementType, typename CharacterType>
-class JSTypedArrayJoiner {
+class NumericSpanJoiner {
     WTF_FORBID_HEAP_ALLOCATION;
 public:
-    JSTypedArrayJoiner(std::span<const CharacterType> separator)
-        : m_separator(separator)
+    NumericSpanJoiner(VM& vm, std::span<const CharacterType> separator)
+        : m_numericStrings(&vm.numericStrings)
+        , m_separator(separator)
     {
     }
 
@@ -541,14 +550,16 @@ private:
             appendStringToData(data, m_separator);
     }
 
+    NumericStrings* m_numericStrings;
     std::span<const CharacterType> m_separator;
     Vector<CharacterType, 0, CrashOnOverflow, 16, WTF::StringImplMalloc> m_buffer;
     size_t m_length { 0 };
+    size_t m_cacheHits { 0 };
 };
 
 template<typename ElementType, typename CharacterType>
-template<typename JSTypedArrayJoiner<ElementType, CharacterType>::SeparatorKind kind>
-bool JSTypedArrayJoiner<ElementType, CharacterType>::appendElements(std::span<const ElementType> elements)
+template<typename NumericSpanJoiner<ElementType, CharacterType>::SeparatorKind kind>
+bool NumericSpanJoiner<ElementType, CharacterType>::appendElements(std::span<const ElementType> elements)
 {
     ASSERT(!elements.empty());
     auto sampled = elements.first(std::min(elements.size(), sampledElementCount));
@@ -565,6 +576,10 @@ bool JSTypedArrayJoiner<ElementType, CharacterType>::appendElements(std::span<co
     auto remaining = elements.subspan(sampled.size());
     if (remaining.empty())
         return true;
+
+    // Looking up numbers that do not repeat costs time, and evicts those that do.
+    if (m_cacheHits < sampled.size() / 2)
+        m_numericStrings = nullptr;
 
     CheckedSize estimatedLength = m_length;
     estimatedLength *= elements.size();
@@ -583,8 +598,8 @@ bool JSTypedArrayJoiner<ElementType, CharacterType>::appendElements(std::span<co
 }
 
 template<typename ElementType, typename CharacterType>
-template<typename JSTypedArrayJoiner<ElementType, CharacterType>::SeparatorKind kind>
-ALWAYS_INLINE bool JSTypedArrayJoiner<ElementType, CharacterType>::append(ElementType element)
+template<typename NumericSpanJoiner<ElementType, CharacterType>::SeparatorKind kind>
+ALWAYS_INLINE bool NumericSpanJoiner<ElementType, CharacterType>::append(ElementType element)
 {
     if (!ensureRoom(separatorLength<kind>() + maxElementStringLength)) [[unlikely]]
         return false;
@@ -594,14 +609,14 @@ ALWAYS_INLINE bool JSTypedArrayJoiner<ElementType, CharacterType>::append(Elemen
     if constexpr (std::is_integral_v<ElementType>)
         appendStringToData(data, element);
     else
-        appendStringToData(data, static_cast<double>(element));
+        m_cacheHits += appendStringToData(m_numericStrings, data, static_cast<double>(element));
 
     m_length = m_buffer.size() - data.size();
     return m_length <= String::MaxLength;
 }
 
 template<typename ElementType, typename CharacterType>
-bool JSTypedArrayJoiner<ElementType, CharacterType>::appendSeparators(size_t count)
+bool NumericSpanJoiner<ElementType, CharacterType>::appendSeparators(size_t count)
 {
     if (m_separator.empty())
         return true;
@@ -622,7 +637,7 @@ bool JSTypedArrayJoiner<ElementType, CharacterType>::appendSeparators(size_t cou
 }
 
 template<typename ElementType, typename CharacterType>
-JSString* JSTypedArrayJoiner<ElementType, CharacterType>::join(JSGlobalObject* globalObject, std::span<const ElementType> elements, size_t length)
+JSString* NumericSpanJoiner<ElementType, CharacterType>::join(JSGlobalObject* globalObject, std::span<const ElementType> elements, size_t length)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -668,8 +683,8 @@ template<typename ElementType>
 JSString* joinTypedArray(JSGlobalObject* globalObject, std::span<const ElementType> elements, size_t length, StringView separator)
 {
     if (separator.is8Bit())
-        return JSTypedArrayJoiner<ElementType, Latin1Character>(separator.span8()).join(globalObject, elements, length);
-    return JSTypedArrayJoiner<ElementType, char16_t>(separator.span16()).join(globalObject, elements, length);
+        return NumericSpanJoiner<ElementType, Latin1Character>(globalObject->vm(), separator.span8()).join(globalObject, elements, length);
+    return NumericSpanJoiner<ElementType, char16_t>(globalObject->vm(), separator.span16()).join(globalObject, elements, length);
 }
 
 template JSString* joinTypedArray<int8_t>(JSGlobalObject*, std::span<const int8_t>, size_t, StringView);
@@ -683,6 +698,47 @@ template JSString* joinTypedArray<uint64_t>(JSGlobalObject*, std::span<const uin
 template JSString* joinTypedArray<Float16>(JSGlobalObject*, std::span<const Float16>, size_t, StringView);
 template JSString* joinTypedArray<float>(JSGlobalObject*, std::span<const float>, size_t, StringView);
 template JSString* joinTypedArray<double>(JSGlobalObject*, std::span<const double>, size_t, StringView);
+
+template<typename CharacterType>
+static JSString* tryJoinDoubleArrayImpl(JSGlobalObject* globalObject, std::span<const double> elements, std::span<const CharacterType> separator)
+{
+    VM& vm = globalObject->vm();
+
+    uint64_t maxJoinedLength = static_cast<uint64_t>(elements.size()) * (static_cast<uint64_t>(separator.size()) + numberToShortestStringBufferSize);
+
+    // When the result is known to be short, formatting it on the stack is cheaper than allocating
+    // a buffer for the worst case and shrinking it afterwards.
+    constexpr size_t stackBufferCapacity = 4 * KB / sizeof(CharacterType);
+    if (maxJoinedLength <= stackBufferCapacity) {
+        std::array<CharacterType, stackBufferCapacity> buffer;
+        std::span<CharacterType> data { buffer };
+        for (size_t i = 0; i < elements.size(); ++i) {
+            if (i)
+                appendStringToData(data, separator);
+            appendStringToData(&vm.numericStrings, data, elements[i]);
+        }
+        size_t length = buffer.size() - data.size();
+        return jsString(vm, StringView { std::span<const CharacterType> { buffer }.first(length) });
+    }
+
+    // With a long separator, growing and shrinking a buffer that is mostly copies of it costs more
+    // time and memory than JSStringJoiner, which allocates the exact length once. JSStringJoiner also
+    // has to handle what might not fit in a Vector but does fit in a String.
+    constexpr size_t maxSeparatorLength = 64;
+    constexpr uint64_t maxGrowableJoinedLength = 1 * GB / sizeof(CharacterType);
+    if (separator.size() > maxSeparatorLength || maxJoinedLength > maxGrowableJoinedLength) [[unlikely]]
+        return nullptr;
+
+    return NumericSpanJoiner<double, CharacterType>(vm, separator).join(globalObject, elements, elements.size());
+}
+
+JSString* tryJoinDoubleArray(JSGlobalObject* globalObject, std::span<const double> elements, StringView separator)
+{
+    ASSERT(!containsHole(elements.data(), elements.size()));
+    if (separator.is8Bit())
+        return tryJoinDoubleArrayImpl(globalObject, elements, separator.span8());
+    return tryJoinDoubleArrayImpl(globalObject, elements, separator.span16());
+}
 
 } // namespace JSC
 

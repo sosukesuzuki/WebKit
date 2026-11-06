@@ -528,6 +528,27 @@ JSString* NumericStrings::addJSString(VM& vm, double value)
     return entry.jsString;
 }
 
+// The value can come from memory that another thread writes, so this must not rely on what the caller
+// compared it with.
+NEVER_INLINE const String* NumericStrings::addIfRepeatedSlow(CacheEntryWithJSString<double>& entry, double value)
+{
+    ASSERT(value);
+    if (value == entry.key) {
+        if (entry.value.isNull()) {
+            ASSERT(!entry.jsString);
+            entry.value = String::number(value);
+        }
+        return &entry.value;
+    }
+    // NaN would never be found.
+    if (value == value) {
+        entry.key = value;
+        entry.value = String();
+        entry.jsString = nullptr;
+    }
+    return nullptr;
+}
+
 void NumericStrings::initializeSmallIntCache(VM& vm)
 {
     for (int i = 0; i < 10; ++i) {

@@ -83,6 +83,20 @@ public:
         return entry.value;
     }
 
+    // For callers that can format a number without making a String, which is what a miss of add()
+    // costs. The first miss for a value only records its key and returns null. The string is made
+    // when the value is looked up again before another one takes the entry. Not for zero, which is
+    // the key of an entry that was never used.
+    ALWAYS_INLINE const String* addIfRepeated(double d)
+    {
+        if (!m_doubleCache) [[unlikely]]
+            initializeDoubleCache();
+        auto& entry = lookup(d);
+        if (d == entry.key && !entry.value.isNull())
+            return &entry.value;
+        return addIfRepeatedSlow(entry, d);
+    }
+
     ALWAYS_INLINE const String& add(int i)
     {
         if (static_cast<unsigned>(i) < cacheSize)
@@ -162,6 +176,7 @@ private:
     }
 
     JS_EXPORT_PRIVATE void initializeDoubleCache();
+    const String* addIfRepeatedSlow(CacheEntryWithJSString<double>&, double);
 
     std::array<StringWithJSString, cacheSize> m_smallIntCache { };
     std::array<CacheEntryWithJSString<int>, cacheSize> m_intCache { };

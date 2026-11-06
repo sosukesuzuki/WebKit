@@ -31,6 +31,7 @@
 #include "Error.h"
 #include "ExceptionHelpers.h"
 #include "GetVM.h"
+#include "JSArrayInlines.h"
 #include "JSGlobalObject.h"
 #include "JSStringJoiner.h"
 #include "JSStringInlines.h"
@@ -382,9 +383,17 @@ ALWAYS_INLINE JSString* fastArrayJoin(JSGlobalObject* globalObject, JSObject* th
         auto& butterfly = *thisObject->butterfly();
         if (length > butterfly.publicLength()) [[unlikely]]
             break;
+        auto data = butterfly.contiguousDouble().data();
+
+        // A single element is left to JSStringJoiner, which shares the string that VM::numericStrings caches.
+        if (length > 1 && !containsHole(data, length)) {
+            if (auto joined = tryJoinDoubleArray(globalObject, unsafeMakeSpan(data, length), separator))
+                RELEASE_AND_RETURN(scope, joined);
+            RETURN_IF_EXCEPTION(scope, { });
+        }
+
         joiner.reserveCapacity(globalObject, length);
         RETURN_IF_EXCEPTION(scope, { });
-        auto data = butterfly.contiguousDouble().data();
         bool holesKnownToBeOK = false;
         for (; i < length; ++i) {
             double value = data[i];
