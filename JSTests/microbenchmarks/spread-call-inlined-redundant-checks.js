@@ -17,11 +17,8 @@ function test(p, q, r, s, args) {
 }
 noInline(test);
 
-// Adding a property fires the transition watchpoint of the structure of { x }, so the compiler has to
-// rely on checks for it instead of watching it.
 ({ x: 1 }).extra = 1;
 
-// Spread returns the storage of this copy-on-write array without allocating.
 const args = [1, "a"];
 const p = { x: 1 };
 const q = { x: 2 };

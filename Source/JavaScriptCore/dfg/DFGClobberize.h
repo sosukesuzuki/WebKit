@@ -1040,7 +1040,6 @@ void clobberize(Graph& graph, Node* node, NOESCAPE const ReadFunctor& read, NOES
     }
         
     case VarargsLength: {
-        // KnownCellUse means that the child is a JSCellButterfly created by Spread.
         if (node->argumentsChild().useKind() == KnownCellUse) {
             read(Butterfly_publicLength);
             return;
@@ -1068,7 +1067,6 @@ void clobberize(Graph& graph, Node* node, NOESCAPE const ReadFunctor& read, NOES
         case OtherUse:
             break;
         case KnownCellUse:
-            // The child is a JSCellButterfly created by Spread. The length is not read here since child1 already has it.
             read(IndexedContiguousProperties);
             break;
         default:

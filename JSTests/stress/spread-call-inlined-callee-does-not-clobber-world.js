@@ -5,8 +5,6 @@ function shouldBe(actual, expected) {
         throw new Error(`bad value: ${String(actual)} expected: ${String(expected)}`);
 }
 
-// Adding a property fires the transition watchpoint of the structure of { x }, so the compiler has to
-// rely on checks for it instead of watching it.
 function makeObject(x) {
     return { x };
 }
@@ -15,7 +13,6 @@ function makeObject(x) {
 function add(a, b) { return a + b; }
 function count() { return arguments.length; }
 
-// The array is a literal, so its structure is proven at Spread and Spread does not clobber the world.
 function checkAroundCall(object, a, b) {
     let before = object.x;
     let sum = add(...[a, b]);
@@ -23,7 +20,6 @@ function checkAroundCall(object, a, b) {
 }
 noInline(checkAroundCall);
 
-// The access to the array proves its structure.
 function checkAroundCallWithArray(object, array) {
     let before = object.x + array.length;
     let sum = add(...array);
@@ -32,7 +28,6 @@ function checkAroundCallWithArray(object, array) {
 }
 noInline(checkAroundCallWithArray);
 
-// The callee changes the structure of the object, which it gets as an argument.
 function change(target, a, b) {
     delete target.x;
     target.z = 1000;
@@ -46,7 +41,6 @@ function changeStructureInCallee(object, a, b) {
 }
 noInline(changeStructureInCallee);
 
-// A callee which is not inlined does the same, while the arguments of an inlined one are live.
 function opaque(object) {
     delete object.x;
     object.z = 1000;
@@ -64,7 +58,6 @@ function changeStructureInNestedCall(object, a) {
 }
 noInline(changeStructureInNestedCall);
 
-// The array changes between two spreads.
 function mutateBetweenCalls(a, b, value) {
     let array = [a, b];
     let first = add(...array);
@@ -75,7 +68,6 @@ function mutateBetweenCalls(a, b, value) {
 }
 noInline(mutateBetweenCalls);
 
-// The callee changes the array after its elements are copied.
 function truncate(array, first, second) {
     array[0] = 100;
     array.length = 1;
@@ -88,7 +80,6 @@ function mutateInCallee(a, b) {
 }
 noInline(mutateInCallee);
 
-// A custom iterator runs user code.
 function checkAroundIterable(object, iterable) {
     let before = object.x;
     let sum = add(...iterable);
@@ -104,7 +95,6 @@ function loop(object, array) {
 }
 noInline(loop);
 
-// Rest parameters go through arguments elimination.
 function forwardRest(...args) { return add(...args) * 10 + count(...args); }
 function callForwardRest(a, b, c) { return forwardRest(a, b, c) + a; }
 noInline(callForwardRest);
@@ -115,7 +105,6 @@ function callForwardRestTwice(array, a) {
 }
 noInline(callForwardRestTwice);
 
-// The arguments object of a sloppy function is read after the call.
 function sloppyArguments(a, b) {
     a = a + 1;
     let sum = add(...[b, b]);
@@ -169,8 +158,6 @@ function callThrow(object, a) {
 }
 noInline(catchThrow);
 
-// LoadVarargs exits when there are more arguments than the inlined frame has room for. VarargsLength
-// exits when there are more than maxArguments.
 function exits(object, array) {
     let before = object.x + array.length;
     object.x++;
@@ -187,7 +174,6 @@ function locals(a, b, c, array) {
 }
 noInline(locals);
 
-// The iterator fires the watchpoint which the inlined callee was compiled against.
 let constant = 1;
 function readConstant(a) { return constant * 10 + a; }
 function callReadConstant(iterable) { return readConstant(...iterable); }
@@ -207,7 +193,6 @@ function* generate(object) {
 }
 
 const int32s = [2, 3];
-// Has the structure which the large arrays below have, so that only the length makes the code exit.
 const notCopyOnWrite = new Array(2).fill(1);
 const doubles = [2.5, 3];
 const set = new Set([2, 3]);
@@ -239,7 +224,6 @@ for (let i = 0; i < testLoopCount; ++i) {
 shouldBe(callReadConstant(changeConstant(2)), 25);
 const tooLarge = new Array(0x100000 + 1).fill(1);
 {
-    // This exits at VarargsLength. The store before it has to be done once.
     let object = makeObject(1);
     let error;
     try {
@@ -256,7 +240,6 @@ for (let i = 0; i < 5; ++i) {
     shouldBe(locals(1, 2, 3, large), "3,5,1002,1,2,3");
 }
 
-// The array iterator protocol is no longer intact.
 const arrayIteratorPrototype = Object.getPrototypeOf([][Symbol.iterator]());
 const originalNext = arrayIteratorPrototype.next;
 let target;

@@ -262,7 +262,6 @@ public:
                     break;
                 case VarargsLength:
                 case LoadVarargs:
-                    // The code generation and the effects of these nodes rely on this.
                     if (node->argumentsChild().useKind() == KnownCellUse) {
                         VALIDATE((node), node->argumentsChild()->op() == Spread);
                         VALIDATE((node), !node->loadVarargsData()->offset);
