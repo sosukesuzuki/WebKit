@@ -69,14 +69,14 @@ function mutateBetweenCalls(a, b, value) {
 noInline(mutateBetweenCalls);
 
 function truncate(array, first, second) {
-    array[0] = 100;
+    array[1] = 100;
     array.length = 1;
     return first * 10 + second + arguments.length * 100;
 }
 function mutateInCallee(a, b) {
-    let array = [a, b];
-    let holder = [array, a, b];
-    return truncate(...holder) + array.length * 1000 + holder.length * 10000;
+    let array = [null, a, b];
+    array[0] = array;
+    return truncate(...array) + array.length * 1000;
 }
 noInline(mutateInCallee);
 
@@ -205,7 +205,7 @@ for (let i = 0; i < testLoopCount; ++i) {
     shouldBe(changeStructureInCallee(makeObject(1), 2, 3), 10053);
     shouldBe(changeStructureInNestedCall(makeObject(1), 2), 10047);
     shouldBe(mutateBetweenCalls(1, 2, 5), 30073);
-    shouldBe(mutateInCallee(1, 2), 31312);
+    shouldBe(mutateInCallee(1, 2), 1312);
     shouldBe(loop(makeObject(1), int32s), 100);
     shouldBe(callForwardRest(1, 2, 3), 34);
     shouldBe(callForwardRestTwice(int32s, 1), 55);

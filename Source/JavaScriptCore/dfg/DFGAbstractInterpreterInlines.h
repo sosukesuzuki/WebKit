@@ -568,14 +568,8 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         // https://bugs.webkit.org/show_bug.cgi?id=143071
         switch (node->op()) {
         case LoadVarargs:
-            switch (node->argumentsChild().useKind()) {
-            case OtherUse:
-            case KnownCellUse:
-                break;
-            default:
+            if (node->argumentsChild().useKind() != OtherUse && node->argumentsChild().useKind() != KnownCellUse)
                 clobberWorld();
-                break;
-            }
             break;
         case ForwardVarargs:
             break;
