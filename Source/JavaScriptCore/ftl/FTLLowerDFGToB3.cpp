@@ -21987,7 +21987,6 @@ IGNORE_CLANG_WARNINGS_END
             ValueFromBlock fastResult = m_out.anchor(loadCachedInt32String(int32Value, JSValue(), slowCase));
             m_out.jump(continuation);
 
-            // For an int32 value, the operation fills the same cache entries that are looked up above.
             m_out.appendTo(slowCase, continuation);
             ValueFromBlock slowResult = m_out.anchor(vmCall(pointerType(), operationDoubleToStringWithValidRadix, weakPointer(globalObject), doubleValue, m_out.constInt32(radix)));
             m_out.jump(continuation);
@@ -22001,7 +22000,6 @@ IGNORE_CLANG_WARNINGS_END
         return nullptr;
     }
 
-    // Continues with the JSString that NumericStrings has cached for int32Value, or jumps to slowCase if there is none.
     LValue loadCachedInt32String(LValue int32Value, JSValue provenInt32Value, LBasicBlock slowCase)
     {
         LBasicBlock smallIntCase = m_out.newBlock();
