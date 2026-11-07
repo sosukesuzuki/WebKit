@@ -33,11 +33,15 @@ function toString16(num) {
 }
 noInline(toString16);
 
-// The operand has to be a double here, whatever its profile says.
+// The multiplication makes the operand a double regardless of the argument's profile.
 function computed(num) {
     return '' + num * 0.5;
 }
 noInline(computed);
+
+function computed2x(num) {
+    return computed(num * 2);
+}
 
 // [value, radix 10, radix 16]
 let cases = [
@@ -86,19 +90,21 @@ for (let i = 0; i < testLoopCount; ++i) {
     shouldBe(toString10(value), decimal);
     if (hex)
         shouldBe(toString16(value), hex);
-    if (value !== Infinity && value !== -Infinity && Math.abs(value) < 1e300)
+    // Number.MAX_VALUE * 2 overflows.
+    if (value !== Number.MAX_VALUE)
         shouldBe(computed(value * 2), decimal);
 }
 
 // A collection empties the cache, and the first conversion after it fills the entry again.
-for (let round = 0; round < 3; ++round) {
+// Each function gets its own collection so that it sees the empty entries itself.
+let expectedStrings = [];
+for (let i = 0; i < 1030; ++i)
+    expectedStrings.push(JSON.stringify(i));
+
+for (let convert of [computed2x, concat, template, callString, toStringDefault, toString10]) {
     gc();
     for (let i = 0; i < 1030; ++i) {
-        let expected = JSON.stringify(i);
-        for (let j = 0; j < 2; ++j) {
-            shouldBe(concat(i), expected);
-            shouldBe(computed(i * 2), expected);
-            shouldBe(toString10(i), expected);
-        }
+        for (let j = 0; j < 2; ++j)
+            shouldBe(convert(i), expectedStrings[i]);
     }
 }
