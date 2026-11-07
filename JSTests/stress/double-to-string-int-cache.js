@@ -95,16 +95,20 @@ for (let i = 0; i < testLoopCount; ++i) {
         shouldBe(computed(value * 2), decimal);
 }
 
-// A collection empties the cache, and the first conversion after it fills the entry again.
+// A collection empties the caches, and the first conversion after it fills the entry again.
 // Each function gets its own collection so that it sees the empty entries itself.
-let expectedStrings = [];
-for (let i = 0; i < 1030; ++i)
-    expectedStrings.push(JSON.stringify(i));
+let integers = [];
+for (let i = -1030; i < 1030; ++i)
+    integers.push(i);
+// More keys than the int cache has entries, so that they evict each other.
+for (let i = 0; i < 3000; ++i)
+    integers.push(100000 + i * 7919, -100000 - i * 7919);
+let expectedStrings = integers.map(i => JSON.stringify(i));
 
 for (let convert of [computed2x, concat, template, callString, toStringDefault, toString10]) {
     gc();
-    for (let i = 0; i < 1030; ++i) {
+    for (let i = 0; i < integers.length; ++i) {
         for (let j = 0; j < 2; ++j)
-            shouldBe(convert(i), expectedStrings[i]);
+            shouldBe(convert(integers[i]), expectedStrings[i]);
     }
 }
