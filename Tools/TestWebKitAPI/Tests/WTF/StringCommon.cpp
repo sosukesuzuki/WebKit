@@ -507,32 +507,28 @@ TEST(WTF_StringCommon, CharactersAreAllLatin1)
 
 TEST(WTF_StringCommon, CopyElements8To16)
 {
-    constexpr size_t maxLength = 160;
-    constexpr char16_t guard = 0xa55a;
+    constexpr unsigned guard = 0xa55a;
 
-    auto check = [&](size_t length, size_t sourceOffset, size_t destinationOffset) {
-        // The source ends where its buffer ends, so that ASan sees a read past it.
-        Vector<Latin1Character> source(sourceOffset + length);
-        for (size_t i = 0; i < source.size(); ++i)
-            source[i] = static_cast<Latin1Character>(0xff - 7 * i);
-
-        // The destination has room after the copied elements, as in a buffer that is being filled.
-        Vector<char16_t> destination(FillWith { }, destinationOffset + length + 64, guard);
-
-        WTF::copyElements(destination.mutableSpan().subspan(destinationOffset), source.span().subspan(sourceOffset));
-
-        for (size_t i = 0; i < destination.size(); ++i) {
-            bool isCopied = i >= destinationOffset && i < destinationOffset + length;
-            char16_t expected = isCopied ? static_cast<char16_t>(source[sourceOffset + i - destinationOffset]) : guard;
-            ASSERT_EQ(static_cast<unsigned>(destination[i]), static_cast<unsigned>(expected))
-                << "length=" << length << " sourceOffset=" << sourceOffset << " destinationOffset=" << destinationOffset << " i=" << i;
-        }
-    };
-
-    for (size_t length = 0; length <= maxLength; ++length) {
+    for (size_t length = 0; length <= 160; ++length) {
         for (size_t sourceOffset = 0; sourceOffset < 9; ++sourceOffset) {
-            for (size_t destinationOffset = 0; destinationOffset < 9; ++destinationOffset)
-                ASSERT_NO_FATAL_FAILURE(check(length, sourceOffset, destinationOffset));
+            for (size_t destinationOffset = 0; destinationOffset < 9; ++destinationOffset) {
+                // The source ends where its buffer ends, so that ASan sees a read past it.
+                Vector<Latin1Character> source(sourceOffset + length);
+                for (size_t i = 0; i < source.size(); ++i)
+                    source[i] = static_cast<Latin1Character>(0xff - 7 * i);
+
+                // The destination has room after the copied elements, as in a buffer that is being filled.
+                Vector<char16_t> destination(FillWith { }, destinationOffset + length + 64, static_cast<char16_t>(guard));
+
+                WTF::copyElements(destination.mutableSpan().subspan(destinationOffset), source.span().subspan(sourceOffset));
+
+                for (size_t i = 0; i < destination.size(); ++i) {
+                    bool isCopied = i >= destinationOffset && i < destinationOffset + length;
+                    unsigned expected = isCopied ? static_cast<unsigned>(source[sourceOffset + i - destinationOffset]) : guard;
+                    ASSERT_EQ(static_cast<unsigned>(destination[i]), expected)
+                        << "length=" << length << " sourceOffset=" << sourceOffset << " destinationOffset=" << destinationOffset << " i=" << i;
+                }
+            }
         }
     }
 }

@@ -1472,7 +1472,7 @@ ALWAYS_INLINE void copyElements(std::span<ElementType> destinationSpan, std::spa
         std::memcpy(destination, source, count); // NOLINT
 }
 
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(ARM64) || CPU(X86_64)
 
 ALWAYS_INLINE void widen4Elements(uint16_t* destination, const uint8_t* source)
 {
@@ -1485,15 +1485,14 @@ ALWAYS_INLINE void widen8Elements(uint16_t* destination, const uint8_t* source)
     simde_vst1q_u16(destination, simde_vmovl_u8(simde_vld1_u8(source)));
 }
 
-// Four 8-element blocks.
-inline constexpr size_t maxSmallWideningCopyLength = 4 * 8;
-
 // The widening counterpart of copySmallMemory. Blocks anchored at both ends cover the whole range,
 // overlapping in the middle, so that no length needs a loop. Unlike with copySmallMemory, the
 // source and the destination must not overlap.
+template<size_t maximumLength>
 ALWAYS_INLINE void copySmallWidening(uint16_t* __restrict destination, const uint8_t* __restrict source, size_t length)
 {
-    ASSERT(length >= 2 && length <= maxSmallWideningCopyLength);
+    static_assert(maximumLength <= 4 * 8);
+    ASSERT(length >= 2 && length <= maximumLength);
 
     if (length < 4) {
         destination[0] = source[0];
@@ -1514,7 +1513,7 @@ ALWAYS_INLINE void copySmallWidening(uint16_t* __restrict destination, const uin
     widen8Elements(destination + length - 8, source + length - 8);
 }
 
-#endif // CPU(X86_64) || CPU(ARM64)
+#endif // CPU(ARM64) || CPU(X86_64)
 
 inline void copyElements(std::span<uint16_t> destinationSpan, std::span<const uint8_t> sourceSpan)
 {
@@ -1524,13 +1523,15 @@ inline void copyElements(std::span<uint16_t> destinationSpan, std::span<const ui
     auto* __restrict source = sourceSpan.data();
     size_t length = sourceSpan.size();
 
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(ARM64) || CPU(X86_64)
+    // Checking for this first is measurably faster than doing it inside copySmallWidening.
     if (length == 1) {
         *destination = *source;
         return;
     }
-    if (isInRange<size_t>(length, 2, maxSmallWideningCopyLength)) {
-        copySmallWidening(destination, source, length);
+    constexpr size_t maxInlineCopyLength = 32;
+    if (isInRange<size_t>(length, 2, maxInlineCopyLength)) {
+        copySmallWidening<maxInlineCopyLength>(destination, source, length);
         return;
     }
 #endif
