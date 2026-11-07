@@ -21954,14 +21954,15 @@ IGNORE_CLANG_WARNINGS_END
             LBasicBlock continuation = m_out.newBlock();
 
             LBasicBlock lastNext = m_out.insertNewBlocksBefore(slowCase);
-            auto [smallIntResult, intCacheResult] = lookUpInt32StringCaches(int32Value, provenValue(child1), slowCase, continuation);
+            ValueFromBlock fastResult = m_out.anchor(loadCachedInt32String(int32Value, provenValue(child1), slowCase));
+            m_out.jump(continuation);
 
             m_out.appendTo(slowCase, continuation);
             ValueFromBlock slowResult = m_out.anchor(vmCall(pointerType(), operationInt32ToStringWithValidRadix, weakPointer(globalObject), int32Value, m_out.constInt32(radix)));
             m_out.jump(continuation);
 
             m_out.appendTo(continuation, lastNext);
-            return m_out.phi(pointerType(), smallIntResult, intCacheResult, slowResult);
+            return m_out.phi(pointerType(), fastResult, slowResult);
         }
         case Int52RepUse:
             return vmCall(pointerType(), operationInt52ToStringWithValidRadix, weakPointer(globalObject), lowStrictInt52(child1), m_out.constInt32(radix));
@@ -21983,7 +21984,8 @@ IGNORE_CLANG_WARNINGS_END
             m_out.branch(m_out.doubleNotEqualOrUnordered(doubleValue, int32InDouble), unsure(slowCase), unsure(int32Case));
 
             LBasicBlock lastNext = m_out.appendTo(int32Case, slowCase);
-            auto [smallIntResult, intCacheResult] = lookUpInt32StringCaches(int32Value, JSValue(), slowCase, continuation);
+            ValueFromBlock fastResult = m_out.anchor(loadCachedInt32String(int32Value, JSValue(), slowCase));
+            m_out.jump(continuation);
 
             // For an int32 value, the operation fills the same cache entries that are looked up above.
             m_out.appendTo(slowCase, continuation);
@@ -21991,7 +21993,7 @@ IGNORE_CLANG_WARNINGS_END
             m_out.jump(continuation);
 
             m_out.appendTo(continuation, lastNext);
-            return m_out.phi(pointerType(), smallIntResult, intCacheResult, slowResult);
+            return m_out.phi(pointerType(), fastResult, slowResult);
         }
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -21999,20 +22001,21 @@ IGNORE_CLANG_WARNINGS_END
         return nullptr;
     }
 
-    // Jumps to continuation with one of the returned values if the caches have the JSString for int32Value, and to slowCase otherwise.
-    std::pair<ValueFromBlock, ValueFromBlock> lookUpInt32StringCaches(LValue int32Value, JSValue provenInt32Value, LBasicBlock slowCase, LBasicBlock continuation)
+    // Continues with the JSString that NumericStrings has cached for int32Value, or jumps to slowCase if there is none.
+    LValue loadCachedInt32String(LValue int32Value, JSValue provenInt32Value, LBasicBlock slowCase)
     {
         LBasicBlock smallIntCase = m_out.newBlock();
         LBasicBlock intCacheCase = m_out.newBlock();
         LBasicBlock intCacheKeyMatchCase = m_out.newBlock();
+        LBasicBlock foundCase = m_out.newBlock();
 
         m_out.branch(m_out.aboveOrEqual(int32Value, m_out.constInt32(NumericStrings::cacheSize)), unsure(intCacheCase), unsure(smallIntCase));
 
-        m_out.appendTo(smallIntCase, intCacheCase);
+        LBasicBlock lastNext = m_out.appendTo(smallIntCase, intCacheCase);
         LValue smallIntCacheBase = m_out.constIntPtr(vm().numericStrings.smallIntCache());
         LValue smallIntJSString = m_out.loadPtr(m_out.baseIndex(m_heaps.SmallIntCache, smallIntCacheBase, m_out.zeroExtPtr(int32Value), provenInt32Value, NumericStrings::StringWithJSString::offsetOfJSString()));
         ValueFromBlock smallIntResult = m_out.anchor(smallIntJSString);
-        m_out.branch(m_out.isNull(smallIntJSString), unsure(slowCase), unsure(continuation));
+        m_out.branch(m_out.isNull(smallIntJSString), unsure(slowCase), unsure(foundCase));
 
         m_out.appendTo(intCacheCase, intCacheKeyMatchCase);
         LValue hash = rapidHashMix64(m_out.zeroExt(int32Value, Int64));
@@ -22022,11 +22025,12 @@ IGNORE_CLANG_WARNINGS_END
         LValue entryJSString = m_out.loadPtr(m_out.baseIndex(m_heaps.IntCache, intCacheBase, slotIndex, JSValue(), NumericStrings::CacheEntryWithJSString<int>::offsetOfJSString()));
         m_out.branch(m_out.equal(entryKey, int32Value), unsure(intCacheKeyMatchCase), unsure(slowCase));
 
-        m_out.appendTo(intCacheKeyMatchCase, slowCase);
+        m_out.appendTo(intCacheKeyMatchCase, foundCase);
         ValueFromBlock intCacheResult = m_out.anchor(entryJSString);
-        m_out.branch(m_out.isNull(entryJSString), unsure(slowCase), unsure(continuation));
+        m_out.branch(m_out.isNull(entryJSString), unsure(slowCase), unsure(foundCase));
 
-        return { smallIntResult, intCacheResult };
+        m_out.appendTo(foundCase, lastNext);
+        return m_out.phi(pointerType(), smallIntResult, intCacheResult);
     }
 
     void compileResolveScopeForHoistingFuncDeclInEval()
