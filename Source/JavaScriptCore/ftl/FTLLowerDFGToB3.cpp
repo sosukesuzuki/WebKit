@@ -21985,8 +21985,40 @@ IGNORE_CLANG_WARNINGS_END
         }
         case Int52RepUse:
             return vmCall(pointerType(), operationInt52ToStringWithValidRadix, weakPointer(globalObject), lowStrictInt52(child1), m_out.constInt32(radix));
-        case DoubleRepUse:
-            return vmCall(pointerType(), operationDoubleToStringWithValidRadix, weakPointer(globalObject), lowDouble(child1), m_out.constInt32(radix));
+        case DoubleRepUse: {
+            LValue doubleValue = lowDouble(child1);
+            if (radix == 10) {
+                LBasicBlock inRangeCase = m_out.newBlock();
+                LBasicBlock smallIntCase = m_out.newBlock();
+                LBasicBlock slowCase = m_out.newBlock();
+                LBasicBlock continuation = m_out.newBlock();
+
+                // NaN and values outside of int32 truncate to an arbitrary integer, which never converts back to the same double.
+                // -0 truncates to 0 and compares equal to it, which is right since ToString(-0) is "0".
+                LValue int32Value = m_out.doubleToInt32(doubleValue);
+                m_out.branch(m_out.aboveOrEqual(int32Value, m_out.constInt32(NumericStrings::cacheSize)), unsure(slowCase), unsure(inRangeCase));
+
+                LBasicBlock lastNext = m_out.appendTo(inRangeCase, smallIntCase);
+                LValue int32InDouble = tryDoubleToInt32AsDouble(doubleValue);
+                if (!int32InDouble)
+                    int32InDouble = m_out.intToDouble(int32Value);
+                m_out.branch(m_out.doubleNotEqualOrUnordered(doubleValue, int32InDouble), unsure(slowCase), unsure(smallIntCase));
+
+                m_out.appendTo(smallIntCase, slowCase);
+                LValue cache = m_out.constIntPtr(vm().numericStrings.smallIntCache());
+                LValue result = m_out.loadPtr(m_out.baseIndex(m_heaps.SmallIntCache, cache, m_out.zeroExtPtr(int32Value), JSValue(), NumericStrings::StringWithJSString::offsetOfJSString()));
+                ValueFromBlock smallIntResult = m_out.anchor(result);
+                m_out.branch(m_out.isNull(result), unsure(slowCase), unsure(continuation));
+
+                m_out.appendTo(slowCase, continuation);
+                ValueFromBlock slowResult = m_out.anchor(vmCall(pointerType(), operationDoubleToStringWithValidRadix, weakPointer(globalObject), doubleValue, m_out.constInt32(radix)));
+                m_out.jump(continuation);
+
+                m_out.appendTo(continuation, lastNext);
+                return m_out.phi(pointerType(), smallIntResult, slowResult);
+            }
+            return vmCall(pointerType(), operationDoubleToStringWithValidRadix, weakPointer(globalObject), doubleValue, m_out.constInt32(radix));
+        }
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
