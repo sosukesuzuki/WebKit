@@ -4132,11 +4132,12 @@ public:
 // The spread operands of CallVarargsWithSpread / VarargsLengthWithSpread / LoadVarargsWithSpread (the ones
 // bitVector() marks) reach the FTL in one of three shapes. An eliminated spread survived arguments
 // elimination as a PhantomSpread over either a PhantomCreateRest (a forwarded segment: it has no value of
-// its own, so it is passed to the frame-setup operations as an empty-JSValue sentinel plus a
-// VarargsSpreadForwardDescriptor) or a PhantomNewArrayBuffer (a constant butterfly cell). Any other operand
-// has a value: a materialized spread butterfly cell, or, at a position bitVector() does not mark, a plain
-// argument. Only the FTL sees the phantom shapes, since arguments elimination requires SSA form; in the DFG
-// every operand has a value.
+// its own, so VarargsLengthWithSpread / LoadVarargsWithSpread read the frame it forwards from, and
+// CallVarargsWithSpread passes it to the frame-setup operations as an empty-JSValue sentinel plus a
+// VarargsSpreadForwardDescriptor) or a PhantomNewArrayBuffer (a constant butterfly cell, which can hold
+// unboxed doubles). Any other operand has a value: a materialized spread butterfly cell, which holds boxed
+// values and has no holes, or, at a position bitVector() does not mark, a plain argument. Only the FTL sees
+// the phantom shapes, since arguments elimination requires SSA form; in the DFG every operand has a value.
 
 // Returns the PhantomCreateRest of an eliminated forwarded rest, or nullptr.
 inline Node* eliminatedSpreadForwardedRest(Node* spreadOperand)
