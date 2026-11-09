@@ -805,11 +805,16 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
 
 String Interpreter::stackTraceAsString(VM& vm, const Vector<StackFrame>& stackTrace)
 {
-    StringBuilder builder;
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     for (unsigned i = 0; i < stackTrace.size(); i++) {
         stackTrace[i].appendTo(vm, builder);
         if (i != stackTrace.size() - 1)
             builder.append('\n');
+        // Function names come from script, so the result can exceed String::MaxLength. This can run at the
+        // end of a GC, where throwing is impossible, and whether a trace is formatted there or by a getter
+        // should not be observable. So give up on the trace instead of throwing an out-of-memory error.
+        if (builder.hasOverflowed()) [[unlikely]]
+            return emptyString();
     }
     return WTF::move(builder).toString();
 }
