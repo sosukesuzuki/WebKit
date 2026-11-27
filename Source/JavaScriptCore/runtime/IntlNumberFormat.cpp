@@ -577,6 +577,32 @@ UNumberRangeFormatter* IntlNumberFormat::createNumberRangeFormatterIfNecessary(J
     return m_numberRangeFormatter.get();
 }
 
+// Whether the options leave a non-negative integer below 1000 as its digits. The locale's part of the answer is in what ICU returns.
+bool IntlNumberFormat::canFormatSmallIntegersAsDecimalDigits() const
+{
+    return m_style == Style::Decimal
+        && m_notation == IntlNotation::Standard
+        && m_signDisplay != SignDisplay::Always
+        && m_signDisplay != SignDisplay::ExceptZero
+        && m_roundingType == IntlRoundingType::FractionDigits
+        && m_roundingIncrement == 1
+        && m_minimumIntegerDigits == 1
+        && !m_minimumFractionDigits
+        && (m_numberingSystem.isNull() || m_numberingSystem == "latn"_s);
+}
+
+void IntlNumberFormat::updateDecimalDigitsLimit(VM& vm, int32_t integer, StringView formatted) const
+{
+    ASSERT(integer >= 0 && integer < 1000);
+    if (!canFormatSmallIntegersAsDecimalDigits() || formatted != vm.numericStrings.add(integer)) {
+        m_mayRaiseDecimalDigitsLimit = false;
+        return;
+    }
+    // ASCII digits alone mean that the numbering system is latn and the locale's pattern has no prefix or suffix. They say nothing
+    // about longer integers, since some locales put a grouping separator before the last two digits ("1 00" in tok).
+    m_decimalDigitsLimit = integer < 10 ? 10 : integer < 100 ? 100 : 1000;
+}
+
 // https://tc39.es/ecma402/#sec-formatnumber
 JSValue IntlNumberFormat::format(JSGlobalObject* globalObject, double value) const
 {
@@ -585,8 +611,15 @@ JSValue IntlNumberFormat::format(JSGlobalObject* globalObject, double value) con
 
     value = purifyNaN(value);
 
-    Vector<char16_t, 32> buffer;
     ASSERT(m_numberFormatter);
+
+    // -0 is excluded since it can be formatted as "-0".
+    int32_t integer = truncateDoubleToInt32(value);
+    bool isSmallInteger = integer == value && static_cast<uint32_t>(integer) < 1000 && !std::signbit(value);
+    if (isSmallInteger && integer < m_decimalDigitsLimit)
+        return vm.numericStrings.addJSString(vm, integer);
+
+    Vector<char16_t, 32> buffer;
     UErrorCode status = U_ZERO_ERROR;
     auto formattedNumber = std::unique_ptr<UFormattedNumber, ICUDeleter<unumf_closeResult>>(unumf_openResult(&status));
     if (U_FAILURE(status))
@@ -597,6 +630,10 @@ JSValue IntlNumberFormat::format(JSGlobalObject* globalObject, double value) con
     status = callBufferProducingFunction(unumf_resultToString, formattedNumber.get(), buffer);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "Failed to format a number."_s);
+
+    if (isSmallInteger && m_mayRaiseDecimalDigitsLimit)
+        updateDecimalDigitsLimit(vm, integer, buffer.span());
+
     return jsString(vm, String(WTF::move(buffer)));
 }
 

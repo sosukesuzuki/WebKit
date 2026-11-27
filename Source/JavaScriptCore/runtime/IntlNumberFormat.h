@@ -209,6 +209,9 @@ private:
 
     UNumberRangeFormatter* createNumberRangeFormatterIfNecessary(JSGlobalObject*);
 
+    bool canFormatSmallIntegersAsDecimalDigits() const;
+    void updateDecimalDigitsLimit(VM&, int32_t, StringView formatted) const;
+
     enum class CurrencyDisplay : uint8_t { Code, Symbol, FormalSymbol, NarrowSymbol, Name, Never };
     enum class CurrencySign : uint8_t { Standard, Accounting };
     enum class UnitDisplay : uint8_t { Short, Narrow, Long };
@@ -250,6 +253,8 @@ private:
     UseGrouping m_useGrouping { UseGrouping::Always };
     RoundingMode m_roundingMode { RoundingMode::HalfExpand };
     IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };
+    mutable uint16_t m_decimalDigitsLimit { 0 }; // Non-negative integers below this are formatted as their decimal digits.
+    mutable bool m_mayRaiseDecimalDigitsLimit { true };
 };
 
 } // namespace JSC
